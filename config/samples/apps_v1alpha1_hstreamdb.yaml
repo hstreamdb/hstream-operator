@@ -1,0 +1,12 @@
+apiVersion: apps.hstream.io/v1alpha1
+kind: HStreamDB
+metadata:
+  labels:
+    app.kubernetes.io/name: hstreamdb
+    app.kubernetes.io/instance: hstreamdb-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: hstreamdb-sample
+spec:
+  # TODO(user): Add fields here
