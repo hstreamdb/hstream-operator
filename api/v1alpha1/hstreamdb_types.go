@@ -17,26 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// HStreamDBSpec defines the desired state of HStreamDB
-type HStreamDBSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of HStreamDB. Edit hstreamdb_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-}
-
-// HStreamDBStatus defines the observed state of HStreamDB
-type HStreamDBStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -58,6 +42,47 @@ type HStreamDBList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []HStreamDB `json:"items"`
+}
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// HStreamDBSpec defines the desired state of HStreamDB
+type HStreamDBSpec struct {
+	// +optional
+	Config Config `json:"config,omitempty"`
+
+	// VolumeClaimTemplate allows customizing the persistent volume claim for the
+	// pod.
+	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
+
+	Image string `json:"image,omitempty"`
+
+	// TODO：Component.Spec.Container 是标准api中的的结构体，其中包含了image字段，这个要怎么处理？
+	HServer     Component `json:"hserver,omitempty"`
+	HStore      Component `json:"hstore,omitempty"`
+	AdminServer Component `json:"adminServer,omitempty"`
+}
+
+// HStreamDBStatus defines the observed state of HStreamDB
+type HStreamDBStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	Configured bool `json:"configured"`
+}
+
+type Config struct {
+	//+kubebuilder:default:=1
+	//+kubebuilder:validation:Minimum:=1
+	MetadataReplicateAcross int32 `json:"metadata-replicate-across,omitempty"`
+	//+kubebuilder:default:=1
+	//+kubebuilder:validation:Minimum:=1
+	NShards *int32 `json:"nshards,omitempty"`
+	// log device bootstrap config, json style
+	// More info: https://logdevice.io/docs/Settings.html
+	// Example: https://github.com/hstreamdb/hstream/blob/main/deploy/k8s/config.json
+	// +kubebuilder:pruning:PreserveUnknownFields
+	LogDeviceConfig runtime.RawExtension `json:"LogDeviceConfig,omitempty"`
 }
 
 func init() {

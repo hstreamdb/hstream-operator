@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,7 +51,15 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-
+	hdb := &appsv1alpha1.HStreamDB{}
+	if err := r.Get(ctx, req.NamespacedName, hdb); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("spec.image", hdb.Spec.Image)
+		fmt.Println("spec.config.nshards", *hdb.Spec.Config.NShards)
+		fmt.Println("spec.config.nshards", hdb.Spec.Config.LogDeviceConfig.String())
+		fmt.Println("spec.hserver.replicas", *hdb.Spec.HServer.Replicas)
+	}
 	return ctrl.Result{}, nil
 }
 

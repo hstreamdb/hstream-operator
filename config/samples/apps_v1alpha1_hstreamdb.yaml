@@ -10,3 +10,25 @@ metadata:
   name: hstreamdb-sample
 spec:
   # TODO(user): Add fields here
+  config:
+    metadata-replicate-across: 3
+    nshards: 1
+    LogDeviceConfig:
+      {
+        "rqlite": {
+          "rqlite_uri": "ip://localhost:4001"
+        }
+      }
+  image: hstreamdb/hstream
+  hserver:
+    replicas: 1
+    container:
+      name: hserver
+  hstore:
+    replicas: 1
+    container:
+      name: hstore
+  adminServer:
+    replicas: 1
+    container:
+      name: admin-server
