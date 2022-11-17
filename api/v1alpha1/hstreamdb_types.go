@@ -53,7 +53,15 @@ type HStreamDBSpec struct {
 	// pod.
 	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
 
+	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
+
+	// Image pull policy.
+	// One of Always, Never, IfNotPresent.
+	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	HServer     Component `json:"hserver,omitempty"`
 	HStore      Component `json:"hstore,omitempty"`
@@ -62,7 +70,10 @@ type HStreamDBSpec struct {
 
 // HStreamDBStatus defines the observed state of HStreamDB
 type HStreamDBStatus struct {
-	Configured bool `json:"configured"`
+	// HStoreConfigured defines whether we have bootstrapped the hstore yet.
+	HStoreConfigured bool `json:"HStoreConfigured"`
+	// HServerConfigured defines whether we have bootstrapped the hserver yet.
+	HServerConfigured bool `json:"HServerConfigured"`
 }
 
 type Config struct {
@@ -76,7 +87,7 @@ type Config struct {
 	// More info: https://logdevice.io/docs/Settings.html
 	// Example: https://github.com/hstreamdb/hstream/blob/main/deploy/k8s/config.json
 	// +kubebuilder:pruning:PreserveUnknownFields
-	LogDeviceConfig runtime.RawExtension `json:"LogDeviceConfig,omitempty"`
+	LogDeviceConfig runtime.RawExtension `json:"logDeviceConfig,omitempty"`
 }
 
 func init() {

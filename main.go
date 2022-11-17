@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/hstreamdb/hstream-operator/internal/admin"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -63,7 +64,22 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	logWriter := os.Stdout
+
+	// TODO: write log to file?
+	//lumberjackLogger := &lumberjack.Logger{
+	//	Filename:   opts.LogFile,
+	//	MaxSize:    opts.LogFileMaxSize,
+	//	MaxAge:     opts.LogFileMaxAge,
+	//	MaxBackups: opts.MaxNumberOfOldLogFiles,
+	//	Compress:   opts.CompressOldFiles,
+	//}
+	//logWriter = io.MultiWriter(os.Stdout, lumberjackLogger)
+
+	logger := zap.New(
+		zap.UseFlagOptions(&opts),
+		zap.WriteTo(logWriter))
+	ctrl.SetLogger(logger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -90,8 +106,10 @@ func main() {
 	}
 
 	if err = (&controllers.HStreamDBReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Recorder:            mgr.GetEventRecorderFor("hstreamdb-controller"),
+		AdminClientProvider: admin.NewAdminClientProvider(mgr.GetConfig(), logger),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HStreamDB")
 		os.Exit(1)

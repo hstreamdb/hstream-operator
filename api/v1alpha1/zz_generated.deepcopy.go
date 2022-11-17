@@ -63,8 +63,8 @@ func (in *Component) DeepCopyInto(out *Component) {
 			(*out)[key] = val
 		}
 	}
-	if in.SecurityContext != nil {
-		in, out := &in.SecurityContext, &out.SecurityContext
+	if in.PodSecurityContext != nil {
+		in, out := &in.PodSecurityContext, &out.PodSecurityContext
 		*out = new(v1.PodSecurityContext)
 		(*in).DeepCopyInto(*out)
 	}
