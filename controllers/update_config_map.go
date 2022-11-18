@@ -128,25 +128,26 @@ func (u updateConfigMap) createOrUpdateConfigMap(ctx context.Context, r *HStream
 
 	existing := &corev1.ConfigMap{}
 	err = r.Get(ctx, client.ObjectKeyFromObject(configMap), existing)
-	if err != nil && k8sErrors.IsNotFound(err) {
-		logger.Info("Creating config map", "name", configMap.Name)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			logger.Info("Creating config map", "name", configMap.Name)
 
-		if err = ctrl.SetControllerReference(hdb, configMap, r.Scheme); err != nil {
-			return
+			if err = ctrl.SetControllerReference(hdb, configMap, r.Scheme); err != nil {
+				return
+			}
+			return r.Create(ctx, configMap)
 		}
-		return r.Create(ctx, configMap)
-	} else if err != nil {
 		return
 	}
 
-	if !equality.Semantic.DeepEqual(existing.Data, configMap.Data) {
+	if !equality.Semantic.DeepEqual(existing, configMap) {
 		logger.Info("Updating config map")
 		r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingConfigMap", "")
 
 		existing.Data = configMap.Data
 		err = r.Update(ctx, existing)
 		if err != nil {
-			return err
+			return
 		}
 	}
 	return

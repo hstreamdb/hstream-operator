@@ -74,7 +74,8 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 			return &requeue{curError: err}
 		}
 		return nil
-	} else if !isHashChanged(&existingSts.ObjectMeta, &sts.ObjectMeta) {
+	}
+	if !isHashChanged(&existingSts.ObjectMeta, &sts.ObjectMeta) {
 		return nil
 	}
 

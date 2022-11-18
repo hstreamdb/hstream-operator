@@ -71,9 +71,9 @@ type HStreamDBSpec struct {
 // HStreamDBStatus defines the observed state of HStreamDB
 type HStreamDBStatus struct {
 	// HStoreConfigured defines whether we have bootstrapped the hstore yet.
-	HStoreConfigured bool `json:"HStoreConfigured"`
-	// HServerConfigured defines whether we have bootstrapped the hserver yet.
-	HServerConfigured bool `json:"HServerConfigured"`
+	HStoreConfigured bool `json:"hstoreConfigured"`
+	// HServerConfigured defines whether we have initialized the hserver yet.
+	HServerConfigured bool `json:"hserverConfigured"`
 }
 
 type Config struct {

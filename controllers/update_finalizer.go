@@ -27,13 +27,13 @@ func (u updateFinalizer) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		}
 		// Stop reconciliation as the item is being deleted
 		return &requeue{}
-	} else {
-		// The object is not being deleted
-		if !hasRegFinalizer {
-			controllerutil.AddFinalizer(hdb, finalizer)
-			if err := r.Update(ctx, hdb); err != nil {
-				return &requeue{curError: err}
-			}
+	}
+
+	// The object is not being deleted
+	if !hasRegFinalizer {
+		controllerutil.AddFinalizer(hdb, finalizer)
+		if err := r.Update(ctx, hdb); err != nil {
+			return &requeue{curError: err}
 		}
 	}
 	return nil

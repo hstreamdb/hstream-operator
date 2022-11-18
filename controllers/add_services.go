@@ -4,13 +4,11 @@ import (
 	"context"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 type addServices struct{}
@@ -35,27 +33,13 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 	hServer := &hdb.Spec.HServer
 	ports := mergePorts(hServerPorts, hServer.Container.Ports)
 
-	var sPort string
 	for _, port := range ports {
 		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
 			Name:     port.Name,
 			Protocol: port.Protocol,
 			Port:     port.ContainerPort,
 		})
-		if port.Name == "port" {
-			sPort = strconv.Itoa(int(port.ContainerPort))
-		}
 	}
-
-	if sPort == "" {
-		return errors.New("invalid port")
-	}
-
-	/*hdb.Status.HServersAddr = fmt.Sprintf("%s-0.%s.%s:%s",
-	appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
-	service.Name,
-	service.Namespace,
-	sPort)*/
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -79,7 +63,6 @@ func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReco
 	adminServer := &hdb.Spec.AdminServer
 	ports := mergePorts(adminServerPorts, adminServer.Container.Ports)
 
-	var sPort string
 	var servicePorts []corev1.ServicePort
 	for _, port := range ports {
 		servicePorts = append(servicePorts, corev1.ServicePort{
@@ -87,13 +70,6 @@ func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReco
 			Protocol: port.Protocol,
 			Port:     port.ContainerPort,
 		})
-		if port.Name == "port" {
-			sPort = strconv.Itoa(int(port.ContainerPort))
-		}
-	}
-
-	if sPort == "" {
-		return errors.New("invalid port")
 	}
 
 	service := internal.GetService(hdb, servicePorts, appsv1alpha1.ComponentTypeAdminServer)
@@ -124,7 +100,7 @@ func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
 	}
 
 	originalSpec := existingService.Spec.DeepCopy()
-	existingService.Spec.Selector = originalSpec.Selector
+	existingService.Spec.Selector = newService.Spec.Selector
 
 	needUpdate := !equality.Semantic.DeepEqual(existingService.Spec, *originalSpec)
 	metadata := existingService.ObjectMeta

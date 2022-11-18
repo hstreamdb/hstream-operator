@@ -8994,13 +8994,13 @@ spec:
             type: object
           status:
             properties:
-              HServerConfigured:
+              hserverConfigured:
                 type: boolean
-              HStoreConfigured:
+              hstoreConfigured:
                 type: boolean
             required:
-            - HServerConfigured
-            - HStoreConfigured
+            - hserverConfigured
+            - hstoreConfigured
             type: object
         type: object
     served: true

@@ -53,7 +53,8 @@ func (a addAdminServer) reconcile(ctx context.Context, r *HStreamDBReconciler, h
 			return &requeue{curError: err}
 		}
 		return nil
-	} else if !isHashChanged(&existingDeploy.ObjectMeta, &deploy.ObjectMeta) {
+	}
+	if !isHashChanged(&existingDeploy.ObjectMeta, &deploy.ObjectMeta) {
 		return nil
 	}
 

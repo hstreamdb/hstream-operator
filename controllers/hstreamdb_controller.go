@@ -86,7 +86,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	logger.Info("Reconcile", "hserver.replicas", *hdb.Spec.HServer.Replicas)
 
 	subReconcilers := []hdbSubReconciler{
-		updateFinalizer{},
+		//updateFinalizer{},
 		updateConfigMap{},
 		addServices{},
 		addHStore{},

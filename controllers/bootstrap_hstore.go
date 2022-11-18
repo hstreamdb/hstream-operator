@@ -6,7 +6,10 @@ import (
 	"fmt"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
-	corev1 "k8s.io/api/core/v1"
+	jsoniter "github.com/json-iterator/go"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
@@ -22,8 +25,12 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	}
 
 	// determine if all hstore pods are running
-	comp := appsv1alpha1.ComponentTypeHStore
-	if err := checkPodRunningStatus(ctx, r, hdb, *hdb.Spec.HStore.Replicas, comp); err != nil {
+	sts := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: appsv1alpha1.ComponentTypeHStore.GetResName(hdb.Name),
+		},
+	}
+	if err := checkPodRunningStatus(ctx, r, hdb, sts); err != nil {
 		// we only set the message to log, and reconcile after several second
 		return &requeue{message: err.Error(), delay: 5 * time.Second}
 	}
@@ -50,6 +57,10 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	}
 
 	hdb.Status.HStoreConfigured = true
+	logger.Info("Update status")
+	if err = r.Status().Update(ctx, hdb); err != nil {
+		return &requeue{curError: fmt.Errorf("update HStore status failed: %w", err)}
+	}
 
 	// we still need to delay several second before deploying hServer
 	// while the first time we bootstrap successfully
@@ -72,59 +83,46 @@ func (a bootstrapHStore) getAdminServerHost(hdb *appsv1alpha1.HStreamDB) (ip str
 	return service.Name, port, nil
 }
 
-func checkPodRunningStatus(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB,
-	desiredReplicas int32, comp appsv1alpha1.ComponentType) error {
-
-	pods, err := getPods(ctx, r, hdb, getPodListOptions(hdb, comp)...)
+func checkPodRunningStatus(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB, obj client.Object) error {
+	count, err := getReadyReplicasInService(ctx, r, hdb, obj)
 	if err != nil {
 		return err
 	}
 
-	// TODO: compare replica with the desire number
-	count := len(pods)
-	if count == 0 || count < int(desiredReplicas) {
-		return fmt.Errorf("%s cluster isn't ready", comp)
+	var desiredReplicas int32
+	if sts, ok := obj.(*appsv1.StatefulSet); ok {
+		desiredReplicas = *sts.Spec.Replicas
+	} else if deploy, ok := obj.(*appsv1.Deployment); ok {
+		desiredReplicas = *deploy.Spec.Replicas
+	} else {
+		err = fmt.Errorf("%s is neither StatefulSet nor Deployment", obj.GetName())
+		return err
 	}
 
-	for i := range pods {
-		pod := &pods[i]
-		if pod.Status.Phase != corev1.PodRunning {
-			return fmt.Errorf("%s cluster isn't ready", comp)
-		}
+	if count == 0 || count < int(desiredReplicas) {
+		return fmt.Errorf("%s cluster isn't ready", obj.GetName())
 	}
 	return nil
 }
 
-func getPods(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB, options ...client.ListOption) (
-	[]corev1.Pod, error) {
+func getReadyReplicasInService(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB,
+	obj client.Object) (count int, err error) {
 
-	pods := &corev1.PodList{}
-	err := r.List(ctx, pods, options...)
+	err = r.Get(ctx, types.NamespacedName{
+		Namespace: hdb.Namespace,
+		Name:      obj.GetName(),
+	}, obj)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	// TODO: change hdb to the sts/deployment that related to the component
-	// determine if a resource is related to this cluster.
-	/*resPods := make([]corev1.Pod, 0, len(pods.Items))
-	for _, pod := range pods.Items {
-		for _, reference := range pod.ObjectMeta.OwnerReferences {
-			if reference.UID == hdb.UID {
-				resPod := pod
-				resPods = append(resPods, resPod)
-				break
-			}
-		}
+	bin, _ := jsoniter.Marshal(obj)
+	ret := jsoniter.Get(bin, "status", "readyReplicas")
+	if ret.LastError() != nil {
+		err = fmt.Errorf("couldn't get ready replicas from status of %s: %w", obj.GetName(), ret.LastError())
+		return
 	}
-	return resPods, nil*/
-	return pods.Items, nil
-}
 
-func getPodListOptions(hdb *appsv1alpha1.HStreamDB, component appsv1alpha1.ComponentType) []client.ListOption {
-	return []client.ListOption{
-		client.InNamespace(hdb.Namespace),
-		client.MatchingLabels{
-			appsv1alpha1.ComponentKey: string(component),
-		},
-	}
+	count = ret.ToInt()
+	return
 }

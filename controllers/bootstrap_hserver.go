@@ -5,6 +5,8 @@ import (
 	"errors"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 )
 
@@ -18,9 +20,17 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 		return nil
 	}
 
+	// TODO: change sts to deployment
 	// determine if all hServer pods are running
-	comp := appsv1alpha1.ComponentTypeHServer
-	if err := checkPodRunningStatus(ctx, r, hdb, *hdb.Spec.HServer.Replicas, comp); err != nil {
+	sts := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: hdb.Spec.HServer.Replicas,
+		},
+	}
+	if err := checkPodRunningStatus(ctx, r, hdb, sts); err != nil {
 		// we only set the message to log, and reconcile after several second
 		return &requeue{message: err.Error(), delay: 5 * time.Second}
 	}
