@@ -5,7 +5,6 @@ import (
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,6 +82,8 @@ func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReco
 func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB,
 	newService *corev1.Service) (err error) {
 
+	newService.Annotations[appsv1alpha1.LastSpecKey] = internal.GetObjectHash(newService)
+
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "service", newService.Name)
 
 	existingService := &corev1.Service{}
@@ -98,22 +99,16 @@ func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
 		}
 		return r.Create(ctx, newService)
 	}
+	if !isHashChanged(&existingService.ObjectMeta, &newService.ObjectMeta) {
+		return nil
+	}
 
-	originalSpec := existingService.Spec.DeepCopy()
-	existingService.Spec.Selector = newService.Spec.Selector
-
-	needUpdate := !equality.Semantic.DeepEqual(existingService.Spec, *originalSpec)
 	metadata := existingService.ObjectMeta
-	if mergeLabelsInMetadata(&metadata, newService.ObjectMeta) {
-		needUpdate = true
-	}
-	if mergeAnnotations(&metadata, newService.ObjectMeta) {
-		needUpdate = true
-	}
-	if needUpdate {
-		existingService.ObjectMeta = metadata
-		logger.Info("Updating service")
-		return r.Update(ctx, existingService)
-	}
-	return
+	_ = mergeLabelsInMetadata(&metadata, newService.ObjectMeta)
+	_ = mergeAnnotations(&metadata, newService.ObjectMeta)
+	existingService.ObjectMeta = metadata
+	existingService.Spec = newService.Spec
+
+	logger.Info("Updating service")
+	return r.Update(ctx, existingService)
 }
