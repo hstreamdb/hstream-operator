@@ -29,7 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var log = logf.Log.WithName("controller")
+var log = logf.Log.WithName("HStreamDB Controller")
 
 // HStreamDBReconciler reconciles a HStreamDB object
 type HStreamDBReconciler struct {
