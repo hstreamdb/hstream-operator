@@ -9,25 +9,103 @@ metadata:
     app.kubernetes.io/created-by: hstream-operator
   name: hstreamdb-sample
 spec:
+  volumeClaimTemplate:
+    spec:
+      storageClassName: 'hstore'
+      resources:
+        requests:
+          storage: 1G
+
   config:
-    metadata-replicate-across: 3
+    metadata-replicate-across: 1
     nshards: 1
-    LogDeviceConfig:
+    logDeviceConfig:
       {
+        "server_settings": {
+          "enable-nodes-configuration-manager": "true",
+          "use-nodes-configuration-manager-nodes-configuration": "true",
+          "enable-node-self-registration": "true",
+          "enable-cluster-maintenance-state-machine": "true"
+        },
+        "client_settings": {
+          "enable-nodes-configuration-manager": "true",
+          "use-nodes-configuration-manager-nodes-configuration": "true",
+          "admin-client-capabilities": "true"
+        },
+        "cluster": "hstore",
+        "internal_logs": {
+          "config_log_deltas": {
+            "replicate_across": {
+              "node": 1
+            }
+          },
+          "config_log_snapshots": {
+            "replicate_across": {
+              "node": 1
+            }
+          },
+          "event_log_deltas": {
+            "replicate_across": {
+              "node": 1
+            }
+          },
+          "event_log_snapshots": {
+            "replicate_across": {
+              "node": 1
+            }
+          },
+          "maintenance_log_deltas": {
+            "replicate_across": {
+              "node": 1
+            }
+          },
+          "maintenance_log_snapshots": {
+            "replicate_across": {
+              "node": 1
+            }
+          }
+        },
+        "metadata_logs": {
+          "nodeset": [ ],
+          "replicate_across": {
+            "node": 1
+          }
+        },
         "rqlite": {
-          "rqlite_uri": "ip://localhost:4001"
-        }
+          "rqlite_uri": "ip://rqlite-svc.default:4001"
+        },
+        "version": 1
       }
-  image: hstreamdb/hstream
+  image: hstreamdb/hstream:rqlite
+  imagePullPolicy: IfNotPresent
+
   hserver:
     replicas: 1
     container:
       name: hserver
+      command:
+        - bash
+        - "-c"
+        - |
+          set -ex
+          [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+          ordinal=${BASH_REMATCH[1]}
+          /usr/local/bin/hstream-server \
+          --config-path /etc/hstream/config.yaml \
+          --host 0.0.0.0 \
+          --address $(POD_IP) \
+          --port 6570 \
+          --internal-port 6571 \
+          --seed-nodes "hstreamdb-sample-hserver-0.hstreamdb-sample-hserver:6571" \
+          --server-id $((100 + $ordinal)) \
+          --metastore-uri rq://rqlite-svc.default:4001 \
+          --store-config /etc/logdevice/config.json \
+          --store-admin-host logdevice-admin-server-service
   hstore:
-    replicas: 1
+    replicas: 3
     container:
       name: hstore
   adminServer:
-    replicas: 1
+    replicas: 2
     container:
       name: admin-server

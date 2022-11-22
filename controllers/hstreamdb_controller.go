@@ -19,19 +19,39 @@ package controllers
 import (
 	"context"
 	"fmt"
-
+	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var log = logf.Log.WithName("HStreamDB Controller")
 
 // HStreamDBReconciler reconciles a HStreamDB object
 type HStreamDBReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme              *runtime.Scheme
+	Recorder            record.EventRecorder
+	AdminClientProvider AdminClientProvider
+}
+
+type hdbSubReconciler interface {
+	/**
+	reconcile runs the reconciler's work.
+
+	If reconciliation can continue, this should return nil.
+
+	If reconciliation encounters an error, this should return a	requeue object
+	with an `Error` field.
+
+	If reconciliation cannot proceed, this should return a requeue object with
+	a `Message` field.
+	*/
+	reconcile(ctx context.Context, r *HStreamDBReconciler, cluster *appsv1alpha1.HStreamDB) *requeue
 }
 
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=hstreamdbs,verbs=get;list;watch;create;update;patch;delete
@@ -47,19 +67,63 @@ type HStreamDBReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+	//_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
 	hdb := &appsv1alpha1.HStreamDB{}
-	if err := r.Get(ctx, req.NamespacedName, hdb); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("spec.image", hdb.Spec.Image)
-		fmt.Println("spec.config.nshards", *hdb.Spec.Config.NShards)
-		fmt.Println("spec.config.nshards", hdb.Spec.Config.LogDeviceConfig.String())
-		fmt.Println("spec.hserver.replicas", *hdb.Spec.HServer.Replicas)
+	if err = r.Get(ctx, req.NamespacedName, hdb); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			err = nil
+		}
+		// Error reading the object - requeue the request.
+		return
 	}
+
+	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name)
+
+	logger.Info("Reconcile", "image", hdb.Spec.Image)
+	logger.Info("Reconcile", "config.nshards", *hdb.Spec.Config.NShards)
+	logger.Info("Reconcile", "hserver.replicas", *hdb.Spec.HServer.Replicas)
+
+	subReconcilers := []hdbSubReconciler{
+		updateConfigMap{},
+		addServices{},
+		addHStore{},
+		addAdminServer{},
+		bootstrapHStore{},
+		addHServer{},
+		bootstrapHServer{},
+		updateStatus{},
+	}
+
+	delayedRequeue := false
+
+	for _, subReconciler := range subReconcilers {
+		logger.Info("Attempting to run sub-reconciler", "subReconciler", fmt.Sprintf("%T", subReconciler))
+		requeue := subReconciler.reconcile(ctx, r, hdb)
+		if requeue == nil {
+			continue
+		}
+
+		if requeue.delayedRequeue {
+			logger.Info("Delaying requeue for sub-reconciler",
+				"subReconciler", fmt.Sprintf("%T", subReconciler),
+				"message", requeue.message,
+				"error", requeue.curError)
+			delayedRequeue = true
+			continue
+		}
+		return processRequeue(requeue, subReconciler, hdb, r.Recorder, logger)
+	}
+
+	if delayedRequeue {
+		logger.Info("HStream was not fully reconciled by reconciliation process")
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	logger.Info("Reconciliation complete")
+	r.Recorder.Event(hdb, corev1.EventTypeNormal, "ReconciliationComplete", "")
+
 	return ctrl.Result{}, nil
 }
 

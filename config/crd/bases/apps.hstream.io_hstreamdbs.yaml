@@ -1585,11 +1585,7 @@ spec:
                       type: string
                     type: object
                     x-kubernetes-map-type: atomic
-                  replicas:
-                    default: 3
-                    format: int32
-                    type: integer
-                  securityContext:
+                  podSecurityContext:
                     properties:
                       fsGroup:
                         format: int64
@@ -1653,6 +1649,10 @@ spec:
                             type: string
                         type: object
                     type: object
+                  replicas:
+                    default: 3
+                    format: int32
+                    type: integer
                   sidecarContainers:
                     items:
                       properties:
@@ -2965,7 +2965,7 @@ spec:
                 type: object
               config:
                 properties:
-                  LogDeviceConfig:
+                  logDeviceConfig:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   metadata-replicate-across:
@@ -4535,11 +4535,7 @@ spec:
                       type: string
                     type: object
                     x-kubernetes-map-type: atomic
-                  replicas:
-                    default: 3
-                    format: int32
-                    type: integer
-                  securityContext:
+                  podSecurityContext:
                     properties:
                       fsGroup:
                         format: int64
@@ -4603,6 +4599,10 @@ spec:
                             type: string
                         type: object
                     type: object
+                  replicas:
+                    default: 3
+                    format: int32
+                    type: integer
                   sidecarContainers:
                     items:
                       properties:
@@ -7469,11 +7469,7 @@ spec:
                       type: string
                     type: object
                     x-kubernetes-map-type: atomic
-                  replicas:
-                    default: 3
-                    format: int32
-                    type: integer
-                  securityContext:
+                  podSecurityContext:
                     properties:
                       fsGroup:
                         format: int64
@@ -7537,6 +7533,10 @@ spec:
                             type: string
                         type: object
                     type: object
+                  replicas:
+                    default: 3
+                    format: int32
+                    type: integer
                   sidecarContainers:
                     items:
                       properties:
@@ -8849,6 +8849,8 @@ spec:
                 type: object
               image:
                 type: string
+              imagePullPolicy:
+                type: string
               volumeClaimTemplate:
                 properties:
                   apiVersion:
@@ -8992,10 +8994,13 @@ spec:
             type: object
           status:
             properties:
-              configured:
+              hserverConfigured:
+                type: boolean
+              hstoreConfigured:
                 type: boolean
             required:
-            - configured
+            - hserverConfigured
+            - hstoreConfigured
             type: object
         type: object
     served: true
