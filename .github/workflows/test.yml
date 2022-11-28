@@ -47,8 +47,8 @@ jobs:
         tar -zxvf kubebuilder-tools
         sudo mv kubebuilder/ /usr/local/kubebuilder        
         
-    
-    - run: |
+    - name: Mod tidy and install ginkgo
+      run: |
         go mod tidy
         go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.5.0
         go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.5.0
@@ -57,10 +57,10 @@ jobs:
         
     - name: Run unit tests that don't depend on realy k8s cluster
       run: 
-        go run github.com/onsi/ginkgo/v2/ginkgo run ./...
+        ginkgo run ./...
 
     - name: Run unit tests that depend on realy k8s cluster
       env:
         USE_EXISTING_CLUSTER: true
       # set label filter 'k8s' to ignore the test cases that don't depond on realy k8s cluster
-      run: go run github.com/onsi/ginkgo/v2/ginkgo run controllers/ --label-filter 'k8s'
+      run: ginkgo run controllers/ --label-filter 'k8s'
