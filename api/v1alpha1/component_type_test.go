@@ -1,7 +1,6 @@
 package v1alpha1_test
 
 import (
-	"fmt"
 	"github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -25,14 +24,6 @@ var _ = Describe("ComponentType", func() {
 		It("admin server should not be StatefulSet", func() {
 			compType = v1alpha1.ComponentTypeAdminServer
 			Expect(compType.IsStateful()).To(Equal(false))
-		})
-	})
-
-	Context("Get resource name with Component", func() {
-		It("admin server should not be StatefulSet", func() {
-			compType = v1alpha1.ComponentTypeHServer
-			instanceName := "HStreamDB"
-			Expect(compType.GetResName(instanceName)).To(Equal(fmt.Sprintf("%s-%s", instanceName, compType)))
 		})
 	})
 })
