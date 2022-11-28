@@ -30,9 +30,9 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 			Replicas: hdb.Spec.HServer.Replicas,
 		},
 	}
-	if err := checkPodRunningStatus(ctx, r, hdb, sts); err != nil {
+	if err := checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
 		// we only set the message to log, and reconcile after several second
-		return &requeue{message: err.Error(), delay: 5 * time.Second}
+		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	}
 
 	ip, port, err := a.getHServerHost(hdb)

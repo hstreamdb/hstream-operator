@@ -40,7 +40,7 @@ func (e *Executor) ExecToPodByLabel(namespace string, label map[string]string,
 		return
 	}
 
-	if pods.Size() == 0 {
+	if len(pods.Items) == 0 {
 		err = fmt.Errorf("couldn't find any pod with label %v", label)
 		return
 	}

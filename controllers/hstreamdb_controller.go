@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	"github.com/hstreamdb/hstream-operator/internal/admin"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +37,7 @@ type HStreamDBReconciler struct {
 	client.Client
 	Scheme              *runtime.Scheme
 	Recorder            record.EventRecorder
-	AdminClientProvider AdminClientProvider
+	AdminClientProvider admin.AdminClientProvider
 }
 
 type hdbSubReconciler interface {
@@ -79,12 +80,6 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return
 	}
 
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name)
-
-	logger.Info("Reconcile", "image", hdb.Spec.Image)
-	logger.Info("Reconcile", "config.nshards", *hdb.Spec.Config.NShards)
-	logger.Info("Reconcile", "hserver.replicas", *hdb.Spec.HServer.Replicas)
-
 	subReconcilers := []hdbSubReconciler{
 		updateConfigMap{},
 		addServices{},
@@ -95,9 +90,15 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		bootstrapHServer{},
 		updateStatus{},
 	}
+	return r.subReconcile(ctx, hdb, subReconcilers)
+}
+
+func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *appsv1alpha1.HStreamDB, subReconcilers []hdbSubReconciler) (
+	ctrl.Result, error) {
+
+	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name)
 
 	delayedRequeue := false
-
 	for _, subReconciler := range subReconcilers {
 		logger.Info("Attempting to run sub-reconciler", "subReconciler", fmt.Sprintf("%T", subReconciler))
 		requeue := subReconciler.reconcile(ctx, r, hdb)

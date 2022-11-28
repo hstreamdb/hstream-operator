@@ -11,7 +11,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
-	"time"
 )
 
 var hStoreEnvVar = []corev1.EnvVar{
@@ -95,7 +94,7 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *a
 	if err = r.Update(ctx, existingSts); err != nil {
 		return &requeue{curError: err}
 	}
-	return &requeue{delay: 5 * time.Second}
+	return nil
 }
 
 func (a addHStore) getSts(hdb *appsv1alpha1.HStreamDB) appsv1.StatefulSet {
@@ -136,6 +135,7 @@ func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container 
 
 	structAssign(&container, &hStore.Container)
 	extendEnv(&container, hStoreEnvVar)
+
 	container.Ports = mergePorts(hStorePorts, container.Ports)
 
 	if container.Name == "" {

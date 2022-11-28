@@ -42,29 +42,38 @@ func (f *FlagSet) parseOne() (bool, error) {
 	}
 
 	s := f.args[0]
-	if len(s) == 0 {
-		return false, nil
-	}
-
-	if s[0] == '-' {
-		numMinuses := 1
-		if s[1] == '-' {
-			numMinuses++
-			if len(s) == 2 { // "--" terminates the flags
-				f.args = f.args[1:]
-				return false, nil
+	if len(s) != 0 {
+		if s[0] == '-' {
+			if f.lastName != "" {
+				return false, fmt.Errorf("bad flag syntax: %s", s)
 			}
+
+			numMinuses := 1
+			if s[1] == '-' {
+				numMinuses++
+				if len(s) == 2 { // "--" terminates the flags
+					f.args = f.args[1:]
+					return false, nil
+				}
+			}
+			// it's a flag, value is the next arg
+			f.lastName = s[numMinuses:]
+			f.actual[f.lastName] = ""
+		} else {
+			if f.lastName == "" {
+				return false, fmt.Errorf("bad flag syntax: %s", s)
+			}
+
+			// it's a value
+			value := s
+			if value[0] == '-' || value[0] == '=' {
+				return false, fmt.Errorf("bad flag syntax: %s", s)
+			}
+			f.actual[f.lastName] = value
+			// reset lastName, next arg is flag
+			f.lastName = ""
 		}
-		// it's a flag, value is the next arg
-		f.lastName = s[numMinuses:]
-		f.actual[f.lastName] = ""
 	} else {
-		// it's a value
-		value := s
-		if len(value) == 0 || value[0] == '-' || value[0] == '=' {
-			return false, fmt.Errorf("bad flag syntax: %s", s)
-		}
-		f.actual[f.lastName] = value
 		// reset lastName, next arg is flag
 		f.lastName = ""
 	}

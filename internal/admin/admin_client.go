@@ -1,4 +1,4 @@
-package controllers
+package admin
 
 import (
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
