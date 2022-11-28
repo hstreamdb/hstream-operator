@@ -3,11 +3,11 @@ package controllers
 import (
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
-	jsoniter "github.com/json-iterator/go"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
+	"strings"
 )
 
 // structAssign copy the value of struct from src to dist
@@ -76,6 +76,7 @@ func extendArg(container *corev1.Container, defaultArgs map[string]string) (err 
 		return err
 	}
 
+	// flag in the args doesn't contain prefix '-' or '--'
 	args := flags.Flags()
 
 	existingVars := make(map[string]bool, len(container.Args))
@@ -84,6 +85,8 @@ func extendArg(container *corev1.Container, defaultArgs map[string]string) (err 
 	}
 
 	for flag, value := range defaultArgs {
+		// we need to cut the prefix '-' or '--' before comparing with existingVars
+		flag = strings.TrimLeft(flag, "-")
 		if !existingVars[flag] {
 			args[flag] = value
 		}
@@ -92,7 +95,7 @@ func extendArg(container *corev1.Container, defaultArgs map[string]string) (err 
 	container.Args = make([]string, 0, len(args))
 	// sort the arg list
 	flags.Visit(func(flag, value string) {
-		container.Args = append(container.Args, flag)
+		container.Args = append(container.Args, "--"+flag)
 		if value != "" {
 			container.Args = append(container.Args, value)
 		}
@@ -138,18 +141,4 @@ func usePvc(hdb *appsv1alpha1.HStreamDB) bool {
 
 func isHashChanged(obj1, obj2 *metav1.ObjectMeta) bool {
 	return obj1.Annotations[appsv1alpha1.LastSpecKey] != obj2.Annotations[appsv1alpha1.LastSpecKey]
-}
-
-func parseLogDeviceConfig(raw []byte) (config map[string]interface{}, err error) {
-	config = make(map[string]interface{})
-	if len(raw) != 0 {
-		if !jsoniter.Valid(raw) {
-			return
-		}
-
-		if err = json.Unmarshal(raw, &config); err != nil {
-			return
-		}
-	}
-	return
 }

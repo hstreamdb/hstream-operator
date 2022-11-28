@@ -100,12 +100,12 @@ spec:
           --server-id $((100 + $ordinal)) \
           --metastore-uri rq://rqlite-svc.default:4001 \
           --store-config /etc/logdevice/config.json \
-          --store-admin-host logdevice-admin-server-service
+          --store-admin-host hstreamdb-sample-admin-server
   hstore:
     replicas: 3
     container:
       name: hstore
   adminServer:
-    replicas: 2
+    replicas: 1
     container:
       name: admin-server

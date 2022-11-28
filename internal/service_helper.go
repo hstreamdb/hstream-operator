@@ -10,11 +10,10 @@ func GetService(hdb *appsv1alpha1.HStreamDB, ports []corev1.ServicePort, compTyp
 	service := corev1.Service{
 		ObjectMeta: GetObjectMetadata(hdb, nil, compType),
 	}
-
-	service.ObjectMeta.Name = hdb.ObjectMeta.Name + "-" + string(compType)
+	service.ObjectMeta.Name = GetResNameOnPanic(hdb, string(compType))
 	service.Spec.Ports = make([]corev1.ServicePort, len(ports))
-	for i, port := range ports {
-		service.Spec.Ports[i] = *(&port).DeepCopy()
+	for i := range ports {
+		service.Spec.Ports[i] = *ports[i].DeepCopy()
 	}
 	service.Spec.Selector = map[string]string{
 		appsv1alpha1.ComponentKey: string(compType),

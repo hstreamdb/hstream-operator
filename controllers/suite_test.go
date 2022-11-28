@@ -17,7 +17,11 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/hstreamdb/hstream-operator/internal/admin"
+	"github.com/hstreamdb/hstream-operator/mock"
+	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -40,15 +44,20 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var clusterReconciler *HStreamDBReconciler
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, "HStreamDB Controller")
 }
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+
+	if isUsingExistingCluster() {
+		Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
+	}
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -71,6 +80,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	clusterReconciler = createTestClusterReconciler()
 })
 
 var _ = AfterSuite(func() {
@@ -78,3 +88,17 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func createTestClusterReconciler() *HStreamDBReconciler {
+	return &HStreamDBReconciler{
+		Client:              k8sClient,
+		Scheme:              k8sClient.Scheme(),
+		Recorder:            mock.GetEventRecorderFor("HStreamDB-controller"),
+		AdminClientProvider: admin.NewAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
+	}
+}
+
+func isUsingExistingCluster() bool {
+	useExistingCluster, _ := strconv.ParseBool(os.Getenv("USE_EXISTING_CLUSTER"))
+	return useExistingCluster
+}

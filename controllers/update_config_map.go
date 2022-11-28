@@ -6,7 +6,6 @@ import (
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,7 +29,7 @@ func (u updateConfigMap) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		return &requeue{curError: err}
 	}
 
-	nshardsMap, err := u.getNshardsMap(hdb)
+	nshardsMap, err := u.getNShardsMap(hdb)
 	if err != nil {
 		return &requeue{curError: err}
 	}
@@ -42,69 +41,42 @@ func (u updateConfigMap) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 }
 
 func (u updateConfigMap) getLogDeviceConfigMap(hdb *appsv1alpha1.HStreamDB) (configMap corev1.ConfigMap, err error) {
-	config, err := parseLogDeviceConfig(hdb.Spec.Config.LogDeviceConfig.Raw)
+	config, err := internal.ParseLogDeviceConfig(hdb.Spec.Config.LogDeviceConfig.Raw)
 	if err != nil {
-		err = errors.New("invalid log device config")
-		return
-	}
-	if len(config) == 0 {
-		err = errors.New("missing rqlite config in LogDeviceConfig")
+		err = fmt.Errorf("invalid log device config: %w", err)
 		return
 	}
 
-	if _, ok := config["cluster"]; !ok {
-		config["cluster"] = "hstore"
+	defConfig := internal.GetLogDeviceConfig()
+	for key, value := range defConfig {
+		if _, ok := config[key]; !ok {
+			config[key] = value
+		}
 	}
 
-	v, ok := config["server_settings"]
-	var m map[string]interface{}
-	if !ok {
-		m = map[string]interface{}{}
-		config["server_settings"] = m
-	} else if m, ok = v.(map[string]interface{}); !ok {
-		err = errors.Errorf("invalid server_settings config")
+	cm, has := internal.ConfigMaps.Get(internal.LogDeviceConfig)
+	if !has {
+		err = fmt.Errorf("no such config map %s", internal.LogDeviceConfig)
 		return
-	}
-
-	m["enable-nodes-configuration-manager"] = "true"
-	m["use-nodes-configuration-manager-nodes-configuration"] = "true"
-	m["enable-node-self-registration"] = "true"
-	m["enable-cluster-maintenance-state-machine"] = "true"
-
-	if v, ok = config["client_settings"]; !ok {
-		m = map[string]interface{}{}
-		config["client_settings"] = m
-	} else if m, ok = v.(map[string]interface{}); !ok {
-		err = errors.Errorf("invalid server_settings config")
-		return
-	}
-
-	m["enable-nodes-configuration-manager"] = "true"
-	m["use-nodes-configuration-manager-nodes-configuration"] = "true"
-	m["admin-client-capabilities"] = "true"
-
-	if v, ok = config["rqlite"]; !ok {
-		m = map[string]interface{}{}
-		config["rqlite"] = m
-	} else if m, ok = v.(map[string]interface{}); !ok {
-		err = errors.Errorf("invalid server_settings config")
-		return
-	}
-
-	if _, ok = m["rqlite_uri"]; !ok {
-		m["rqlite_uri"] = fmt.Sprintf("ip://rqlite-svc.default:4001")
 	}
 
 	file, _ := json.MarshalToString(config)
 	configMap.Data = map[string]string{
-		"config.json": file,
+		// config.json: file
+		cm.MapKey: file,
 	}
-	configMap.Name = internal.GetResNameOnPanic(hdb, "logdevice-config")
+	configMap.Name = internal.GetResNameOnPanic(hdb, cm.MapNameSuffix)
 	configMap.Namespace = hdb.GetNamespace()
 	return
 }
 
-func (u updateConfigMap) getNshardsMap(hdb *appsv1alpha1.HStreamDB) (configMap corev1.ConfigMap, err error) {
+func (u updateConfigMap) getNShardsMap(hdb *appsv1alpha1.HStreamDB) (configMap corev1.ConfigMap, err error) {
+	cm, has := internal.ConfigMaps.Get(internal.NShardsConfig)
+	if !has {
+		err = fmt.Errorf("no such config map %s", internal.NShardsConfig)
+		return
+	}
+
 	var nshards string
 	if hdb.Spec.Config.NShards == nil {
 		nshards = "1"
@@ -113,7 +85,7 @@ func (u updateConfigMap) getNshardsMap(hdb *appsv1alpha1.HStreamDB) (configMap c
 	}
 
 	configMap.Data = map[string]string{
-		"NSHARDS": nshards,
+		cm.MapKey: nshards,
 	}
 	configMap.Name = internal.GetResNameOnPanic(hdb, "nshards")
 	configMap.Namespace = hdb.GetNamespace()
@@ -130,25 +102,28 @@ func (u updateConfigMap) createOrUpdateConfigMap(ctx context.Context, r *HStream
 	err = r.Get(ctx, client.ObjectKeyFromObject(configMap), existing)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			logger.Info("Creating config map", "name", configMap.Name)
-
 			if err = ctrl.SetControllerReference(hdb, configMap, r.Scheme); err != nil {
 				return
 			}
+			logger.Info("Creating config map", "name", configMap.Name)
 			return r.Create(ctx, configMap)
 		}
 		return
 	}
 
-	if !equality.Semantic.DeepEqual(existing, configMap) {
-		logger.Info("Updating config map")
-		r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingConfigMap", "")
-
-		existing.Data = configMap.Data
-		err = r.Update(ctx, existing)
-		if err != nil {
-			return
-		}
+	needUpdate := !equality.Semantic.DeepEqual(existing.Data, configMap.Data)
+	if !equality.Semantic.DeepEqual(existing.BinaryData, configMap.BinaryData) {
+		needUpdate = true
 	}
-	return
+
+	if !needUpdate {
+		return nil
+	}
+
+	logger.Info("Updating config map")
+	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingConfigMap", "")
+
+	existing.Data = configMap.Data
+	existing.BinaryData = configMap.BinaryData
+	return r.Update(ctx, existing)
 }

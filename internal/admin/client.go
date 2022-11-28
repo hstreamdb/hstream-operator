@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
-	"github.com/hstreamdb/hstream-operator/controllers"
 	"k8s.io/client-go/rest"
 	"os/exec"
 	"strconv"
@@ -25,12 +24,12 @@ type realAdminClientProvider struct {
 
 // GetAdminClient generates a client for performing administrative actions
 // against the hStream.
-func (p *realAdminClientProvider) GetAdminClient(hdb *appsv1alpha1.HStreamDB) controllers.AdminClient {
+func (p *realAdminClientProvider) GetAdminClient(hdb *appsv1alpha1.HStreamDB) AdminClient {
 	return NewAdminClient(hdb, p.restConfig, p.log)
 }
 
 // NewAdminClientProvider generates a client provider for talking to real hStream.
-func NewAdminClientProvider(restConfig *rest.Config, log logr.Logger) controllers.AdminClientProvider {
+func NewAdminClientProvider(restConfig *rest.Config, log logr.Logger) AdminClientProvider {
 	return &realAdminClientProvider{
 		log:        log.WithName("adminClient"),
 		restConfig: restConfig,
@@ -44,7 +43,7 @@ type adminClient struct {
 }
 
 // NewAdminClient generates an Admin client for a hStream
-func NewAdminClient(hdb *appsv1alpha1.HStreamDB, restConfig *rest.Config, log logr.Logger) controllers.AdminClient {
+func NewAdminClient(hdb *appsv1alpha1.HStreamDB, restConfig *rest.Config, log logr.Logger) AdminClient {
 	return &adminClient{
 		hdb:        hdb,
 		remoteExec: NewExecutor(restConfig),
@@ -59,7 +58,7 @@ type cmdOrder struct {
 	subCmd      *cmdOrder
 }
 
-func (ac *adminClient) GetStatus(ip string, port int) (s controllers.HStreamStatus, err error) {
+func (ac *adminClient) GetStatus(ip string, port int) (s HStreamStatus, err error) {
 	sPort := strconv.Itoa(port)
 	output, _ := ac.runCommandInPod(cliCommand{
 		args: []string{"store", "--host", ip, "--port", sPort, "status"},
