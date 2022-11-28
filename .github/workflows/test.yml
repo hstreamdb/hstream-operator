@@ -48,7 +48,12 @@ jobs:
         sudo mv kubebuilder/ /usr/local/kubebuilder        
         
     
-    - run: go mod tidy
+    - run: |
+        go mod tidy
+        go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.5.0
+        go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.5.0
+        go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.5.0
+        go install github.com/onsi/ginkgo/v2/ginkgo
         
     - name: Run unit tests that don't depend on realy k8s cluster
       run: 
