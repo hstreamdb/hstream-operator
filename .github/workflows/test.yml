@@ -14,15 +14,6 @@ jobs:
 
   UnitTest:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        dir:
-        - api
-        - controllers
-        - pkg
-        - internal
-        - mock
         
     steps:
     - name: Setup Minikube Kubernetes Cluster
