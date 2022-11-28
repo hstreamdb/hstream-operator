@@ -50,8 +50,13 @@ jobs:
         go install github.com/onsi/ginkgo/v2/ginkgo
         go get github.com/onsi/gomega/...
         ginkgo version
+        
+    - name: Init go mod
+      run: go mod tidy
+      
     - name: Run unit tests that don't depend on realy k8s cluster
-      run: ginkgo run ./...
+      run: 
+        ginkgo run ./...
 
     - name: Run unit tests that depend on realy k8s cluster
       env:
