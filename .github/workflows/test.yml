@@ -39,21 +39,23 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Init kubebuilder and Ginkgo
+    - name: Install kubebuilder
       run: |
         OS=$(uname -s | tr '[:upper:]' '[:lower:]')
         ARCH=$(uname -m | sed 's/x86_64/amd64/')
         curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
         tar -zxvf kubebuilder-tools
-        sudo mv kubebuilder/ /usr/local/kubebuilder
-        
-        go install github.com/onsi/ginkgo/v2/ginkgo
-        go get github.com/onsi/gomega/...
-        ginkgo version
+        sudo mv kubebuilder/ /usr/local/kubebuilder        
         
     - name: Init go mod
       run: go mod tidy
       
+    - name: Install ginkgo
+      run:
+        go install github.com/onsi/ginkgo/v2/ginkgo
+        go get github.com/onsi/gomega/...
+        ginkgo version
+        
     - name: Run unit tests that don't depend on realy k8s cluster
       run: 
         ginkgo run ./...
