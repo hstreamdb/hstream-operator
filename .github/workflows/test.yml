@@ -1,0 +1,147 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Run hstreamdb operator test case
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  UnitTest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        use-existing-cluster:
+          - true
+          - false
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.3
+
+    - name: Go Build Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install kubebuilder
+      run: |
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m | sed 's/x86_64/amd64/')
+        curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
+        tar -zxvf kubebuilder-tools
+        sudo mv kubebuilder/ /usr/local/kubebuilder
+
+    - name: Mod tidy and install ginkgo
+      run: |
+        go mod tidy
+        go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.5.0
+        go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.5.0
+        go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.5.0
+        go install github.com/onsi/ginkgo/v2/ginkgo
+
+    - name: Run unit tests that don't depend on really k8s cluster
+      if: matrix.use-existing-cluster == false
+      run: ginkgo run ./...
+
+    - name: Setup cni plugin
+      if: matrix.use-existing-cluster
+      run: |
+        sudo mkdir -p /opt/cni/bin/
+        sudo wget https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz
+        sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
+
+    - name: Setup minikube
+      if: matrix.use-existing-cluster
+      uses: medyagh/setup-minikube@latest
+      with:
+        driver: docker
+        container-runtime: containerd
+        cni: flannel
+
+    - name: Install rqlite cluster
+      if: matrix.use-existing-cluster
+      run: |
+        curl -s https://raw.githubusercontent.com/rqlite/kubernetes-configuration/master/service.yaml -o rqlite-service.yaml
+        kubectl apply -f rqlite-service.yaml
+
+        kubectl apply -f - <<EOF
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: rqlite
+          spec:
+            selector:
+              matchLabels:
+                app: rqlite # has to match .spec.template.metadata.labels
+            serviceName: rqlite-svc-internal
+            replicas: 3
+            podManagementPolicy: "Parallel"
+            template:
+              metadata:
+                labels:
+                  app: rqlite # has to match .spec.selector.matchLabels
+              spec:
+                terminationGracePeriodSeconds: 5
+                containers:
+                - name: rqlite
+                  image: rqlite/rqlite
+                  imagePullPolicy: IfNotPresent
+                  args: ["-disco-mode=dns","-disco-config={\"name\":\"rqlite-svc-internal\"}","-bootstrap-expect","3", "-join-interval=1s", "-join-attempts=120"]
+                  ports:
+                  - containerPort: 4001
+                    name: rqlite
+                  readinessProbe:
+                    httpGet:
+                      scheme: HTTP
+                      path: /readyz
+                      port: 4001
+                    periodSeconds: 5
+                    timeoutSeconds: 2
+                    initialDelaySeconds: 2
+                  livenessProbe:
+                    httpGet:
+                      scheme: HTTP
+                      path: /readyz?noleader
+                      port: rqlite
+                    initialDelaySeconds: 2
+                    timeoutSeconds: 2
+                    failureThreshold: 3
+                  volumeMounts:
+                  - name: rqlite-file
+                    mountPath: /rqlite/file
+                volumes:
+                - name: rqlite-file
+                  emptyDir:
+        EOF
+
+    - name: Run unit tests that depend on existing k8s cluster
+      if: matrix.use-existing-cluster
+      env:
+        USE_EXISTING_CLUSTER: ${{ matrix.use-existing-cluster }}
+      # set label filter 'k8s' to ignore the test cases that don't deponed on really k8s cluster
+      run: ginkgo run --label-filter 'k8s' controllers/
+
+    - if: failure()
+      run: kubectl get pods -A
+
+    - if: failure()
+      run: kubectl get event -n kube-system
+
+    - if: failure()
+      run: kubectl get event
+

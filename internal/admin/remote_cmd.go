@@ -3,7 +3,6 @@ package admin
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	v1 "k8s.io/api/core/v1"
@@ -79,12 +78,8 @@ func (e *Executor) ExecToPod(namespace string, podName, containerName, command s
 		Stderr: &stderr,
 		Tty:    false,
 	})
-	if err != nil {
-		err = fmt.Errorf("error in Stream: %v", err)
-		return
-	}
-	if stderr.Len() != 0 {
-		err = errors.New(stderr.String())
+	if err != nil || stderr.Len() != 0 {
+		err = fmt.Errorf("error in Stream: %v, stderr: %s", err, stderr.String())
 		return
 	}
 

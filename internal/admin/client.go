@@ -77,12 +77,10 @@ func (ac *adminClient) GetStatus(ip string, port int) (s HStreamStatus, err erro
 // BootstrapHStore init hStore cluster
 func (ac *adminClient) BootstrapHStore(ip string, port int) error {
 	sPort := strconv.Itoa(port)
-	output, err := ac.runCommandInPod(cliCommand{
+	// ignore err and check store status
+	output, _ := ac.runCommandInPod(cliCommand{
 		args: []string{"store", "--host", ip, "--port", sPort, "status"},
 	})
-	if err != nil {
-		return err
-	}
 	skipSubCmd, err := checkStoreStatus(output)
 	if err != nil {
 		return err
@@ -105,12 +103,11 @@ func (ac *adminClient) BootstrapHStore(ip string, port int) error {
 // BootstrapHServer init hserver cluster
 func (ac *adminClient) BootstrapHServer(ip string, port int) error {
 	sPort := strconv.Itoa(port)
-	output, err := ac.runCommandInPod(cliCommand{
+	// ignore err and check store status
+	output, _ := ac.runCommandInPod(cliCommand{
 		args: []string{"server", "--host", ip, "--port", sPort, "status"},
 	})
-	if err != nil {
-		return err
-	}
+
 	skipSubCmd, err := checkServerStatus(output)
 	if err != nil {
 		return err

@@ -12,7 +12,7 @@ func CreateDefaultCR() *appsv1alpha1.HStreamDB {
 	nShards := int32(1)
 	replica := int32(1)
 	hStoreReplica := int32(3)
-
+	storageClassName := "standard"
 	return &appsv1alpha1.HStreamDB{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HStreamDB",
@@ -32,9 +32,10 @@ func CreateDefaultCR() *appsv1alpha1.HStreamDB {
 			},
 			VolumeClaimTemplate: &corev1.PersistentVolumeClaim{
 				Spec: corev1.PersistentVolumeClaimSpec{
+					StorageClassName: &storageClassName,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("1Gi"),
+							corev1.ResourceStorage: resource.MustParse("0Gi"),
 						},
 					},
 				},
@@ -50,10 +51,10 @@ func CreateDefaultCR() *appsv1alpha1.HStreamDB {
 					Args: []string{
 						"--config-path",
 						"/etc/hstream/config.yaml",
-						"--host",
+						"--bind-address",
 						"0.0.0.0",
-						"--address",
-						"127.0.0.1",
+						"--advertised-address",
+						"$(POD_IP)",
 						"--port",
 						"6570",
 						"--internal-port",

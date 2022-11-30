@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"fmt"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,7 +43,7 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 
 	logger.Info("Bootstrap hServer")
 	if err = r.AdminClientProvider.GetAdminClient(hdb).BootstrapHServer(ip, port); err != nil {
-		return &requeue{curError: err, delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	}
 
 	hdb.Status.HServerConfigured = true
@@ -63,5 +64,12 @@ func (a bootstrapHServer) getHServerHost(hdb *appsv1alpha1.HStreamDB) (ip string
 		err = errors.New("invalid port")
 		return
 	}
-	return service.Name, port, nil
+
+	// ep. hdbName-hserver-0.svcName.namespace
+	ip = fmt.Sprintf("%s-%d.%s.%s",
+		appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
+		0,
+		service.Name,
+		service.Namespace)
+	return ip, port, nil
 }
