@@ -76,8 +76,7 @@ jobs:
     - name: Install rqlite cluster
       if: matrix.use-existing-cluster
       run: |
-        curl -s https://raw.githubusercontent.com/rqlite/kubernetes-configuration/master/service.yaml -o rqlite-service.yaml
-        kubectl apply -f rqlite-service.yaml
+        kubectl apply -f https://raw.githubusercontent.com/rqlite/kubernetes-configuration/master/service.yaml
 
         kubectl apply -f - <<EOF
           apiVersion: apps/v1
