@@ -16,10 +16,10 @@ const (
 )
 
 var hServerArg = map[string]string{
-	"--config-path":  "/etc/hstream/config.yaml",
-	"--host":         "0.0.0.0",
-	"--address":      "$(POD_IP)",
-	"--store-config": hServerStoreConfig + "/config.json",
+	"--config-path":        "/etc/hstream/config.yaml",
+	"--bind-address":       "0.0.0.0",
+	"--advertised-address": "$(POD_IP)",
+	"--store-config":       hServerStoreConfig + "/config.json",
 	//"--port":             "6570",
 	//"--internal-port":    "6571",
 	//"--seed-nodes":       "hstream-server-0.hstream-server:6571", // fill this while reconciling deployment

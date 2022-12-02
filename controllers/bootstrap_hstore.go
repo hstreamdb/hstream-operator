@@ -44,7 +44,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	adminClient := r.AdminClientProvider.GetAdminClient(hdb)
 	logger.Info("Check hstore status")
 	if status, err := adminClient.GetStatus(ip, port); err != nil {
-		return &requeue{curError: err, delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	} else if status.HStoreInited {
 		hdb.Status.HStoreConfigured = true
 		return nil
@@ -52,7 +52,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 
 	logger.Info("Bootstrap hstore")
 	if err = adminClient.BootstrapHStore(ip, port); err != nil {
-		return &requeue{curError: err, delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	}
 
 	hdb.Status.HStoreConfigured = true
