@@ -42,7 +42,7 @@ var _ = Describe("AddAdminServer", func() {
 
 		It("should have default port in args", func() {
 			Expect(deploy.Spec.Template.Spec.Containers).NotTo(BeEmpty())
-			Expect(deploy.Spec.Template.Spec.Containers[0].Args).Should(ContainElements("--port", "6440"))
+			Expect(deploy.Spec.Template.Spec.Containers[0].Args).Should(ContainElements("--admin-port", "6440"))
 		})
 
 		When("admin server has been deploy", func() {

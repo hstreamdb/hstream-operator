@@ -7,20 +7,15 @@ import (
 )
 
 type mockAdminClient struct {
-	status HStreamStatus
 }
 
-func (ac *mockAdminClient) BootstrapHStore(ip string, port int) error {
-	ac.status.HStoreInited = true
+func (ac *mockAdminClient) BootstrapHStore() error {
+
 	return nil
 }
 
-func (ac *mockAdminClient) BootstrapHServer(ip string, port int) error {
+func (ac *mockAdminClient) BootstrapHServer() error {
 	return nil
-}
-
-func (ac *mockAdminClient) GetStatus(ip string, port int) (HStreamStatus, error) {
-	return ac.status, nil
 }
 
 type mockAdminClientProvider struct {

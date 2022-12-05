@@ -25,7 +25,7 @@ var adminServerArg = map[string]string{
 
 var adminServerPorts = []corev1.ContainerPort{
 	{
-		Name:          "port",
+		Name:          "admin-port",
 		ContainerPort: 6440,
 		Protocol:      corev1.ProtocolTCP,
 	},

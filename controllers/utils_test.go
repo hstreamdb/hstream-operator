@@ -130,6 +130,74 @@ var _ = Describe("Utils", func() {
 		}))
 	})
 
+	It("test mergePorts2", func() {
+		required := []corev1.ContainerPort{
+			{
+				Name:          "port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+		}
+		userDefined := []corev1.ContainerPort{
+			{
+				Name:          "admin-port",
+				ContainerPort: 2,
+			},
+		}
+		newPorts := mergePorts(required, userDefined)
+		Expect(newPorts).To(Equal([]corev1.ContainerPort{
+			{
+				Name:          "port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "admin-port",
+				ContainerPort: 2,
+			},
+		}))
+	})
+
+	It("test mergePorts3", func() {
+		required := []corev1.ContainerPort{
+			{
+				Name:          "port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "gossip-port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+		}
+		userDefined := []corev1.ContainerPort{
+			{
+				Name:          "gossip-port",
+				ContainerPort: 2,
+			},
+		}
+		newPorts := mergePorts(required, userDefined)
+		Expect(newPorts).To(Equal([]corev1.ContainerPort{
+			{
+				Name:          "port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "gossip-port",
+				ContainerPort: 2,
+			},
+			{
+				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+		}))
+	})
+
 	Context("test use pvc", func() {
 		var hdb *appsv1alpha1.HStreamDB
 		BeforeEach(func() {
