@@ -4,37 +4,39 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	"net/http"
+	"time"
 )
 
 type Executor struct {
-	Clientset kubernetes.Clientset
+	clientSet *kubernetes.Clientset
 	Config    rest.Config
 }
 
 func NewExecutor(config *rest.Config) *Executor {
-	clientset, _ := kubernetes.NewForConfig(config)
+	clientSet, _ := kubernetes.NewForConfig(config)
 	return &Executor{
-		Clientset: *clientset,
+		clientSet: clientSet,
 		Config:    *config,
 	}
 }
 
-func (e *Executor) ExecToPodByLabel(namespace string, label map[string]string,
-	containerName, command string, stdin io.Reader) (output string, err error) {
-
-	core := e.Clientset.CoreV1()
+func (e *Executor) getPodNameByLabel(namespace string, label map[string]string) (name string, err error) {
+	core := e.clientSet.CoreV1()
 	pods, err := core.Pods(namespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: labels.FormatLabels(label),
+		FieldSelector: fields.Set{"status.phase": "Running"}.String(),
 		Limit:         1,
 	})
+
 	if err != nil {
 		return
 	}
@@ -44,28 +46,37 @@ func (e *Executor) ExecToPodByLabel(namespace string, label map[string]string,
 		return
 	}
 
-	pod := pods.Items[0]
-	return e.ExecToPod(namespace, pod.Name, containerName, command, stdin)
+	name = pods.Items[0].Name
+	return
 }
 
-func (e *Executor) ExecToPod(namespace string, podName, containerName, command string, stdin io.Reader) (
+func (e *Executor) ExecToPodByLabel(namespace string, label map[string]string,
+	containerName, command string, timeout time.Duration) (output string, err error) {
+
+	podName, err := e.getPodNameByLabel(namespace, label)
+	if err != nil {
+		err = fmt.Errorf("couldn't get any running pod that has label %v", label)
+		return
+	}
+	return e.ExecToPod(namespace, podName, containerName, command, timeout)
+}
+
+func (e *Executor) ExecToPod(namespace string, targetPod, containerName, command string, timeout time.Duration) (
 	output string, err error) {
 
-	req := e.Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
-		Namespace(namespace).SubResource("exec")
+	req := e.clientSet.CoreV1().RESTClient().Post().Resource("pods").Name(targetPod).
+		Namespace(namespace).SubResource("exec").Timeout(timeout)
 	option := &v1.PodExecOptions{
 		Command:   []string{"sh", "-c", command},
 		Container: containerName,
-		Stdin:     stdin != nil,
 		Stdout:    true,
 		Stderr:    true,
-		TTY:       false,
 	}
 	req.VersionedParams(
 		option,
 		scheme.ParameterCodec,
 	)
-	exec, err := remotecommand.NewSPDYExecutor(&e.Config, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(&e.Config, http.MethodPost, req.URL())
 	if err != nil {
 		err = fmt.Errorf("error while creating Executor: %v", err)
 		return
@@ -73,10 +84,8 @@ func (e *Executor) ExecToPod(namespace string, podName, containerName, command s
 
 	var stdout, stderr bytes.Buffer
 	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:  stdin,
 		Stdout: &stdout,
 		Stderr: &stderr,
-		Tty:    false,
 	})
 	if err != nil || stderr.Len() != 0 {
 		err = fmt.Errorf("error in Stream: %v, stderr: %s", err, stderr.String())

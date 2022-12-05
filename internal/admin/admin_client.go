@@ -5,19 +5,12 @@ import (
 )
 
 type AdminClient interface {
-	BootstrapHStore(ip string, port int) error
-	BootstrapHServer(ip string, port int) error
-	GetStatus(ip string, port int) (HStreamStatus, error)
-}
-
-type HStreamStatus struct {
-	HStoreInited bool
-	HServer      string
-	HStore       string
+	BootstrapHStore() error
+	BootstrapHServer() error
 }
 
 // AdminClientProvider provides an abstraction for creating clients that
-// communicate with the hstreamdb.
+// communicate with the HStreamDB.
 type AdminClientProvider interface {
 	// GetAdminClient generates a client for performing administrative actions
 	// against the hstreamdb.

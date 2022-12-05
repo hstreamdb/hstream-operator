@@ -116,7 +116,7 @@ func mergePorts(required, userDefined []corev1.ContainerPort) []corev1.Container
 			}
 		}
 		if found {
-			ports[i] = userDefined[i]
+			ports[i] = userDefined[j]
 			ports[i].Protocol = required[i].Protocol
 		} else {
 			ports[i] = required[i]

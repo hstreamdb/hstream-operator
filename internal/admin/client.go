@@ -1,19 +1,16 @@
 package admin
 
 import (
-	"context"
 	"fmt"
 	"github.com/go-logr/logr"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"k8s.io/client-go/rest"
-	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 )
 
 // defaultCLITimeout is the default timeout for CLI commands.
-var defaultCLITimeout = 10
+var defaultCLITimeout = 15 * time.Second
 
 type realAdminClientProvider struct {
 	// log implementation for logging output
@@ -58,81 +55,56 @@ type cmdOrder struct {
 	subCmd      *cmdOrder
 }
 
-func (ac *adminClient) GetStatus(ip string, port int) (s HStreamStatus, err error) {
-	sPort := strconv.Itoa(port)
-	output, _ := ac.runCommandInPod(cliCommand{
-		args: []string{"store", "--host", ip, "--port", sPort, "status"},
-	})
-
-	ok, _ := checkStoreStatus(output)
-	if ok {
-		s.HStoreInited = true
-	}
-
-	// TODO: get all hStream status from http service
-	return s, nil
-
-}
-
 // BootstrapHStore init hStore cluster
-func (ac *adminClient) BootstrapHStore(ip string, port int) error {
-	sPort := strconv.Itoa(port)
-	// ignore err and check store status
-	output, _ := ac.runCommandInPod(cliCommand{
-		args: []string{"store", "--host", ip, "--port", sPort, "status"},
-	})
-	skipSubCmd, err := checkStoreStatus(output)
-	if err != nil {
-		return err
-	}
-	if skipSubCmd {
-		return nil
+func (ac *adminClient) BootstrapHStore() error {
+	command := cliCommand{
+		// run the bootstrap cmd in the admin server pod
+		targetComponent: string(appsv1alpha1.ComponentTypeAdminServer),
+		containerName:   ac.hdb.Spec.AdminServer.Container.Name,
+		args: []string{"store", "nodes-config", "bootstrap",
+			"--metadata-replicate-across", fmt.Sprintf("'node:%d'", ac.hdb.Spec.Config.MetadataReplicateAcross)},
 	}
 
-	output, err = ac.runCommandInPod(cliCommand{
-		args: []string{"store", "--host", ip, "--port", sPort, "nodes-config", "bootstrap",
-			"--metadata-replicate-across", fmt.Sprintf("'node:%d'", ac.hdb.Spec.Config.MetadataReplicateAcross)},
-	})
+	userDefinedPorts := ac.hdb.Spec.AdminServer.Container.Ports
+	for i := range userDefinedPorts {
+		if userDefinedPorts[i].Name == "admin-port" {
+			command.args = append(command.args, "--port", fmt.Sprint(userDefinedPorts[0].ContainerPort))
+			break
+		}
+	}
+
+	output, err := ac.runCommandInPod(command)
 	if err != nil {
 		return err
 	}
+
 	_, err = checkStoreInit(output)
 	return err
 }
 
-// BootstrapHServer init hserver cluster
-func (ac *adminClient) BootstrapHServer(ip string, port int) error {
-	sPort := strconv.Itoa(port)
-	// ignore err and check store status
-	output, _ := ac.runCommandInPod(cliCommand{
-		args: []string{"server", "--host", ip, "--port", sPort, "status"},
-	})
+// BootstrapHServer init hServer cluster
+func (ac *adminClient) BootstrapHServer() error {
+	command := cliCommand{
+		targetComponent: string(appsv1alpha1.ComponentTypeHServer),
+		containerName:   ac.hdb.Spec.HServer.Container.Name,
+		args:            []string{"server", "init"},
+	}
 
-	skipSubCmd, err := checkServerStatus(output)
+	userDefinedPorts := ac.hdb.Spec.HServer.Container.Ports
+	for i := range userDefinedPorts {
+		if userDefinedPorts[i].Name == "port" {
+			command.args = append(command.args, "--port", fmt.Sprint(userDefinedPorts[0].ContainerPort))
+			break
+		}
+	}
+
+	output, err := ac.runCommandInPod(command)
 	if err != nil {
 		return err
 	}
-	if skipSubCmd {
-		return nil
-	}
 
-	output, err = ac.runCommandInPod(cliCommand{
-		args: []string{"server", "--host", ip, "--port", sPort, "init"},
-	})
-	if err != nil {
-		return err
-	}
 	_, err = checkServerInit(output)
 	return err
-}
-
-func checkStoreStatus(output string) (skipSubCmd bool, err error) {
-	if strings.Contains(output, "ALIVE") {
-		// return true for skipping sub cmd
-		return true, nil
-	}
-	// TODO: check error
-	return false, nil
 }
 
 func checkStoreInit(output string) (skipSubCmd bool, err error) {
@@ -142,14 +114,6 @@ func checkStoreInit(output string) (skipSubCmd bool, err error) {
 
 	err = fmt.Errorf("hstore init failed: %s", output)
 	return
-}
-
-func checkServerStatus(output string) (skipSubCmd bool, err error) {
-	if strings.Contains(output, "Running") {
-		return true, nil
-	}
-	// TODO: check error
-	return false, nil
 }
 
 func checkServerInit(output string) (skipSubCmd bool, err error) {
@@ -166,54 +130,33 @@ func (ac *adminClient) runCommandInPod(cmd cliCommand) (string, error) {
 		cmd.binary = "hadmin"
 	}
 
+	containerName := cmd.containerName
+	// use component type as default container name if user doesn't define name
+	if containerName == "" {
+		containerName = cmd.targetComponent
+	}
+
 	remoteCmdToExec := fmt.Sprintf("%s %s", cmd.binary, strings.Join(cmd.args, " "))
 
-	// run the bootstrap cmd in the admin server pod
-	podType := string(appsv1alpha1.ComponentTypeAdminServer)
-	containerName := ac.hdb.Spec.AdminServer.Container.Name
-	if containerName == "" {
-		containerName = podType
-	}
-	label := map[string]string{appsv1alpha1.ComponentKey: podType}
-
-	output, err := ac.remoteExec.ExecToPodByLabel(ac.hdb.Namespace, label, containerName, remoteCmdToExec, nil)
+	targetPodLabel := map[string]string{appsv1alpha1.ComponentKey: cmd.targetComponent}
+	output, err := ac.remoteExec.ExecToPodByLabel(ac.hdb.Namespace, targetPodLabel,
+		containerName, remoteCmdToExec, cmd.getTimeout())
 	if err != nil {
-		ac.log.Error(err, "Error from hadmin command", "stdout", output, "command", remoteCmdToExec)
+		ac.log.Error(err, "Error from "+cmd.binary+" command", "command", remoteCmdToExec)
 		return "", err
 	}
 	return output, nil
-}
-
-func (ac *adminClient) runCommand(cmd cliCommand) (string, error) {
-	if cmd.binary == "" {
-		cmd.binary = "hadmin"
-	}
-
-	args := strings.Join(cmd.args, " ")
-
-	hardTimeout := cmd.getTimeout()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(hardTimeout))
-	defer cancel()
-
-	execCommand := exec.CommandContext(ctx, cmd.binary, args)
-	ac.log.Info("Running command", "path", execCommand.Path, "args", execCommand.Args)
-
-	output, err := execCommand.CombinedOutput()
-	if err != nil {
-		exitError, canCast := err.(*exec.ExitError)
-		if canCast {
-			ac.log.Error(exitError, "Error from hadmin command", "code",
-				exitError.ProcessState.ExitCode(), "stdout", string(output), "stderr", string(exitError.Stderr))
-		}
-		return "", err
-	}
-	return string(output), nil
 }
 
 // cliCommand describes a command that we are running against hstream.
 type cliCommand struct {
 	// binary is the binary to run.
 	binary string
+
+	// the component will run the cmd
+	targetComponent string
+	// the container in the target component pod
+	containerName string
 
 	args []string
 
@@ -222,9 +165,9 @@ type cliCommand struct {
 }
 
 // getTimeout returns the timeout for the command
-func (command cliCommand) getTimeout() int {
+func (command cliCommand) getTimeout() time.Duration {
 	if command.timeout != 0 {
-		return int(command.timeout.Seconds())
+		return command.timeout
 	}
 	return defaultCLITimeout
 }
