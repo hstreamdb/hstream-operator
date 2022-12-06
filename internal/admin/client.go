@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	"github.com/hstreamdb/hstream-operator/internal"
 	"k8s.io/client-go/rest"
 	"strings"
 	"time"
@@ -65,12 +66,13 @@ func (ac *adminClient) BootstrapHStore() error {
 			"--metadata-replicate-across", fmt.Sprintf("'node:%d'", ac.hdb.Spec.Config.MetadataReplicateAcross)},
 	}
 
-	userDefinedPorts := ac.hdb.Spec.AdminServer.Container.Ports
-	for i := range userDefinedPorts {
-		if userDefinedPorts[i].Name == "admin-port" {
-			command.args = append(command.args, "--port", fmt.Sprint(userDefinedPorts[0].ContainerPort))
-			break
-		}
+	flags := internal.FlagSet{}
+	if err := flags.Parse(ac.hdb.Spec.AdminServer.Container.Args); err != nil {
+		return fmt.Errorf("parse admin server args failed. %w", err)
+	}
+	args := flags.Flags()
+	if port, ok := args["admin-port"]; ok {
+		command.args = append(command.args, "--port", port)
 	}
 
 	output, err := ac.runCommandInPod(command)
@@ -90,12 +92,13 @@ func (ac *adminClient) BootstrapHServer() error {
 		args:            []string{"server", "init"},
 	}
 
-	userDefinedPorts := ac.hdb.Spec.HServer.Container.Ports
-	for i := range userDefinedPorts {
-		if userDefinedPorts[i].Name == "port" {
-			command.args = append(command.args, "--port", fmt.Sprint(userDefinedPorts[0].ContainerPort))
-			break
-		}
+	flags := internal.FlagSet{}
+	if err := flags.Parse(ac.hdb.Spec.HServer.Container.Args); err != nil {
+		return fmt.Errorf("parse hServer args failed. %w", err)
+	}
+	args := flags.Flags()
+	if port, ok := args["port"]; ok {
+		command.args = append(command.args, "--port", port)
 	}
 
 	output, err := ac.runCommandInPod(command)

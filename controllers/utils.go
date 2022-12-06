@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
 	"strings"
 )
@@ -70,29 +72,23 @@ func extendEnv(container *corev1.Container, env []corev1.EnvVar) {
 	}
 }
 
-func extendArg(container *corev1.Container, defaultArgs map[string]string) (err error) {
+func extendArg(container *corev1.Container, defaultArgs map[string]string) (args map[string]string, err error) {
 	flags := internal.FlagSet{}
 	if err = flags.Parse(container.Args); err != nil {
-		return err
+		return
 	}
 
 	// flag in the args doesn't contain prefix '-' or '--'
-	args := flags.Flags()
-
-	existingVars := make(map[string]bool, len(container.Args))
-	for flag := range args {
-		existingVars[flag] = true
-	}
-
+	args = flags.Flags()
 	for flag, value := range defaultArgs {
 		// we need to cut the prefix '-' or '--' before comparing with existingVars
 		flag = strings.TrimLeft(flag, "-")
-		if !existingVars[flag] {
+		if _, ok := args[flag]; !ok {
 			args[flag] = value
 		}
 	}
 
-	container.Args = make([]string, 0, len(args))
+	container.Args = make([]string, 0, len(args)*2)
 	// sort the arg list
 	flags.Visit(func(flag, value string) {
 		container.Args = append(container.Args, "--"+flag)
@@ -100,33 +96,54 @@ func extendArg(container *corev1.Container, defaultArgs map[string]string) (err 
 			container.Args = append(container.Args, value)
 		}
 	})
-	return nil
+	return
 }
 
-// mergePorts merge the same name of user defined port to required port
-func mergePorts(required, userDefined []corev1.ContainerPort) []corev1.ContainerPort {
+func extendPorts(args map[string]string, userDefinedPorts, defaultPorts []corev1.ContainerPort) []corev1.ContainerPort {
+	// copy default ports and cover the containerPort with user-defined port arg
+	required := coverPorts(args, defaultPorts)
+	// merge user-defined ports to required
+	return mergePorts(required, userDefinedPorts)
+}
+
+// coverPorts use the port in user-defined args to cover the default port
+func coverPorts(args map[string]string, required []corev1.ContainerPort) []corev1.ContainerPort {
 	ports := make([]corev1.ContainerPort, len(required))
+	copy(ports, required)
+
 	for i := range required {
-		found := false
-		j := 0
-		for j = range userDefined {
-			if (&required[i]).Name == (&userDefined[j]).Name {
-				found = true
-				break
-			}
-		}
-		if found {
-			ports[i] = userDefined[j]
-			ports[i].Protocol = required[i].Protocol
-		} else {
-			ports[i] = required[i]
+		if port, ok := args[(&required[i]).Name]; ok {
+			ports[i].ContainerPort = intstr.Parse(port).IntVal
 		}
 	}
 	return ports
 }
 
-// usePvc determines whether we should attach a PVC to a pod.
-func usePvc(hdb *appsv1alpha1.HStreamDB) bool {
+// mergePorts merge the same name of user defined port to required port
+func mergePorts(required, userDefined []corev1.ContainerPort) []corev1.ContainerPort {
+	ports := make([]corev1.ContainerPort, len(required))
+	copy(ports, required)
+
+	for i := range userDefined {
+		found := false
+		for j := range ports {
+			if (&ports[j]).Name == (&userDefined[i]).Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if (&userDefined[i]).Name == "" {
+				(&userDefined[i]).Name = fmt.Sprintf("unset-%d", (&userDefined[i]).ContainerPort)
+			}
+			ports = append(ports, userDefined[i])
+		}
+	}
+	return ports
+}
+
+// usePVC determines whether we should attach a PVC to a pod.
+func usePVC(hdb *appsv1alpha1.HStreamDB) bool {
 	var storage *resource.Quantity
 
 	if hdb.Spec.VolumeClaimTemplate != nil {
@@ -136,7 +153,7 @@ func usePvc(hdb *appsv1alpha1.HStreamDB) bool {
 			storage = &storageCopy
 		}
 	}
-	return storage == nil || !storage.IsZero()
+	return storage != nil && !storage.IsZero()
 }
 
 func isHashChanged(obj1, obj2 *metav1.ObjectMeta) bool {
