@@ -99,7 +99,7 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *a
 
 func (a addHStore) getSts(hdb *appsv1alpha1.HStreamDB) appsv1.StatefulSet {
 	podTemplate := a.getPodTemplate(hdb)
-	pvcs := a.getPvc(hdb)
+	pvcs := a.getPVC(hdb)
 
 	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HStore, &podTemplate, appsv1alpha1.ComponentTypeHStore)
 	sts.Spec.VolumeClaimTemplates = pvcs
@@ -136,8 +136,6 @@ func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container 
 	structAssign(&container, &hStore.Container)
 	extendEnv(&container, hStoreEnvVar)
 
-	container.Ports = mergePorts(hStorePorts, container.Ports)
-
 	if container.Name == "" {
 		container.Name = string(appsv1alpha1.ComponentTypeHStore)
 	}
@@ -150,14 +148,10 @@ func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container 
 	for k, v := range hStoreArg {
 		args[k] = v
 	}
-
 	args["--num-shards"] = strconv.Itoa(int(*hdb.Spec.Config.NShards))
+	args, _ = extendArg(&container, args)
 
-	for _, p := range container.Ports {
-		args["--"+(&p).Name] = strconv.Itoa(int((&p).ContainerPort))
-	}
-
-	extendArg(&container, args)
+	container.Ports = extendPorts(args, container.Ports, hStorePorts)
 
 	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -197,7 +191,7 @@ func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Vol
 		})
 	})
 
-	if !usePvc(hdb) {
+	if !usePVC(hdb) {
 		volumes = append(volumes, corev1.Volume{
 			Name: internal.GetPvcName(hdb),
 			VolumeSource: corev1.VolumeSource{
@@ -208,8 +202,8 @@ func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Vol
 	return
 }
 
-func (a addHStore) getPvc(hdb *appsv1alpha1.HStreamDB) (pvc []corev1.PersistentVolumeClaim) {
-	if usePvc(hdb) {
+func (a addHStore) getPVC(hdb *appsv1alpha1.HStreamDB) (pvc []corev1.PersistentVolumeClaim) {
+	if usePVC(hdb) {
 		return []corev1.PersistentVolumeClaim{internal.GetPvc(hdb)}
 	}
 	return nil

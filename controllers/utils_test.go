@@ -87,13 +87,18 @@ var _ = Describe("Utils", func() {
 				"--b", "1",
 			},
 		}
-		newArgs := map[string]string{
+		defaultArgs := map[string]string{
 			"--a": "2",
 			"--c": "2",
 		}
-		err := extendArg(container, newArgs)
+		args, err := extendArg(container, defaultArgs)
 		Expect(err).To(BeNil())
 		Expect(container.Args).To(ContainElements("--a", "1", "--b", "1", "--c", "2"))
+		Expect(args).To(BeComparableTo(map[string]string{
+			"a": "1",
+			"b": "1",
+			"c": "2",
+		}))
 	})
 
 	It("test mergePorts", func() {
@@ -121,11 +126,15 @@ var _ = Describe("Utils", func() {
 		Expect(newPorts).To(Equal([]corev1.ContainerPort{
 			{
 				Name:          "port",
-				ContainerPort: 2,
+				ContainerPort: 1,
 			},
 			{
 				Name:          "admin-port",
 				ContainerPort: 1,
+			},
+			{
+				Name:          "unknown-port",
+				ContainerPort: 2,
 			},
 		}))
 	})
@@ -143,7 +152,6 @@ var _ = Describe("Utils", func() {
 		}
 		userDefined := []corev1.ContainerPort{
 			{
-				Name:          "admin-port",
 				ContainerPort: 2,
 			},
 		}
@@ -155,12 +163,16 @@ var _ = Describe("Utils", func() {
 			},
 			{
 				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "unset-2",
 				ContainerPort: 2,
 			},
 		}))
 	})
 
-	It("test mergePorts3", func() {
+	It("test coverPorts", func() {
 		required := []corev1.ContainerPort{
 			{
 				Name:          "port",
@@ -175,24 +187,73 @@ var _ = Describe("Utils", func() {
 				ContainerPort: 1,
 			},
 		}
-		userDefined := []corev1.ContainerPort{
+		userDefinedArgs := map[string]string{
+			"unknown-port": "1",
+			"port":         "2",
+		}
+		newPorts := coverPorts(userDefinedArgs, required)
+		Expect(newPorts).To(Equal([]corev1.ContainerPort{
 			{
-				Name:          "gossip-port",
+				Name:          "port",
 				ContainerPort: 2,
 			},
+			{
+				Name:          "gossip-port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+		}))
+	})
+
+	It("test extendPorts", func() {
+		container := &corev1.Container{
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "unknown-port",
+					ContainerPort: 1,
+				},
+				{
+					Name:          "port",
+					ContainerPort: 1,
+				},
+			},
 		}
-		newPorts := mergePorts(required, userDefined)
-		Expect(newPorts).To(Equal([]corev1.ContainerPort{
+		args := map[string]string{
+			"port": "2",
+		}
+		required := []corev1.ContainerPort{
 			{
 				Name:          "port",
 				ContainerPort: 1,
 			},
 			{
 				Name:          "gossip-port",
-				ContainerPort: 2,
+				ContainerPort: 1,
 			},
 			{
 				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+		}
+		container.Ports = extendPorts(args, container.Ports, required)
+		Expect(container.Ports).To(Equal([]corev1.ContainerPort{
+			{
+				Name:          "port",
+				ContainerPort: 2,
+			},
+			{
+				Name:          "gossip-port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "admin-port",
+				ContainerPort: 1,
+			},
+			{
+				Name:          "unknown-port",
 				ContainerPort: 1,
 			},
 		}))
@@ -217,17 +278,22 @@ var _ = Describe("Utils", func() {
 		})
 
 		It("should use pvc", func() {
-			Expect(usePvc(hdb)).To(BeTrue())
+			Expect(usePVC(hdb)).To(BeTrue())
 		})
 
 		It("should not user pvc", func() {
 			hdb.Spec.VolumeClaimTemplate.Spec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("0Gi")
-			Expect(usePvc(hdb)).To(BeFalse())
+			Expect(usePVC(hdb)).To(BeFalse())
 		})
 
 		It("should not user pvc", func() {
 			delete(hdb.Spec.VolumeClaimTemplate.Spec.Resources.Requests, corev1.ResourceStorage)
-			Expect(usePvc(hdb)).To(BeFalse())
+			Expect(usePVC(hdb)).To(BeFalse())
+		})
+
+		It("should not user pvc if VolumeClaimTemplate is nil", func() {
+			hdb.Spec.VolumeClaimTemplate = nil
+			Expect(usePVC(hdb)).To(BeFalse())
 		})
 	})
 

@@ -9,7 +9,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 const (
@@ -108,7 +107,6 @@ func (a addAdminServer) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Conta
 	}
 
 	structAssign(&container, &adminServer.Container)
-	container.Ports = mergePorts(adminServerPorts, container.Ports)
 
 	if container.Name == "" {
 		container.Name = string(appsv1alpha1.ComponentTypeAdminServer)
@@ -122,12 +120,9 @@ func (a addAdminServer) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Conta
 	for k, v := range adminServerArg {
 		args[k] = v
 	}
+	args, _ = extendArg(&container, args)
 
-	for _, p := range container.Ports {
-		args["--"+(&p).Name] = strconv.Itoa(int((&p).ContainerPort))
-	}
-
-	extendArg(&container, args)
+	container.Ports = extendPorts(args, container.Ports, adminServerPorts)
 
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	container.VolumeMounts = append(container.VolumeMounts,

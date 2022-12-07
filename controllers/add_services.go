@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +31,10 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 	service := internal.GetHeadlessService(hdb, appsv1alpha1.ComponentTypeHServer)
 
 	hServer := &hdb.Spec.HServer
-	ports := mergePorts(hServerPorts, hServer.Container.Ports)
+	ports, err := a.getPorts(&hServer.Container, hServerPorts)
+	if err != nil {
+		return fmt.Errorf("parse hServer args failed. %w", err)
+	}
 
 	for _, port := range ports {
 		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
@@ -46,7 +50,10 @@ func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconcile
 	service := internal.GetHeadlessService(hdb, appsv1alpha1.ComponentTypeHStore)
 
 	hStore := &hdb.Spec.HStore
-	ports := mergePorts(hStorePorts, hStore.Container.Ports)
+	ports, err := a.getPorts(&hStore.Container, hStorePorts)
+	if err != nil {
+		return fmt.Errorf("parse hStore args failed. %w", err)
+	}
 
 	for _, port := range ports {
 		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
@@ -60,7 +67,10 @@ func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconcile
 
 func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) (err error) {
 	adminServer := &hdb.Spec.AdminServer
-	ports := mergePorts(adminServerPorts, adminServer.Container.Ports)
+	ports, err := a.getPorts(&adminServer.Container, adminServerPorts)
+	if err != nil {
+		return fmt.Errorf("parse adminServer args failed. %w", err)
+	}
 
 	var servicePorts []corev1.ServicePort
 	for _, port := range ports {
@@ -70,10 +80,8 @@ func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReco
 			Port:     port.ContainerPort,
 		})
 	}
-
 	service := internal.GetService(hdb, servicePorts, appsv1alpha1.ComponentTypeAdminServer)
 
-	//hdb.Status.AdminServerAddr = fmt.Sprintf("%s.%s:%s", service.Name, service.Namespace, sPort)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -111,4 +119,18 @@ func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
 
 	logger.Info("Updating service")
 	return r.Update(ctx, existingService)
+}
+
+func (a addServices) getPorts(container *appsv1alpha1.Container, defaultPorts []corev1.ContainerPort) (
+	[]corev1.ContainerPort, error) {
+
+	flags := internal.FlagSet{}
+	if err := flags.Parse(container.Args); err != nil {
+		return nil, err
+	}
+
+	args := flags.Flags()
+	ports := extendPorts(args, container.Ports, defaultPorts)
+	return ports, nil
+
 }

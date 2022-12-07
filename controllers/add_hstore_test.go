@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -39,15 +38,6 @@ var _ = Describe("AddHstore", func() {
 			var err error
 			sts, err = getHStoreStatefulSet(hdb)
 			Expect(err).To(BeNil())
-		})
-
-		It("should have default port in args", func() {
-			Expect(sts.Spec.Template.Spec.Containers).NotTo(BeEmpty())
-			Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(ContainElements(
-				"--port", "4440",
-				"--gossip-port", "4441",
-				"--admin-port", "6440",
-				"--num-shards", fmt.Sprint(*hdb.Spec.Config.NShards)))
 		})
 
 		When("hserver has been deploy", func() {

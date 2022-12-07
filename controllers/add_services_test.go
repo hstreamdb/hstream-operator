@@ -67,7 +67,7 @@ var _ = Describe("AddServices", func() {
 				BeforeEach(func() {
 					hdb.Spec.HStore.Container.Ports = []corev1.ContainerPort{
 						{
-							Name:          "port",
+							Name:          "user-defined-port",
 							ContainerPort: 5440,
 						},
 					}
@@ -82,7 +82,7 @@ var _ = Describe("AddServices", func() {
 					svc, err := getService(hdb, appsv1alpha1.ComponentTypeHStore)
 					Expect(err).To(BeNil())
 					Expect(svc.Spec.Ports).To(ContainElement(corev1.ServicePort{
-						Name:     "port",
+						Name:     "user-defined-port",
 						Protocol: corev1.ProtocolTCP,
 						Port:     5440,
 						TargetPort: intstr.IntOrString{
