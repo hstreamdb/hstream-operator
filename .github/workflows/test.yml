@@ -3,8 +3,15 @@
 
 name: Run hstreamdb operator test case
 
+concurrency:
+  group: test-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
+    ## For update codecov.io
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -56,7 +63,7 @@ jobs:
 
     - name: Run unit tests that don't depend on really k8s cluster
       if: matrix.use-existing-cluster == false
-      run: ginkgo run ./...
+      run: ginkgo run --cover --coverprofile ./cover.out ./...
 
     - name: Setup minikube
       if: matrix.use-existing-cluster
@@ -64,65 +71,21 @@ jobs:
 
     - name: Install rqlite cluster
       if: matrix.use-existing-cluster
-      run: |
-        kubectl apply -f https://raw.githubusercontent.com/rqlite/kubernetes-configuration/master/service.yaml
-
-        kubectl apply -f - <<EOF
-          apiVersion: apps/v1
-          kind: StatefulSet
-          metadata:
-            name: rqlite
-          spec:
-            selector:
-              matchLabels:
-                app: rqlite # has to match .spec.template.metadata.labels
-            serviceName: rqlite-svc-internal
-            replicas: 3
-            podManagementPolicy: "Parallel"
-            template:
-              metadata:
-                labels:
-                  app: rqlite # has to match .spec.selector.matchLabels
-              spec:
-                terminationGracePeriodSeconds: 5
-                containers:
-                - name: rqlite
-                  image: rqlite/rqlite
-                  imagePullPolicy: IfNotPresent
-                  args: ["-disco-mode=dns","-disco-config={\"name\":\"rqlite-svc-internal\"}","-bootstrap-expect","3", "-join-interval=1s", "-join-attempts=120"]
-                  ports:
-                  - containerPort: 4001
-                    name: rqlite
-                  readinessProbe:
-                    httpGet:
-                      scheme: HTTP
-                      path: /readyz
-                      port: 4001
-                    periodSeconds: 5
-                    timeoutSeconds: 2
-                    initialDelaySeconds: 2
-                  livenessProbe:
-                    httpGet:
-                      scheme: HTTP
-                      path: /readyz?noleader
-                      port: rqlite
-                    initialDelaySeconds: 2
-                    timeoutSeconds: 2
-                    failureThreshold: 3
-                  volumeMounts:
-                  - name: rqlite-file
-                    mountPath: /rqlite/file
-                volumes:
-                - name: rqlite-file
-                  emptyDir:
-        EOF
+      uses: ./.github/actions/deploy-rqlite
 
     - name: Run unit tests that depend on existing k8s cluster
       if: matrix.use-existing-cluster
       env:
         USE_EXISTING_CLUSTER: ${{ matrix.use-existing-cluster }}
       # set label filter 'k8s' to ignore the test cases that don't deponed on really k8s cluster
-      run: ginkgo run --label-filter 'k8s' controllers/
+      run: ginkgo run --cover --coverprofile ./cover.out  --label-filter 'k8s' controllers/
+
+    - name: Report code coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./cover.out # optional
+        fail_ci_if_error: true # optional (default = false)
+        verbose: true # optional (default = false)
 
     - if: failure()
       run: kubectl get pods -A
@@ -132,4 +95,65 @@ jobs:
 
     - if: failure()
       run: kubectl get event
+  deployment:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        install:
+          - yaml
+    steps:
+      - run: minikube start
 
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/deploy-rqlite
+
+      - name: Build image
+        env:
+          IMG: "hstream/hstream-operator-controller:latest"
+        run: eval $(minikube docker-env) && docker build -t $IMG .
+
+      - name: Deploy controller
+        env:
+          IMG: "hstream/hstream-operator-controller:latest"
+        run: make deploy
+
+      - name: Check operator
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n hstream-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
+            echo "waiting operator controller pod running"
+            sleep 1
+          done
+
+      - name: Deploy hstreamdb
+        run: |
+          kubectl apply -f config/samples/
+      - name: Check hstream custom resource status
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          while
+            kubectl get hstreamdb hstreamdb-sample -o json
+            kubectl get pod
+            kubectl logs -l "control-plane=controller-manager" -n hstream-operator-system --tail=1000
+            status=`kubectl get hstreamdb hstreamdb-sample -o json | jq '.status'`;
+            echo "hserverConfigured=$(echo $status | jq --raw-output '.hserverConfigured')"
+            echo "hstoreConfigured=$(echo $status | jq --raw-output '.hstoreConfigured')"
+            [[ "$status" == "null" ]] \
+            || [[ "$(echo $status | jq --raw-output '.hserverConfigured')" != "true" ]] \
+            || [[ "$(echo $status | jq --raw-output '.hstoreConfigured')" != "true" ]]
+          do
+            echo "waiting for bootstrapping"
+            sleep 5
+          done
+      - if: failure()
+        run: kubectl logs -l "control-plane=controller-manager" -n hstream-operator-system --tail=1000
+      - if: failure()
+        run: kubectl describe hstreamdb hstreamdb-sample
+      - if: failure()
+        run: kubectl get hstreamdb hstreamdb-sample -o json
+      - if: failure()
+        run: kubectl get pods -A
