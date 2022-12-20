@@ -1,0 +1,59 @@
+name: Deployment rqlite
+description: "Deployment rqlite"
+runs:
+  using: "composite"
+  steps:
+    - name: deploy
+      shell: bash
+      run: |
+        kubectl apply -f https://raw.githubusercontent.com/rqlite/kubernetes-configuration/master/service.yaml
+
+        kubectl apply -f - <<EOF
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: rqlite
+          spec:
+            selector:
+              matchLabels:
+                app: rqlite # has to match .spec.template.metadata.labels
+            serviceName: rqlite-svc-internal
+            replicas: 3
+            podManagementPolicy: "Parallel"
+            template:
+              metadata:
+                labels:
+                  app: rqlite # has to match .spec.selector.matchLabels
+              spec:
+                terminationGracePeriodSeconds: 5
+                containers:
+                - name: rqlite
+                  image: rqlite/rqlite
+                  imagePullPolicy: IfNotPresent
+                  args: ["-disco-mode=dns","-disco-config={\"name\":\"rqlite-svc-internal\"}","-bootstrap-expect","3", "-join-interval=1s", "-join-attempts=120"]
+                  ports:
+                  - containerPort: 4001
+                    name: rqlite
+                  readinessProbe:
+                    httpGet:
+                      scheme: HTTP
+                      path: /readyz
+                      port: 4001
+                    periodSeconds: 5
+                    timeoutSeconds: 2
+                    initialDelaySeconds: 2
+                  livenessProbe:
+                    httpGet:
+                      scheme: HTTP
+                      path: /readyz?noleader
+                      port: rqlite
+                    initialDelaySeconds: 2
+                    timeoutSeconds: 2
+                    failureThreshold: 3
+                  volumeMounts:
+                  - name: rqlite-file
+                    mountPath: /rqlite/file
+                volumes:
+                - name: rqlite-file
+                  emptyDir:
+        EOF

@@ -49,6 +49,15 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods/portforward,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool

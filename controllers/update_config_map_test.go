@@ -23,15 +23,17 @@ var _ = Describe("UpdateConfigMap", func() {
 		hdb = mock.CreateDefaultCR()
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
-
-		requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, hdb)
+		_ = k8sClient.Delete(ctx, hdb)
 	})
 
 	Context("with a reconciled cluster", func() {
+		BeforeEach(func() {
+			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
+		})
+
 		It("should not requeue", func() {
 			Expect(requeue).To(BeNil())
 		})
@@ -108,6 +110,45 @@ var _ = Describe("UpdateConfigMap", func() {
 					Expect(newNShard.Data).To(HaveKeyWithValue("NSHARDS", "2"))
 				})
 			})
+		})
+	})
+
+	Context("with a invalid config", func() {
+		BeforeEach(func() {
+			hdb.Spec.Config.LogDeviceConfig = runtime.RawExtension{
+				Raw: []byte("invalid config"),
+			}
+			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
+		})
+
+		It("should requeue", func() {
+			Expect(requeue).NotTo(BeNil())
+		})
+
+		It("get error 'invalid raw'", func() {
+			Expect(requeue.curError).NotTo(BeNil())
+			Expect(requeue.curError.Error()).To(ContainSubstring("incorrect json raw"))
+		})
+	})
+
+	Context("with default nshard", func() {
+		BeforeEach(func() {
+			hdb.Spec.Config.NShards = nil
+			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
+		})
+		It("should not requeue", func() {
+			Expect(requeue).To(BeNil())
+		})
+
+		var nShard *corev1.ConfigMap
+		It("should successfully get config map", func() {
+			var err error
+			_, nShard, err = getConfigMaps(hdb)
+			Expect(err).To(BeNil())
+		})
+
+		It("NSHARDS should be '1'", func() {
+			Expect(nShard.Data["NSHARDS"]).To(Equal("1"))
 		})
 	})
 })

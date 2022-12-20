@@ -68,45 +68,55 @@ var _ = Describe("BootstrapHServer", Label("k8s"), func() {
 		k8sClient.Delete(ctx, hdb)
 	})
 
-	It("bootstrap", func() {
-		By("Bootstrap hstore")
-		Eventually(func() bool {
-			requeue = bootstrapHStore.reconcile(ctx, clusterReconciler, hdb)
-			if requeue == nil || (requeue.curError == nil && requeue.message == "") {
-				return true
-			}
-			return false
-		}, timeout, 10*time.Second).Should(BeTrue())
-
-		Expect(hdb.Status.HStoreConfigured).To(BeTrue())
-
-		By("Add hserver")
-		requeue = addHServer.reconcile(ctx, clusterReconciler, hdb)
-		Expect(requeue).To(BeNil())
-
-		By("Checking the hserver StatefulSet's ready replicas")
-		Eventually(func() bool {
-			sts := &appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
-				},
-			}
-			if err := checkPodRunningStatus(ctx, k8sClient, hdb, sts); err != nil {
-				By(fmt.Sprint("CheckPodRunningStatus failed. ", err.Error()))
+	Context("with bootstrap first", func() {
+		It("bootstrap", func() {
+			By("Bootstrap hstore")
+			Eventually(func() bool {
+				requeue = bootstrapHStore.reconcile(ctx, clusterReconciler, hdb)
+				if requeue == nil || (requeue.curError == nil && requeue.message == "") {
+					return true
+				}
 				return false
-			}
-			return true
-		}, timeout, 10*time.Second).Should(BeTrue())
+			}, timeout, 10*time.Second).Should(BeTrue())
 
-		By("Bootstrap hserver")
-		Eventually(func() bool {
-			requeue = bootstrapHServer.reconcile(ctx, clusterReconciler, hdb)
-			if requeue == nil || (requeue.curError == nil && requeue.message == "") {
+			Expect(hdb.Status.HStoreConfigured).To(BeTrue())
+
+			By("Add hserver")
+			requeue = addHServer.reconcile(ctx, clusterReconciler, hdb)
+			Expect(requeue).To(BeNil())
+
+			By("Checking the hserver StatefulSet's ready replicas")
+			Eventually(func() bool {
+				sts := &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
+					},
+				}
+				if err := checkPodRunningStatus(ctx, k8sClient, hdb, sts); err != nil {
+					By(fmt.Sprint("CheckPodRunningStatus failed. ", err.Error()))
+					return false
+				}
 				return true
-			}
-			return false
-		}, timeout, 10*time.Second).Should(BeTrue())
+			}, timeout, 10*time.Second).Should(BeTrue())
 
-		Expect(hdb.Status.HServerConfigured).To(BeTrue())
+			By("Bootstrap hserver")
+			Eventually(func() bool {
+				requeue = bootstrapHServer.reconcile(ctx, clusterReconciler, hdb)
+				if requeue == nil || (requeue.curError == nil && requeue.message == "") {
+					return true
+				}
+				return false
+			}, timeout, 10*time.Second).Should(BeTrue())
+
+			Expect(hdb.Status.HServerConfigured).To(BeTrue())
+
+			By("hServer has been bootstrapped")
+			requeue = bootstrapHServer.reconcile(ctx, clusterReconciler, hdb)
+			Expect(requeue).To(BeNil())
+
+			By("hStroe has been bootstrapped")
+			requeue = bootstrapHStore.reconcile(ctx, clusterReconciler, hdb)
+			Expect(requeue).To(BeNil())
+		})
 	})
 })
