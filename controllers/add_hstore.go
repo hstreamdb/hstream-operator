@@ -191,7 +191,7 @@ func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Vol
 		})
 	})
 
-	if !usePVC(hdb) {
+	if hdb.Spec.VolumeClaimTemplate == nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: internal.GetPvcName(hdb),
 			VolumeSource: corev1.VolumeSource{
@@ -203,7 +203,7 @@ func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Vol
 }
 
 func (a addHStore) getPVC(hdb *appsv1alpha1.HStreamDB) (pvc []corev1.PersistentVolumeClaim) {
-	if usePVC(hdb) {
+	if hdb.Spec.VolumeClaimTemplate != nil {
 		return []corev1.PersistentVolumeClaim{internal.GetPvc(hdb)}
 	}
 	return nil

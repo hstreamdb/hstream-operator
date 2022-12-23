@@ -7,10 +7,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("AddHstore", func() {
+var _ = Describe("AddHstore", Label("hstore"), func() {
 	var hdb *appsv1alpha1.HStreamDB
 	var requeue *requeue
 	hStore := addHStore{}
@@ -20,15 +23,16 @@ var _ = Describe("AddHstore", func() {
 		hdb = mock.CreateDefaultCR()
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
-
-		requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, hdb)
+		_ = k8sClient.Delete(ctx, hdb)
 	})
 
 	Context("with a reconciled cluster", func() {
+		BeforeEach(func() {
+			requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+		})
 		It("should not requeue", func() {
 			Expect(requeue).To(BeNil())
 		})
@@ -93,6 +97,44 @@ var _ = Describe("AddHstore", func() {
 					Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(command))
 				})
 			})
+		})
+	})
+
+	Context("with a reconciled cluster that used pvc", func() {
+		storageClassName := "standard"
+		BeforeEach(func() {
+			sts, err := getHStoreStatefulSet(hdb)
+			if err != nil {
+				Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
+			} else {
+				_ = k8sClient.Delete(ctx, sts)
+			}
+
+			hdb.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaim{
+				Spec: corev1.PersistentVolumeClaimSpec{
+					StorageClassName: &storageClassName,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
+						},
+					},
+				},
+			}
+
+			requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+		})
+
+		It("should not requeue", func() {
+			Expect(requeue).To(BeNil())
+		})
+
+		It("should get new sts with pvc", func() {
+			sts, err := getHStoreStatefulSet(hdb)
+			Expect(err).To(BeNil())
+			Expect(sts.Spec.VolumeClaimTemplates).To(HaveLen(1))
+			Expect(*sts.Spec.VolumeClaimTemplates[0].Spec.StorageClassName).To(Equal(storageClassName))
+			Expect(sts.Spec.VolumeClaimTemplates[0].Spec.AccessModes).To(ContainElement(corev1.ReadWriteOnce))
+
 		})
 	})
 })

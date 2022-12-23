@@ -2,8 +2,6 @@ package mock
 
 import (
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -12,7 +10,6 @@ func CreateDefaultCR() *appsv1alpha1.HStreamDB {
 	nShards := int32(1)
 	replica := int32(1)
 	hStoreReplica := int32(3)
-	storageClassName := "standard"
 	return &appsv1alpha1.HStreamDB{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HStreamDB",
@@ -30,18 +27,9 @@ func CreateDefaultCR() *appsv1alpha1.HStreamDB {
 					Raw: []byte("{}"),
 				},
 			},
-			VolumeClaimTemplate: &corev1.PersistentVolumeClaim{
-				Spec: corev1.PersistentVolumeClaimSpec{
-					StorageClassName: &storageClassName,
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("0Gi"),
-						},
-					},
-				},
-			},
-			Image:           "hstreamdb/hstream:rqlite",
-			ImagePullPolicy: "IfNotPresent",
+			VolumeClaimTemplate: nil,
+			Image:               "hstreamdb/hstream:rqlite",
+			ImagePullPolicy:     "IfNotPresent",
 			HServer: appsv1alpha1.Component{
 				Replicas: &replica,
 				Container: appsv1alpha1.Container{
