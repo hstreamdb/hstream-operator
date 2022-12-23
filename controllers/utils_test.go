@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -257,44 +256,6 @@ var _ = Describe("Utils", func() {
 				ContainerPort: 1,
 			},
 		}))
-	})
-
-	Context("test use pvc", func() {
-		var hdb *appsv1alpha1.HStreamDB
-		BeforeEach(func() {
-			hdb = &appsv1alpha1.HStreamDB{
-				Spec: appsv1alpha1.HStreamDBSpec{
-					VolumeClaimTemplate: &corev1.PersistentVolumeClaim{
-						Spec: corev1.PersistentVolumeClaimSpec{
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-						},
-					},
-				},
-			}
-		})
-
-		It("should use pvc", func() {
-			Expect(usePVC(hdb)).To(BeTrue())
-		})
-
-		It("should not user pvc", func() {
-			hdb.Spec.VolumeClaimTemplate.Spec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("0Gi")
-			Expect(usePVC(hdb)).To(BeFalse())
-		})
-
-		It("should not user pvc", func() {
-			delete(hdb.Spec.VolumeClaimTemplate.Spec.Resources.Requests, corev1.ResourceStorage)
-			Expect(usePVC(hdb)).To(BeFalse())
-		})
-
-		It("should not user pvc if VolumeClaimTemplate is nil", func() {
-			hdb.Spec.VolumeClaimTemplate = nil
-			Expect(usePVC(hdb)).To(BeFalse())
-		})
 	})
 
 	Context("test obj hash", func() {

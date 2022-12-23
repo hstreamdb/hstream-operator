@@ -9,12 +9,12 @@ metadata:
     app.kubernetes.io/created-by: hstream-operator
   name: hstreamdb-sample
 spec:
-  volumeClaimTemplate:
-    spec:
-      storageClassName: 'standard'
-      resources:
-        requests:
-          storage: 0
+#  volumeClaimTemplate:
+#    spec:
+#      storageClassName: 'standard'
+#      resources:
+#        requests:
+#          storage: 1Gi
 
   config:
     metadata-replicate-across: 1

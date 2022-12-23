@@ -5,7 +5,6 @@ import (
 	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
@@ -140,20 +139,6 @@ func mergePorts(required, userDefined []corev1.ContainerPort) []corev1.Container
 		}
 	}
 	return ports
-}
-
-// usePVC determines whether we should attach a PVC to a pod.
-func usePVC(hdb *appsv1alpha1.HStreamDB) bool {
-	var storage *resource.Quantity
-
-	if hdb.Spec.VolumeClaimTemplate != nil {
-		requests := hdb.Spec.VolumeClaimTemplate.Spec.Resources.Requests
-		if requests != nil {
-			storageCopy := requests[corev1.ResourceStorage]
-			storage = &storageCopy
-		}
-	}
-	return storage != nil && !storage.IsZero()
 }
 
 func isHashChanged(obj1, obj2 *metav1.ObjectMeta) bool {
