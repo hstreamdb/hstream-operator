@@ -37,7 +37,7 @@ jobs:
       - id: generate_yaml
         run: |
           make kustomize
-          cd config/manager && kustomize edit set image controller="${{ github.repository_owner }}/hstream-operator-controller:${{ github.ref_name }}"
+          pushd config/manager && kustomize edit set image controller="${{ github.repository_owner }}/hstream-operator-controller:${{ github.ref_name }}" && popd
           kustomize build config/default > hstream-operator.yaml
           echo "file=hstream-operator.yaml" >> $GITHUB_OUTPUT
       - id: prerelease

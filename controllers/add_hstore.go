@@ -90,7 +90,10 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *a
 
 	existingSts.Annotations = sts.Annotations
 	existingSts.Labels = sts.Labels
-	existingSts.Spec = sts.Spec
+	existingSts.Spec.Replicas = sts.Spec.Replicas
+	existingSts.Spec.Template = sts.Spec.Template
+	existingSts.Spec.UpdateStrategy = sts.Spec.UpdateStrategy
+	existingSts.Spec.MinReadySeconds = sts.Spec.MinReadySeconds
 	if err = r.Update(ctx, existingSts); err != nil {
 		return &requeue{curError: err}
 	}

@@ -130,7 +130,7 @@ jobs:
 
       - name: Deploy hstreamdb
         run: |
-          kubectl apply -f config/samples/
+          kubectl apply -f config/samples/apps_v1alpha1_hstreamdb.yaml
       - name: Check hstream custom resource status
         timeout-minutes: 5
         shell: bash
