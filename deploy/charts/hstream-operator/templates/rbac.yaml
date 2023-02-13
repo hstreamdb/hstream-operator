@@ -1,0 +1,281 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kuberentes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: serviceaccount
+  name: {{ template "hstream-operator.serviceAccountName" . }}
+  namespace: {{ include "hstream-operator.namespace" . }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: role
+  name: {{ include "hstream-operator.fullname" . }}-leader-election-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: {{ include "hstream-operator.fullname" . }}-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/portforward
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - hstreamdbs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - hstreamdbs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - hstreamdbs/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: clusterrole
+  name: {{ include "hstream-operator.fullname" . }}-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: clusterrole
+  name: {{ include "hstream-operator.fullname" . }}-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: rolebinding
+  name: {{ include "hstream-operator.fullname" . }}-leader-election-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "hstream-operator.fullname" . }}-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: {{ template "hstream-operator.serviceAccountName" . }}
+  namespace: {{ include "hstream-operator.namespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: clusterrolebinding
+  name: {{ include "hstream-operator.fullname" . }}-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "hstream-operator.fullname" . }}-manager-role
+subjects:
+- kind: ServiceAccount
+  name: {{ template "hstream-operator.serviceAccountName" . }}
+  namespace: {{ include "hstream-operator.namespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: clusterrolebinding
+  name: {{ include "hstream-operator.fullname" . }}-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "hstream-operator.fullname" . }}-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: {{ template "hstream-operator.serviceAccountName" . }}
+  namespace: {{ include "hstream-operator.namespace" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: service
+    control-plane: hstream-operator-manager
+  name: {{ include "hstream-operator.fullname" . }}-metrics-service
+  namespace: {{ include "hstream-operator.namespace" . }}
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: hstream-operator-manager
