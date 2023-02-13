@@ -1,0 +1,5 @@
+HStream Operator Controller {{ .Chart.AppVersion }} has been deployed successfully!
+
+Now you can create the HStream Custom Resource file and deploy it.
+
+Where to get help: https://github.com/hstreamdb/hstream-operator/issues

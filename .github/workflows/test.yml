@@ -102,6 +102,7 @@ jobs:
       matrix:
         install:
           - yaml
+          - helm
     steps:
       - run: minikube start
 
@@ -114,16 +115,24 @@ jobs:
           IMG: "hstream/hstream-operator-controller:latest"
         run: eval $(minikube docker-env) && docker build -t $IMG .
 
-      - name: Deploy controller
+      - name: Deploy controller by yaml
+        if: matrix.install == 'yaml'
         env:
           IMG: "hstream/hstream-operator-controller:latest"
         run: make deploy
+      - name: Deploy controller by helm
+        if: matrix.install == 'helm'
+        run: |
+          helm install hstream-operator deploy/charts/hstream-operator \
+            --set image.tag=latest \
+            --namespace hstream-operator-system \
+            --create-namespace
 
       - name: Check operator
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n hstream-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
+          while [ "$(kubectl get pods -l "control-plane=hstream-operator-manager" -n hstream-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
             echo "waiting operator controller pod running"
             sleep 1
           done
@@ -138,7 +147,7 @@ jobs:
           while
             kubectl get hstreamdb hstreamdb-sample -o json
             kubectl get pod
-            kubectl logs -l "control-plane=controller-manager" -n hstream-operator-system --tail=1000
+            kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
             status=`kubectl get hstreamdb hstreamdb-sample -o json | jq '.status'`;
             echo "hserverConfigured=$(echo $status | jq --raw-output '.hserverConfigured')"
             echo "hstoreConfigured=$(echo $status | jq --raw-output '.hstoreConfigured')"
@@ -150,7 +159,7 @@ jobs:
             sleep 5
           done
       - if: failure()
-        run: kubectl logs -l "control-plane=controller-manager" -n hstream-operator-system --tail=1000
+        run: kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
       - if: failure()
         run: kubectl describe hstreamdb hstreamdb-sample
       - if: failure()
