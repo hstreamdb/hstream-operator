@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("UpdateStatus", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 	updateStatus := updateStatus{}
 	ctx := context.TODO()
 
@@ -21,13 +21,20 @@ var _ = Describe("UpdateStatus", func() {
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, hdb)
+		_ = k8sClient.Delete(ctx, hdb)
 	})
 
 	Context("with a reconciled cluster", func() {
 		var requeue *requeue
 		BeforeEach(func() {
-			hdb.Status.HStoreConfigured = true
+			hdb.Status.HMeta.Nodes = []hapi.HMetaNode{
+				{
+					NodeId:    "node-id",
+					Reachable: true,
+					Leader:    false,
+					Error:     "",
+				},
+			}
 			requeue = updateStatus.reconcile(ctx, clusterReconciler, hdb)
 		})
 
@@ -35,9 +42,9 @@ var _ = Describe("UpdateStatus", func() {
 			Expect(requeue).To(BeNil())
 		})
 
-		When("hserver has been bootstrapped", func() {
+		When("hmeta has been ready", func() {
 			BeforeEach(func() {
-				hdb.Status.HServerConfigured = true
+				hdb.Status.HStore.Bootstrapped = true
 				requeue = updateStatus.reconcile(ctx, clusterReconciler, hdb)
 			})
 
@@ -45,13 +52,25 @@ var _ = Describe("UpdateStatus", func() {
 				Expect(requeue).To(BeNil())
 			})
 
-			It("should bootstrapped hserver", func() {
-				newHdb := &appsv1alpha1.HStreamDB{}
-				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), newHdb)
-				Expect(err).To(BeNil())
-				Expect(newHdb.Status.HStoreConfigured).To(BeTrue())
-				Expect(newHdb.Status.HServerConfigured).To(BeTrue())
+			When("hserver has been bootstrapped", func() {
+				BeforeEach(func() {
+					hdb.Status.HServer.Bootstrapped = true
+					requeue = updateStatus.reconcile(ctx, clusterReconciler, hdb)
+				})
+
+				It("should not requeue", func() {
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should bootstrapped hserver", func() {
+					newHdb := &hapi.HStreamDB{}
+					err := k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), newHdb)
+					Expect(err).To(BeNil())
+					Expect(newHdb.Status.HStore.Bootstrapped).To(BeTrue())
+					Expect(newHdb.Status.HServer.Bootstrapped).To(BeTrue())
+				})
 			})
 		})
+
 	})
 })

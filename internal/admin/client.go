@@ -3,12 +3,17 @@ package admin
 import (
 	"fmt"
 	"github.com/go-logr/logr"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	jsoniter "github.com/json-iterator/go"
 	"k8s.io/client-go/rest"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // defaultCLITimeout is the default timeout for CLI commands.
 var defaultCLITimeout = 15 * time.Second
@@ -22,7 +27,7 @@ type realAdminClientProvider struct {
 
 // GetAdminClient generates a client for performing administrative actions
 // against the hStream.
-func (p *realAdminClientProvider) GetAdminClient(hdb *appsv1alpha1.HStreamDB) AdminClient {
+func (p *realAdminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) AdminClient {
 	return NewAdminClient(hdb, p.restConfig, p.log)
 }
 
@@ -35,13 +40,13 @@ func NewAdminClientProvider(restConfig *rest.Config, log logr.Logger) AdminClien
 }
 
 type adminClient struct {
-	hdb        *appsv1alpha1.HStreamDB
+	hdb        *hapi.HStreamDB
 	remoteExec *Executor
 	log        logr.Logger
 }
 
 // NewAdminClient generates an Admin client for a hStream
-func NewAdminClient(hdb *appsv1alpha1.HStreamDB, restConfig *rest.Config, log logr.Logger) AdminClient {
+func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logger) AdminClient {
 	return &adminClient{
 		hdb:        hdb,
 		remoteExec: NewExecutor(restConfig),
@@ -57,13 +62,13 @@ type cmdOrder struct {
 }
 
 // BootstrapHStore init hStore cluster
-func (ac *adminClient) BootstrapHStore() error {
+func (ac *adminClient) BootstrapHStore(metadataReplication int32) error {
 	command := cliCommand{
 		// run the bootstrap cmd in the admin server pod
-		targetComponent: string(appsv1alpha1.ComponentTypeAdminServer),
+		targetComponent: string(hapi.ComponentTypeAdminServer),
 		containerName:   ac.hdb.Spec.AdminServer.Container.Name,
 		args: []string{"store", "nodes-config", "bootstrap",
-			"--metadata-replicate-across", fmt.Sprintf("'node:%d'", ac.hdb.Spec.Config.MetadataReplicateAcross)},
+			"--metadata-replicate-across", fmt.Sprintf("'node:%d'", metadataReplication)},
 	}
 
 	flags := internal.FlagSet{}
@@ -87,7 +92,7 @@ func (ac *adminClient) BootstrapHStore() error {
 // BootstrapHServer init hServer cluster
 func (ac *adminClient) BootstrapHServer() error {
 	command := cliCommand{
-		targetComponent: string(appsv1alpha1.ComponentTypeHServer),
+		targetComponent: string(hapi.ComponentTypeHServer),
 		containerName:   ac.hdb.Spec.HServer.Container.Name,
 		args:            []string{"server", "init"},
 	}
@@ -108,6 +113,36 @@ func (ac *adminClient) BootstrapHServer() error {
 
 	_, err = checkServerInit(output)
 	return err
+}
+
+func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
+	hmetaAddr := ""
+	namespace := ""
+	if ac.hdb.Spec.ExternalHMeta != nil {
+		namespace = ac.hdb.Spec.ExternalHMeta.Namespace
+		hmetaAddr = ac.hdb.Spec.ExternalHMeta.Host + ":" + strconv.Itoa(int(ac.hdb.Spec.ExternalHMeta.Port))
+	} else {
+		namespace = ac.hdb.Namespace
+		svc := internal.GetService(ac.hdb, hapi.ComponentTypeHMeta)
+		hmetaAddr = fmt.Sprintf("%s:port", svc.Name)
+	}
+
+	resp, statusCode, err := ac.remoteExec.GetAPIByService(namespace, hmetaAddr, "nodes")
+	if err != nil {
+		err = fmt.Errorf("get hmeta status failed. %w", err)
+		return
+	}
+	if statusCode != http.StatusOK {
+		err = fmt.Errorf("service unavailable: %s", jsoniter.Get(resp, "message").ToString())
+		return
+	}
+
+	err = json.Unmarshal(resp, &status.Nodes)
+	if err != nil {
+		err = fmt.Errorf("unmarshal hmeta staus failed. %w", err)
+		return
+	}
+	return
 }
 
 func checkStoreInit(output string) (skipSubCmd bool, err error) {
@@ -141,11 +176,11 @@ func (ac *adminClient) runCommandInPod(cmd cliCommand) (string, error) {
 
 	remoteCmdToExec := fmt.Sprintf("%s %s", cmd.binary, strings.Join(cmd.args, " "))
 
-	targetPodLabel := map[string]string{appsv1alpha1.ComponentKey: cmd.targetComponent}
+	targetPodLabel := map[string]string{hapi.ComponentKey: cmd.targetComponent}
 	output, err := ac.remoteExec.ExecToPodByLabel(ac.hdb.Namespace, targetPodLabel,
 		containerName, remoteCmdToExec, cmd.getTimeout())
 	if err != nil {
-		ac.log.Error(err, "Error from "+cmd.binary+" command", "command", remoteCmdToExec)
+		//ac.log.Error(err, "Error from "+cmd.binary+" command", "command", remoteCmdToExec)
 		return "", err
 	}
 	return output, nil

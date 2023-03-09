@@ -1,0 +1,144 @@
+apiVersion: apps.hstream.io/v1alpha2
+kind: HStreamDB
+metadata:
+  labels:
+    app.kubernetes.io/name: hstreamdb
+    app.kubernetes.io/instance: hstreamdb-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: hstreamdb-sample
+spec:
+#  externalHmeta:
+#    host: rqlite-svc
+#    port: 4001
+#    namespace: default
+
+#  config:
+#    nshards: 1
+#    metadata-replicate-across: 1
+#    logDeviceConfig:
+#      {
+#        "server_settings": {
+#          "enable-nodes-configuration-manager": "true",
+#          "use-nodes-configuration-manager-nodes-configuration": "true",
+#          "enable-node-self-registration": "true",
+#          "enable-cluster-maintenance-state-machine": "true"
+#        },
+#        "client_settings": {
+#          "enable-nodes-configuration-manager": "true",
+#          "use-nodes-configuration-manager-nodes-configuration": "true",
+#          "admin-client-capabilities": "true"
+#        },
+#        "cluster": "hstore",
+#        "internal_logs": {
+#          "config_log_deltas": {
+#            "replicate_across": {
+#              "node": 3
+#            }
+#          },
+#          "config_log_snapshots": {
+#            "replicate_across": {
+#              "node": 3
+#            }
+#          },
+#          "event_log_deltas": {
+#            "replicate_across": {
+#              "node": 3
+#            }
+#          },
+#          "event_log_snapshots": {
+#            "replicate_across": {
+#              "node": 3
+#            }
+#          },
+#          "maintenance_log_deltas": {
+#            "replicate_across": {
+#              "node": 3
+#            }
+#          },
+#          "maintenance_log_snapshots": {
+#            "replicate_across": {
+#              "node": 3
+#            }
+#          }
+#        },
+#        "version": 1
+#      }
+
+  hserver:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: hserver
+#      command:
+#        - bash
+#        - "-c"
+#        - |
+#          set -ex
+#          [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+#          ordinal=${BASH_REMATCH[1]}
+#          /usr/local/bin/hstream-server \
+#          --config-path /etc/hstream/config.yaml \
+#          --bind-address 0.0.0.0 \
+#          --advertised-address $(POD_IP) \
+#          --port 6570 \
+#          --internal-port 6571 \
+#          --seed-nodes "hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver:6571" \
+#          --server-id $((100 + $ordinal)) \
+#          --metastore-uri rq://hstreamdb-sample-hmeta.default:4001 \
+#          --store-config /etc/logdevice/config.json \
+#          --store-admin-host hstreamdb-sample-admin-server
+      # the name of port can't be changed
+      ports:
+        - name: port
+          containerPort: 6570
+        - name: internal-port
+          containerPort: 6571
+  hstore:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 3
+    container:
+      name: hstore
+      # the name of port can't be changed
+      ports:
+        - name: port
+          containerPort: 4440
+        - name: gossip-port
+          containerPort: 4441
+        - name: admin-port
+          containerPort: 6440
+#    volumeClaimTemplate:
+#      spec:
+#        storageClassName: 'standard'
+#        resources:
+#          requests:
+#            storage: 1Gi
+  adminServer:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: admin-server
+      # the name of port can't be changed
+      ports:
+        - name: admin-port
+          containerPort: 6440
+  hmeta:
+    image: rqlite/rqlite:latest
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: hmeta
+      # the name of port can't be changed
+      ports:
+        - name: port
+          containerPort: 4001
+#    volumeClaimTemplate:
+#      spec:
+#        storageClassName: 'standard'
+#        resources:
+#          requests:
+#            storage: 1Gi

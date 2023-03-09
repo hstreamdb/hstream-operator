@@ -1,7 +1,7 @@
 package internal_test
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -12,10 +12,10 @@ import (
 )
 
 var _ = Describe("PodSetHelper", func() {
-	var hdb *appsv1alpha1.HStreamDB
-	compType := appsv1alpha1.ComponentTypeHServer
-	comp := &appsv1alpha1.Component{
-		Replicas: &([]int32{1}[0]),
+	var hdb *hapi.HStreamDB
+	compType := hapi.ComponentTypeHServer
+	comp := &hapi.Component{
+		Replicas: 1,
 	}
 	podSpec := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -34,8 +34,8 @@ var _ = Describe("PodSetHelper", func() {
 		deploy := internal.GetDeployment(hdb, comp, podSpec, compType)
 		Expect(deploy.Name).To(Equal(compType.GetResName(hdb.Name)))
 		Expect(deploy.Spec.Selector.MatchLabels).To(HaveKeyWithValue("label", "testLabel"))
-		Expect(*deploy.Spec.Replicas).To(Equal(*comp.Replicas))
-		Expect(deploy.Annotations).To(HaveKey(appsv1alpha1.LastSpecKey))
+		Expect(*deploy.Spec.Replicas).To(Equal(comp.Replicas))
+		Expect(deploy.Annotations).To(HaveKey(hapi.LastSpecKey))
 		Expect(&deploy.Spec.Template).To(Equal(podSpec))
 	})
 
@@ -45,8 +45,8 @@ var _ = Describe("PodSetHelper", func() {
 
 		Expect(sts.Name).To(Equal(compType.GetResName(hdb.Name)))
 		Expect(sts.Spec.Selector.MatchLabels).To(HaveKeyWithValue("label", "testLabel"))
-		Expect(*sts.Spec.Replicas).To(Equal(*comp.Replicas))
-		Expect(sts.Annotations).To(HaveKey(appsv1alpha1.LastSpecKey))
+		Expect(*sts.Spec.Replicas).To(Equal(comp.Replicas))
+		Expect(sts.Annotations).To(HaveKey(hapi.LastSpecKey))
 		Expect(&sts.Spec.Template).To(Equal(podSpec))
 		Expect(sts.Spec.ServiceName).To(Equal(service.Name))
 		Expect(sts.Spec.PodManagementPolicy).To(Equal(appsv1.ParallelPodManagement))

@@ -1,11 +1,11 @@
 package internal
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"strings"
 )
 
-func GetResNameOnPanic(hdb *appsv1alpha1.HStreamDB, shortName string) string {
+func GetResNameOnPanic(hdb *hapi.HStreamDB, shortName string) string {
 	if shortName == "" {
 		panic("short name is empty")
 	}
@@ -13,7 +13,7 @@ func GetResNameOnPanic(hdb *appsv1alpha1.HStreamDB, shortName string) string {
 }
 
 // GetResNameWithDefault get resource name with short name, it will use default name if short name is empty
-func GetResNameWithDefault(hdb *appsv1alpha1.HStreamDB, shortName, defaultName string) string {
+func GetResNameWithDefault(hdb *hapi.HStreamDB, shortName, defaultName string) string {
 	buf := strings.Builder{}
 	buf.WriteString(hdb.Name)
 	buf.WriteRune('-')

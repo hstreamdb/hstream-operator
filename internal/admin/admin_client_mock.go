@@ -1,15 +1,17 @@
 package admin
 
 import (
+	"fmt"
 	"github.com/go-logr/logr"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"k8s.io/client-go/rest"
 )
 
 type mockAdminClient struct {
+	hdb *hapi.HStreamDB
 }
 
-func (ac *mockAdminClient) BootstrapHStore() error {
+func (ac *mockAdminClient) BootstrapHStore(int32) error {
 
 	return nil
 }
@@ -18,16 +20,28 @@ func (ac *mockAdminClient) BootstrapHServer() error {
 	return nil
 }
 
+func (ac *mockAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
+	for i := 0; i < int(ac.hdb.Spec.HMeta.Replicas); i++ {
+		status.Nodes[fmt.Sprint("nodeId-", i)] = HMetaNode{
+			Reachable: true,
+			Leader:    false,
+			Error:     "",
+		}
+	}
+	return
+}
+
 type mockAdminClientProvider struct {
 	client *mockAdminClient
 }
 
-func (m *mockAdminClientProvider) GetAdminClient(hdb *appsv1alpha1.HStreamDB) AdminClient {
+func (m *mockAdminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) AdminClient {
+	m.client.hdb = hdb
 	return m.client
 }
 
 // NewMockAdminClientProvider generates a client provider for talking to real hStream.
-func NewMockAdminClientProvider(restConfig *rest.Config, log logr.Logger) AdminClientProvider {
+func NewMockAdminClientProvider(*rest.Config, logr.Logger) AdminClientProvider {
 	return &mockAdminClientProvider{
 		client: &mockAdminClient{},
 	}

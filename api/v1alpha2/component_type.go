@@ -1,4 +1,4 @@
-package v1alpha1
+package v1alpha2
 
 import "fmt"
 
@@ -8,6 +8,7 @@ const (
 	ComponentTypeHServer     ComponentType = "hserver"
 	ComponentTypeHStore      ComponentType = "hstore"
 	ComponentTypeAdminServer ComponentType = "admin-server"
+	ComponentTypeHMeta       ComponentType = "hmeta"
 )
 
 func (ct ComponentType) GetResName(instance string) string {

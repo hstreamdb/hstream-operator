@@ -1,7 +1,7 @@
 package internal_test
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -9,7 +9,7 @@ import (
 )
 
 var _ = Describe("ResNameMgr", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 
 	BeforeEach(func() {
 		hdb = mock.CreateDefaultCR()

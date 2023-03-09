@@ -22,9 +22,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        use-existing-cluster:
-          - true
-          - false
+        testMode:
+          - e2e-test
+          - unit-test
 
     steps:
     - name: Checkout
@@ -62,21 +62,21 @@ jobs:
         go install github.com/onsi/ginkgo/v2/ginkgo
 
     - name: Run unit tests that don't depend on really k8s cluster
-      if: matrix.use-existing-cluster == false
+      if: matrix.testMode == 'unit-test'
       run: ginkgo run --cover --coverprofile ./cover.out ./...
 
     - name: Setup minikube
-      if: matrix.use-existing-cluster
+      if: matrix.testMode == 'e2e-test'
       uses: medyagh/setup-minikube@latest
 
-    - name: Install rqlite cluster
-      if: matrix.use-existing-cluster
-      uses: ./.github/actions/deploy-rqlite
+    - name: Install hmeta cluster
+      if: matrix.testMode == 'e2e-test'
+      uses: ./.github/actions/deploy-hmeta
 
-    - name: Run unit tests that depend on existing k8s cluster
-      if: matrix.use-existing-cluster
+    - name: Run e2e tests that depend on existing k8s cluster
+      if: matrix.testMode == 'e2e-test'
       env:
-        USE_EXISTING_CLUSTER: ${{ matrix.use-existing-cluster }}
+        USE_EXISTING_CLUSTER: true
       # set label filter 'k8s' to ignore the test cases that don't deponed on really k8s cluster
       run: ginkgo run --cover --coverprofile ./cover.out  --label-filter 'k8s' controllers/
 
@@ -87,14 +87,6 @@ jobs:
         fail_ci_if_error: true # optional (default = false)
         verbose: true # optional (default = false)
 
-    - if: failure()
-      run: kubectl get pods -A
-
-    - if: failure()
-      run: kubectl get event -n kube-system
-
-    - if: failure()
-      run: kubectl get event
   deployment:
     runs-on: ubuntu-latest
     strategy:
@@ -102,29 +94,31 @@ jobs:
       matrix:
         install:
           - yaml
+          - yaml_with_external_hmeta
           - helm
     steps:
       - run: minikube start
 
       - uses: actions/checkout@v3
 
-      - uses: ./.github/actions/deploy-rqlite
+      - uses: ./.github/actions/deploy-hmeta
+        if: matrix.install == 'yaml_with_external_hmeta'
 
       - name: Build image
         env:
-          IMG: "hstream/hstream-operator-controller:latest"
+          IMG: "hstreamdb/hstream-operator-controller:latest"
         run: eval $(minikube docker-env) && docker build -t $IMG .
 
       - name: Deploy controller by yaml
-        if: matrix.install == 'yaml'
+        if: matrix.install != 'helm'
         env:
-          IMG: "hstream/hstream-operator-controller:latest"
+          IMG: "hstreamdb/hstream-operator-controller:latest"
         run: make deploy
       - name: Deploy controller by helm
         if: matrix.install == 'helm'
         run: |
           helm install hstream-operator deploy/charts/hstream-operator \
-            --set image.tag=latest \
+            --set image.tag=latest,image.repository=hstreamdb/hstream-operator-controller \
             --namespace hstream-operator-system \
             --create-namespace
 
@@ -138,8 +132,15 @@ jobs:
           done
 
       - name: Deploy hstreamdb
+        if: matrix.install != 'yaml_with_external_hmeta'
         run: |
-          kubectl apply -f config/samples/apps_v1alpha1_hstreamdb.yaml
+          kubectl apply -f config/samples/hstreamdb.yaml
+
+      - name: Deploy hstreamdb with external hmeta cluster
+        if: matrix.install == 'yaml_with_external_hmeta'
+        run: |
+            kubectl apply -f config/samples/hstreamdb_with_external_hmeta.yaml
+
       - name: Check hstream custom resource status
         timeout-minutes: 5
         shell: bash
@@ -149,11 +150,11 @@ jobs:
             kubectl get pod
             kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
             status=`kubectl get hstreamdb hstreamdb-sample -o json | jq '.status'`;
-            echo "hserverConfigured=$(echo $status | jq --raw-output '.hserverConfigured')"
-            echo "hstoreConfigured=$(echo $status | jq --raw-output '.hstoreConfigured')"
+            echo "hserverConfigured=$(echo $status | jq --raw-output '.hserver.bootstrapped')"
+            echo "hstoreConfigured=$(echo $status | jq --raw-output '.hstore.bootstrapped')"
             [[ "$status" == "null" ]] \
-            || [[ "$(echo $status | jq --raw-output '.hserverConfigured')" != "true" ]] \
-            || [[ "$(echo $status | jq --raw-output '.hstoreConfigured')" != "true" ]]
+            || [[ "$(echo $status | jq --raw-output '.hserver.bootstrapped')" != "true" ]] \
+            || [[ "$(echo $status | jq --raw-output '.hstore.bootstrapped')" != "true" ]]
           do
             echo "waiting for bootstrapping"
             sleep 5

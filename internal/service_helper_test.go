@@ -1,7 +1,7 @@
 package internal_test
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -11,7 +11,7 @@ import (
 )
 
 var _ = Describe("ServiceHelper", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 
 	BeforeEach(func() {
 		hdb = mock.CreateDefaultCR()
@@ -26,19 +26,19 @@ var _ = Describe("ServiceHelper", func() {
 				TargetPort: intstr.IntOrString{IntVal: 1000},
 			},
 		}
-		compType := appsv1alpha1.ComponentTypeHServer
-		svc := internal.GetService(hdb, ports, compType)
+		compType := hapi.ComponentTypeHServer
+		svc := internal.GetService(hdb, compType, ports...)
 
 		Expect(svc.Name).To(Equal(compType.GetResName(hdb.Name)))
 		Expect(svc.Spec.Ports).To(ContainElements(ports[0]))
-		Expect(svc.Spec.Selector).To(HaveKeyWithValue(appsv1alpha1.ComponentKey, string(compType)))
+		Expect(svc.Spec.Selector).To(HaveKeyWithValue(hapi.ComponentKey, string(compType)))
 	})
 
 	It("get headless service", func() {
-		compType := appsv1alpha1.ComponentTypeHServer
+		compType := hapi.ComponentTypeHServer
 		svc := internal.GetHeadlessService(hdb, compType)
-		Expect(svc.Name).To(Equal(compType.GetResName(hdb.Name)))
-		Expect(svc.Spec.Selector).To(HaveKeyWithValue(appsv1alpha1.ComponentKey, string(compType)))
+		Expect(svc.Name).To(Equal(internal.GetResNameOnPanic(hdb, "internal-"+string(compType))))
+		Expect(svc.Spec.Selector).To(HaveKeyWithValue(hapi.ComponentKey, string(compType)))
 		Expect(svc.Spec.ClusterIP).To(Equal(corev1.ClusterIPNone))
 
 	})

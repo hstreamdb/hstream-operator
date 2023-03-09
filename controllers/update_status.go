@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -10,11 +10,11 @@ import (
 
 type updateStatus struct{}
 
-func (a updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "update status")
 
 	var err error
-	oldHdb := &appsv1alpha1.HStreamDB{}
+	oldHdb := &hapi.HStreamDB{}
 	if err = r.Get(ctx, client.ObjectKeyFromObject(hdb), oldHdb); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			err = nil
@@ -23,7 +23,6 @@ func (a updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb
 		return &requeue{curError: err}
 	}
 
-	// TODO: this update operation will trigger k8s to reconcile again
 	if !equality.Semantic.DeepEqual(oldHdb.Status, hdb.Status) {
 		logger.Info("Update status")
 		if err = r.Status().Update(ctx, hdb); err != nil {

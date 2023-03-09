@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ var adminServerPorts = []corev1.ContainerPort{
 
 type addAdminServer struct{}
 
-func (a addAdminServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a addAdminServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add admin server")
 
 	deploy := a.getDeployment(hdb)
@@ -69,19 +69,19 @@ func (a addAdminServer) reconcile(ctx context.Context, r *HStreamDBReconciler, h
 	return nil
 }
 
-func (a addAdminServer) getDeployment(hdb *appsv1alpha1.HStreamDB) appsv1.Deployment {
+func (a addAdminServer) getDeployment(hdb *hapi.HStreamDB) appsv1.Deployment {
 	podTemplate := a.getPodTemplate(hdb)
 	deploy := internal.GetDeployment(hdb, &hdb.Spec.AdminServer,
-		&podTemplate, appsv1alpha1.ComponentTypeAdminServer)
+		&podTemplate, hapi.ComponentTypeAdminServer)
 
 	return deploy
 }
 
-func (a addAdminServer) getPodTemplate(hdb *appsv1alpha1.HStreamDB) corev1.PodTemplateSpec {
+func (a addAdminServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 	adminServer := &hdb.Spec.AdminServer
 
 	pod := corev1.PodTemplateSpec{
-		ObjectMeta: internal.GetObjectMetadata(hdb, nil, appsv1alpha1.ComponentTypeAdminServer),
+		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeAdminServer),
 		Spec: corev1.PodSpec{
 			Affinity:        adminServer.Affinity,
 			Tolerations:     adminServer.Tolerations,
@@ -94,22 +94,22 @@ func (a addAdminServer) getPodTemplate(hdb *appsv1alpha1.HStreamDB) corev1.PodTe
 		},
 	}
 
-	pod.Name = appsv1alpha1.ComponentTypeAdminServer.GetResName(hdb.Name)
+	pod.Name = hapi.ComponentTypeAdminServer.GetResName(hdb.Name)
 	pod.Spec.Volumes = append(pod.Spec.Volumes, a.getVolumes(hdb)...)
 	return pod
 }
 
-func (a addAdminServer) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container {
+func (a addAdminServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	adminServer := &hdb.Spec.AdminServer
 	container := corev1.Container{
-		Image:           hdb.Spec.Image,
-		ImagePullPolicy: hdb.Spec.ImagePullPolicy,
+		Image:           hdb.Spec.AdminServer.Image,
+		ImagePullPolicy: hdb.Spec.AdminServer.ImagePullPolicy,
 	}
 
 	structAssign(&container, &adminServer.Container)
 
 	if container.Name == "" {
-		container.Name = string(appsv1alpha1.ComponentTypeAdminServer)
+		container.Name = string(hapi.ComponentTypeAdminServer)
 	}
 
 	if len(container.Command) == 0 {
@@ -131,7 +131,7 @@ func (a addAdminServer) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Conta
 	return append([]corev1.Container{container}, adminServer.SidecarContainers...)
 }
 
-func (a addAdminServer) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Volume) {
+func (a addAdminServer) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	volumes = []corev1.Volume{internal.GetVolume(hdb, m)}
 	return

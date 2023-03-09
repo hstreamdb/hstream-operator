@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("AddHstore", Label("hstore"), func() {
-	var hdb *appsv1alpha1.HStreamDB
+var _ = Describe("AddHstore", func() {
+	var hdb *hapi.HStreamDB
 	var requeue *requeue
 	hStore := addHStore{}
 	ctx := context.TODO()
@@ -110,7 +110,7 @@ var _ = Describe("AddHstore", Label("hstore"), func() {
 				_ = k8sClient.Delete(ctx, sts)
 			}
 
-			hdb.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaim{
+			hdb.Spec.HStore.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
 				Spec: corev1.PersistentVolumeClaimSpec{
 					StorageClassName: &storageClassName,
 					Resources: corev1.ResourceRequirements{
@@ -139,10 +139,10 @@ var _ = Describe("AddHstore", Label("hstore"), func() {
 	})
 })
 
-func getHStoreStatefulSet(hdb *appsv1alpha1.HStreamDB) (sts *appsv1.StatefulSet, err error) {
+func getHStoreStatefulSet(hdb *hapi.HStreamDB) (sts *appsv1.StatefulSet, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      appsv1alpha1.ComponentTypeHStore.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeHStore.GetResName(hdb.Name),
 	}
 	sts = &appsv1.StatefulSet{}
 	err = k8sClient.Get(context.TODO(), keyObj, sts)

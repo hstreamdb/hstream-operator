@@ -1,16 +1,13 @@
 package internal
 
 import (
-	"errors"
-	jsoniter "github.com/json-iterator/go"
 	"sort"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	HStoreDataPath   = "/data/logdevice"
 	HStoreConfigPath = "/etc/logdevice"
+	HMetaDataPath    = "/rqlite/file"
 )
 
 const (
@@ -79,76 +76,4 @@ func sortConfigMaps(cms map[string]*ConfigMap) []string {
 		return result[i] < result[j]
 	})
 	return result
-}
-
-var defaultLogDeviceConfig = map[string]any{
-	"server_settings": map[string]any{
-		"enable-nodes-configuration-manager":                  "true",
-		"use-nodes-configuration-manager-nodes-configuration": "true",
-		"enable-node-self-registration":                       "true",
-		"enable-cluster-maintenance-state-machine":            "true",
-	},
-	"client_settings": map[string]any{
-		"enable-nodes-configuration-manager":                  "true",
-		"use-nodes-configuration-manager-nodes-configuration": "true",
-		"admin-client-capabilities":                           "true",
-	},
-	"cluster": "hstore",
-	"internal_logs": map[string]any{
-		"config_log_deltas": map[string]any{
-			"replicate_across": map[string]any{
-				"node": 1,
-			},
-		},
-		"config_log_snapshots": map[string]any{
-			"replicate_across": map[string]any{
-				"node": 1,
-			},
-		},
-		"event_log_deltas": map[string]any{
-			"replicate_across": map[string]any{
-				"node": 1,
-			},
-		},
-		"event_log_snapshots": map[string]any{
-			"replicate_across": map[string]any{
-				"node": 1,
-			},
-		},
-		"maintenance_log_deltas": map[string]any{
-			"replicate_across": map[string]any{
-				"node": 1,
-			},
-		},
-		"maintenance_log_snapshots": map[string]any{
-			"replicate_across": map[string]any{
-				"node": 1,
-			},
-		},
-	},
-	"metadata_logs": map[string]any{
-		"replicate_across": map[string]any{
-			"node": 1,
-		},
-	},
-	"rqlite": map[string]string{
-		"rqlite_uri": "ip://rqlite-svc.default:4001",
-	},
-	"version": 1,
-}
-
-func GetLogDeviceConfig() map[string]any {
-	return defaultLogDeviceConfig
-}
-
-func ParseLogDeviceConfig(raw []byte) (config map[string]any, err error) {
-	config = make(map[string]any)
-	if len(raw) != 0 {
-		if !jsoniter.Valid(raw) {
-			err = errors.New("incorrect json raw")
-			return
-		}
-		_ = json.Unmarshal(raw, &config)
-	}
-	return
 }

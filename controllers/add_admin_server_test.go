@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,7 +11,7 @@ import (
 )
 
 var _ = Describe("AddAdminServer", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 	var requeue *requeue
 	addAdminServer := addAdminServer{}
 	ctx := context.TODO()
@@ -25,7 +25,7 @@ var _ = Describe("AddAdminServer", func() {
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, hdb)
+		_ = k8sClient.Delete(ctx, hdb)
 	})
 
 	Context("with a reconciled cluster", func() {
@@ -97,10 +97,10 @@ var _ = Describe("AddAdminServer", func() {
 	})
 })
 
-func getAdminServerDeployment(hdb *appsv1alpha1.HStreamDB) (deploy *appsv1.Deployment, err error) {
+func getAdminServerDeployment(hdb *hapi.HStreamDB) (deploy *appsv1.Deployment, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      appsv1alpha1.ComponentTypeAdminServer.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeAdminServer.GetResName(hdb.Name),
 	}
 	deploy = &appsv1.Deployment{}
 	err = k8sClient.Get(context.TODO(), keyObj, deploy)
