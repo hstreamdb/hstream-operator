@@ -1,7 +1,7 @@
 package internal_test
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("PvcHelper", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 
 	BeforeEach(func() {
 		hdb = mock.CreateDefaultCR()
@@ -21,15 +21,16 @@ var _ = Describe("PvcHelper", func() {
 	Context("with volumeClaimTemplate not nil", func() {
 		var pvc corev1.PersistentVolumeClaim
 		BeforeEach(func() {
-			hdb.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaim{
+			hdb.Spec.HStore.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "data",
 				},
 			}
 		})
 		It("get pvc", func() {
-			pvc = internal.GetPvc(hdb)
-			Expect(internal.GetPvcName(hdb)).To(Equal(hdb.Name + "-" + hdb.Spec.VolumeClaimTemplate.Name))
+			pvc = internal.GetPvc(hdb, hdb.Spec.HStore.VolumeClaimTemplate, hapi.ComponentTypeHStore)
+			Expect(internal.GetPvcName(hdb, hdb.Spec.HStore.VolumeClaimTemplate)).To(
+				Equal(hdb.Name + "-" + hdb.Spec.HStore.VolumeClaimTemplate.Name))
 		})
 
 		It("pvc name should be hdbName-data", func() {
@@ -51,10 +52,11 @@ var _ = Describe("PvcHelper", func() {
 
 	Context("with volumeClaimTemplate nil", func() {
 		BeforeEach(func() {
-			hdb.Spec.VolumeClaimTemplate = nil
+			hdb.Spec.HStore.VolumeClaimTemplate = nil
 		})
 		It("get default pvc name", func() {
-			Expect(internal.GetPvcName(hdb)).To(Equal(hdb.Name + "-" + "shard"))
+			Expect(internal.GetPvcName(hdb, hdb.Spec.HStore.VolumeClaimTemplate)).To(
+				Equal(hdb.Name + "-" + "data"))
 		})
 	})
 

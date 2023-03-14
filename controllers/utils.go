@@ -2,12 +2,13 @@ package controllers
 
 import (
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -17,11 +18,18 @@ func structAssign(dist interface{}, src interface{}) {
 	sVal := reflect.ValueOf(src).Elem()
 	sType := sVal.Type()
 	for i := 0; i < sVal.NumField(); i++ {
+		if sVal.Field(i).IsZero() {
+			continue
+		}
+
 		// we need to check if the dist struct has the same field
 		name := sType.Field(i).Name
-		if ok := dVal.FieldByName(name).IsValid(); ok {
-			dVal.FieldByName(name).Set(reflect.ValueOf(sVal.Field(i).Interface()))
+		dvField := dVal.FieldByName(name)
+		if ok := dvField.IsValid(); !ok {
+			continue
 		}
+
+		dvField.Set(reflect.ValueOf(sVal.Field(i).Interface()))
 	}
 }
 
@@ -142,5 +150,50 @@ func mergePorts(required, userDefined []corev1.ContainerPort) []corev1.Container
 }
 
 func isHashChanged(obj1, obj2 *metav1.ObjectMeta) bool {
-	return obj1.Annotations[appsv1alpha1.LastSpecKey] != obj2.Annotations[appsv1alpha1.LastSpecKey]
+	return obj1.Annotations[hapi.LastSpecKey] != obj2.Annotations[hapi.LastSpecKey]
+}
+
+func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
+	hmetaAddr := ""
+	if hdb.Spec.ExternalHMeta != nil {
+		hmetaAddr = hdb.Spec.ExternalHMeta.GetAddr()
+	} else {
+		svc := internal.GetService(hdb, hapi.ComponentTypeHMeta)
+		flags := internal.FlagSet{}
+		if err := flags.Parse(hdb.Spec.HMeta.Container.Args); err != nil {
+			err = fmt.Errorf("parse hmeta args failed. %w", err)
+			return "", err
+		}
+		parsedArgs := flags.Flags()
+		port, ok := parseHMetaPort(parsedArgs)
+		if !ok {
+			port = strconv.Itoa(int(hmetaPorts[0].ContainerPort))
+		}
+		hmetaAddr = svc.Name + "." + svc.Namespace + ":" + port
+	}
+	return hmetaAddr, nil
+}
+
+func getHMetaContainerPorts(container *hapi.Container, parsedArgs map[string]string) (ports []corev1.ContainerPort) {
+	hmetaPort, ok := parseHMetaPort(parsedArgs)
+	if !ok {
+		ports = mergePorts(hmetaPorts, container.Ports)
+	} else {
+		ports = extendPorts(map[string]string{
+			"port": hmetaPort,
+		}, container.Ports, hmetaPorts)
+	}
+	return
+}
+
+func parseHMetaPort(parsedArgs map[string]string) (port string, ok bool) {
+	addr := parsedArgs["http-addr"]
+	if addr == "" {
+		return
+	}
+
+	if slice := strings.Split(addr, ":"); len(slice) == 2 {
+		return slice[1], true
+	}
+	return
 }

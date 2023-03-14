@@ -19,6 +19,7 @@ package controllers
 import (
 	"os"
 	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strconv"
 	"testing"
 
@@ -35,7 +36,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -68,7 +69,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = appsv1alpha1.AddToScheme(scheme.Scheme)
+	err = hapi.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -78,6 +79,23 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	clusterReconciler = createTestClusterReconciler()
+
+	if isUsingExistingCluster() {
+		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme:             scheme.Scheme,
+			MetricsBindAddress: "0",
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		err = clusterReconciler.SetupWithManager(k8sManager)
+		Expect(err).NotTo(HaveOccurred())
+
+		go func() {
+			defer GinkgoRecover()
+			err = k8sManager.Start(ctrl.SetupSignalHandler())
+			Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+		}()
+	}
 })
 
 var _ = AfterSuite(func() {

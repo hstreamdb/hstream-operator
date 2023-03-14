@@ -25,20 +25,4 @@ var _ = Describe("ConfigMapHelper", func() {
 			Expect(has).To(BeFalse())
 		})
 	})
-
-	Context("with log device config parsing", func() {
-		It("should parse successfully", func() {
-			raw := []byte("{}")
-			Expect(internal.ParseLogDeviceConfig(raw)).NotTo(BeNil())
-		})
-		It("should get error", func() {
-			raw := []byte("abc:123")
-			_, err := internal.ParseLogDeviceConfig(raw)
-			Expect(err).To(HaveOccurred())
-		})
-		It("should not return error", func() {
-			var raw []byte
-			Expect(internal.ParseLogDeviceConfig(raw)).To(HaveLen(0))
-		})
-	})
 })

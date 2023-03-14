@@ -1,7 +1,7 @@
 package internal_test
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("PodHelper", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 
 	BeforeEach(func() {
 		hdb = mock.CreateDefaultCR()
@@ -18,10 +18,10 @@ var _ = Describe("PodHelper", func() {
 
 	Context("with base nil", func() {
 		It("get default label and namespace", func() {
-			meta := internal.GetObjectMetadata(hdb, nil, appsv1alpha1.ComponentTypeHServer)
+			meta := internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer)
 			Expect(meta.Labels).NotTo(BeNil())
 			Expect(meta.Annotations).NotTo(BeNil())
-			Expect(meta.Labels).To(HaveKeyWithValue(appsv1alpha1.ComponentKey, string(appsv1alpha1.ComponentTypeHServer)))
+			Expect(meta.Labels).To(HaveKeyWithValue(hapi.ComponentKey, string(hapi.ComponentTypeHServer)))
 			Expect(meta.Namespace).To(Equal(hdb.Namespace))
 		})
 	})
@@ -35,8 +35,8 @@ var _ = Describe("PodHelper", func() {
 					"annotation": "testAnnotation",
 				},
 			}
-			meta := internal.GetObjectMetadata(hdb, base, appsv1alpha1.ComponentTypeHServer)
-			Expect(meta.Labels).To(HaveKeyWithValue(appsv1alpha1.ComponentKey, string(appsv1alpha1.ComponentTypeHServer)))
+			meta := internal.GetObjectMetadata(hdb, base, hapi.ComponentTypeHServer)
+			Expect(meta.Labels).To(HaveKeyWithValue(hapi.ComponentKey, string(hapi.ComponentTypeHServer)))
 			Expect(meta.Labels).To(HaveKeyWithValue("label", "testLabel"))
 			Expect(meta.Annotations).To(HaveKeyWithValue("annotation", "testAnnotation"))
 			Expect(meta.Namespace).To(Equal(hdb.Namespace))

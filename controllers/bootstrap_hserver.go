@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
@@ -10,10 +10,10 @@ import (
 
 type bootstrapHServer struct{}
 
-func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hServer")
 
-	if hdb.Status.HServerConfigured {
+	if hdb.Status.HServer.Bootstrapped {
 		logger.Info("HServer has been bootstrapped before")
 		return nil
 	}
@@ -22,10 +22,10 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	// determine if all hServer pods are running
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
+			Name: hapi.ComponentTypeHServer.GetResName(hdb.Name),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: hdb.Spec.HServer.Replicas,
+			Replicas: &hdb.Spec.HServer.Replicas,
 		},
 	}
 	if err := checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
@@ -38,6 +38,6 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	}
 
-	hdb.Status.HServerConfigured = true
+	hdb.Status.HServer.Bootstrapped = true
 	return nil
 }

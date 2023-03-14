@@ -2,13 +2,15 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	"fmt"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 const (
@@ -54,7 +56,7 @@ var hServerPorts = []corev1.ContainerPort{
 
 type addHServer struct{}
 
-func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add hserver")
 
 	sts := a.getSts(hdb)
@@ -91,18 +93,21 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 	return nil
 }
 
-func (a addHServer) getSts(hdb *appsv1alpha1.HStreamDB) appsv1.StatefulSet {
+func (a addHServer) getSts(hdb *hapi.HStreamDB) appsv1.StatefulSet {
 	podTemplate := a.getPodTemplate(hdb)
-	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HServer, &podTemplate, appsv1alpha1.ComponentTypeHServer)
-
+	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HServer, &podTemplate, hapi.ComponentTypeHServer)
+	// TODO: delete this special handle while hstream remove the seen-nodes and server-id arg
+	if len(hdb.Spec.HServer.Container.Command) == 0 {
+		sts.Spec.Replicas = &[]int32{1}[0]
+	}
 	return sts
 }
 
-func (a addHServer) getPodTemplate(hdb *appsv1alpha1.HStreamDB) corev1.PodTemplateSpec {
+func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 	hServer := &hdb.Spec.HServer
 
 	podTemplate := corev1.PodTemplateSpec{
-		ObjectMeta: internal.GetObjectMetadata(hdb, nil, appsv1alpha1.ComponentTypeHServer),
+		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer),
 		Spec: corev1.PodSpec{
 			Affinity:        hServer.Affinity,
 			Tolerations:     hServer.Tolerations,
@@ -115,67 +120,68 @@ func (a addHServer) getPodTemplate(hdb *appsv1alpha1.HStreamDB) corev1.PodTempla
 		},
 	}
 
-	podTemplate.Name = appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name)
+	podTemplate.Name = hapi.ComponentTypeHServer.GetResName(hdb.Name)
 	return podTemplate
 }
 
-func (a addHServer) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container {
+func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	hServer := &hdb.Spec.HServer
 	container := corev1.Container{
-		Image:           hdb.Spec.Image,
-		ImagePullPolicy: hdb.Spec.ImagePullPolicy,
+		Image:           hdb.Spec.HServer.Image,
+		ImagePullPolicy: hdb.Spec.HServer.ImagePullPolicy,
 	}
 
 	structAssign(&container, &hServer.Container)
 	extendEnv(&container, hServerEnvVar)
-	container.Ports = mergePorts(hServerPorts, container.Ports)
 
 	if container.Name == "" {
-		container.Name = string(appsv1alpha1.ComponentTypeHServer)
+		container.Name = string(hapi.ComponentTypeHServer)
 	}
 
 	if len(container.Command) == 0 {
 		container.Command = []string{"/usr/local/bin/hstream-server"}
-	}
-	/*
+
 		args := make(map[string]string)
 		for k, v := range hServerArg {
 			args[k] = v
 		}
 
-		// TODO:
-		args["--server-id"] = xxx
+		// TODO: remove server-id
+		args["--server-id"] = "100"
 
-		config, _ := parseLogDeviceConfig(hdb.Spec.Config.LogDeviceConfig.Raw)
-		if rqlite, ok := config["rqlite"]; ok {
-			if uri, ok := rqlite.(map[string]interface{}); ok {
-				args["--metastore-uri"] = strings.Replace(uri["rqlite_uri"].(string), "ip", "rq", 1)
-			}
-		}
+		hmeta, _ := getHMetaAddr(hdb)
+		// TODO: rename "rq" to "ip"
+		args["--metastore-uri"] = "rq://" + hmeta
 
-		adminServerSvc := internal.GetService(hdb, nil, appsv1alpha1.ComponentTypeAdminServer)
+		adminServerSvc := getAdminServerSvc(hdb)
 		args["--store-admin-host"] = fmt.Sprintf("%s.%s", adminServerSvc.Name, adminServerSvc.Namespace)
 
-		for _, p := range container.Ports {
-			args["--"+(&p).Name] = strconv.Itoa(int((&p).ContainerPort))
-		}
+		parsedArgs, _ := extendArg(&container, args)
+		container.Ports = extendPorts(parsedArgs, container.Ports, hServerPorts)
 
 		// TODO: remove seed nodes
-		hServerSvc := internal.GetService(hdb, nil, appsv1alpha1.ComponentTypeHServer)
-		seedNodes := make([]string, *hdb.Spec.HServer.Replicas)
-		for i := int32(0); i < *hdb.Spec.HServer.Replicas; i++ {
-			// ep. hdbName-hserver.svcName.namespace:6571
-			seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%s",
-				appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
-				i,
-				hServerSvc.Name,
-				hServerSvc.Namespace,
-				args["--internal-port"])
-		}
-		args["--seed-nodes"] = strings.Join(seedNodes, ",")
+		if _, ok := parsedArgs["seed-nodes"]; !ok {
+			var internalPort int32
+			for _, port := range container.Ports {
+				if port.Name == "internal-port" {
+					internalPort = port.ContainerPort
+				}
+			}
 
-		extendArg(&container, args)
-	*/
+			hServerSvc := getHServerSvc(hdb)
+			seedNodes := make([]string, hdb.Spec.HServer.Replicas)
+			for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
+				// ep. hdbName-hserver-0.svcName.namespace:6571
+				seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%d",
+					hapi.ComponentTypeHServer.GetResName(hdb.Name),
+					i,
+					hServerSvc.Name,
+					hServerSvc.Namespace,
+					internalPort)
+			}
+			container.Args = append(container.Args, "--seed-nodes", strings.Join(seedNodes, ","))
+		}
+	}
 
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	container.VolumeMounts = append(container.VolumeMounts,
@@ -184,7 +190,7 @@ func (a addHServer) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container
 	return append([]corev1.Container{container}, hServer.SidecarContainers...)
 }
 
-func (a addHServer) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Volume) {
+func (a addHServer) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	volumes = []corev1.Volume{internal.GetVolume(hdb, m)}
 	return

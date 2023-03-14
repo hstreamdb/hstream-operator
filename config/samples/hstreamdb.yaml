@@ -1,0 +1,47 @@
+apiVersion: apps.hstream.io/v1alpha2
+kind: HStreamDB
+metadata:
+  labels:
+    app.kubernetes.io/name: hstreamdb
+    app.kubernetes.io/instance: hstreamdb-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: hstreamdb-sample
+spec:
+  hserver:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: hserver
+  hstore:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 3
+    container:
+      name: hstore
+#    volumeClaimTemplate:
+#      spec:
+#        storageClassName: 'standard'
+#        resources:
+#          requests:
+#            storage: 1Gi
+  adminServer:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: admin-server
+  hmeta:
+    image: rqlite/rqlite:latest
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: hmeta
+#    volumeClaimTemplate:
+#      spec:
+#        storageClassName: 'standard'
+#        resources:
+#          requests:
+#            storage: 1Gi

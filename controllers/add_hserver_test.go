@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,7 +12,7 @@ import (
 )
 
 var _ = Describe("AddHserver", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 	var requeue *requeue
 	hServer := addHServer{}
 	ctx := context.TODO()
@@ -25,7 +26,7 @@ var _ = Describe("AddHserver", func() {
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, hdb)
+		_ = k8sClient.Delete(ctx, hdb)
 	})
 
 	Context("with a reconciled cluster", func() {
@@ -93,14 +94,39 @@ var _ = Describe("AddHserver", func() {
 					Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(command))
 				})
 			})
+			Context("define internal-port in args", func() {
+				internalPort := "6572"
+				BeforeEach(func() {
+					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+						"--internal-port", internalPort)
+					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should not requeue", func() {
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should get internal-port and seeds-node from args", func() {
+					sts, err := getHServerStatefulSet(hdb)
+					Expect(err).To(BeNil())
+
+					flags := internal.FlagSet{}
+					err = flags.Parse(sts.Spec.Template.Spec.Containers[0].Args)
+					Expect(err).To(BeNil())
+					Expect(flags.Flags()).To(HaveKeyWithValue("internal-port", internalPort))
+					Expect(flags.Flags()).To(HaveKey("seed-nodes"))
+					Expect(flags.Flags()["seed-nodes"]).To(ContainSubstring(internalPort))
+				})
+			})
 		})
 	})
 })
 
-func getHServerStatefulSet(hdb *appsv1alpha1.HStreamDB) (sts *appsv1.StatefulSet, err error) {
+func getHServerStatefulSet(hdb *hapi.HStreamDB) (sts *appsv1.StatefulSet, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      appsv1alpha1.ComponentTypeHServer.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeHServer.GetResName(hdb.Name),
 	}
 	sts = &appsv1.StatefulSet{}
 	err = k8sClient.Get(context.TODO(), keyObj, sts)

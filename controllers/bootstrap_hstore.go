@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	jsoniter "github.com/json-iterator/go"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,10 +14,10 @@ import (
 
 type bootstrapHStore struct{}
 
-func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hstore")
 
-	if hdb.Status.HStoreConfigured {
+	if hdb.Status.HStore.Bootstrapped {
 		logger.Info("HStore has been bootstrapped before")
 		return nil
 	}
@@ -27,21 +27,28 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	// determine if all hstore pods are running
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: appsv1alpha1.ComponentTypeHStore.GetResName(hdb.Name),
+			Name: hapi.ComponentTypeHStore.GetResName(hdb.Name),
 		},
 	}
 	if err = checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
-		// we only set the message to log, and reconcile after several second
+		// print message only to log, wait for reconciling after several second
 		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	}
 
 	logger.Info("Bootstrap hstore")
-	if err = r.AdminClientProvider.GetAdminClient(hdb).BootstrapHStore(); err != nil {
+
+	metadataReplication := int32(0)
+	if hdb.Spec.Config.MetadataReplicateAcross == nil || *hdb.Spec.Config.MetadataReplicateAcross > hdb.Spec.HStore.Replicas {
+		metadataReplication = getRecommendedLogReplicaAcross(hdb.Spec.HStore.Replicas)
+	} else {
+		metadataReplication = *hdb.Spec.Config.MetadataReplicateAcross
+	}
+	if err = r.AdminClientProvider.GetAdminClient(hdb).BootstrapHStore(metadataReplication); err != nil {
 		return &requeue{message: err.Error(), delay: 10 * time.Second}
 	}
 
-	hdb.Status.HStoreConfigured = true
-	logger.Info("Update status")
+	hdb.Status.HStore.Bootstrapped = true
+	logger.Info("Update hstore status")
 	if err = r.Status().Update(ctx, hdb); err != nil {
 		return &requeue{curError: fmt.Errorf("update HStore status failed: %w", err)}
 	}
@@ -51,7 +58,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	return &requeue{delay: 10 * time.Second}
 }
 
-func checkPodRunningStatus(ctx context.Context, client client.Client, hdb *appsv1alpha1.HStreamDB, obj client.Object) error {
+func checkPodRunningStatus(ctx context.Context, client client.Client, hdb *hapi.HStreamDB, obj client.Object) error {
 	count, err := getReadyReplicasInService(ctx, client, hdb, obj)
 	if err != nil {
 		return err
@@ -73,7 +80,7 @@ func checkPodRunningStatus(ctx context.Context, client client.Client, hdb *appsv
 	return nil
 }
 
-func getReadyReplicasInService(ctx context.Context, client client.Client, hdb *appsv1alpha1.HStreamDB,
+func getReadyReplicasInService(ctx context.Context, client client.Client, hdb *hapi.HStreamDB,
 	obj client.Object) (count int, err error) {
 
 	err = client.Get(ctx, types.NamespacedName{
@@ -87,7 +94,7 @@ func getReadyReplicasInService(ctx context.Context, client client.Client, hdb *a
 	bin, _ := jsoniter.Marshal(obj)
 	ret := jsoniter.Get(bin, "status", "readyReplicas")
 	if ret.LastError() != nil {
-		err = fmt.Errorf("couldn't get ready replicas from status of %s: %w", obj.GetName(), ret.LastError())
+		err = fmt.Errorf("wait for all of %s nodes to be ready", obj.GetName())
 		return
 	}
 

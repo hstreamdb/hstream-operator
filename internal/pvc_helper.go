@@ -1,19 +1,23 @@
 package internal
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func GetPvc(hdb *appsv1alpha1.HStreamDB) (pvc corev1.PersistentVolumeClaim) {
-	if hdb.Spec.VolumeClaimTemplate != nil {
-		pvc = *hdb.Spec.VolumeClaimTemplate.DeepCopy()
+func GetPvc(hdb *hapi.HStreamDB, template *corev1.PersistentVolumeClaimTemplate, compType hapi.ComponentType) (pvc corev1.PersistentVolumeClaim) {
+	var customMetadata *metav1.ObjectMeta
+
+	if template != nil {
+		pvc.ObjectMeta = *template.ObjectMeta.DeepCopy()
+		pvc.Spec = *template.Spec.DeepCopy()
+		customMetadata = &pvc.ObjectMeta
 	}
 
-	pvc.ObjectMeta = getPvcMetadata(hdb, appsv1alpha1.ComponentTypeHStore)
-	pvc.ObjectMeta.Name = GetPvcName(hdb)
+	pvc.ObjectMeta = GetObjectMetadata(hdb, customMetadata, compType)
+	pvc.ObjectMeta.Name = GetPvcName(hdb, template)
 
 	if pvc.Spec.AccessModes == nil {
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
@@ -30,15 +34,15 @@ func GetPvc(hdb *appsv1alpha1.HStreamDB) (pvc corev1.PersistentVolumeClaim) {
 	return
 }
 
-func GetPvcName(hdb *appsv1alpha1.HStreamDB) string {
+func GetPvcName(hdb *hapi.HStreamDB, pvc *corev1.PersistentVolumeClaimTemplate) string {
 	shortName := ""
-	if hdb.Spec.VolumeClaimTemplate != nil && hdb.Spec.VolumeClaimTemplate.Name != "" {
-		shortName = hdb.Spec.VolumeClaimTemplate.Name
+	if pvc != nil && pvc.Name != "" {
+		shortName = pvc.Name
 	}
-	return GetResNameWithDefault(hdb, shortName, "shard")
+	return GetResNameWithDefault(hdb, shortName, "data")
 }
 
-func GetVolume(hdb *appsv1alpha1.HStreamDB, m ConfigMap) corev1.Volume {
+func GetVolume(hdb *hapi.HStreamDB, m ConfigMap) corev1.Volume {
 	return corev1.Volume{
 		Name: m.MountName,
 		VolumeSource: corev1.VolumeSource{
@@ -51,14 +55,4 @@ func GetVolume(hdb *appsv1alpha1.HStreamDB, m ConfigMap) corev1.Volume {
 			},
 		},
 	}
-}
-
-// getPvcMetadata returns the metadata for a PVC
-func getPvcMetadata(hdb *appsv1alpha1.HStreamDB, compType appsv1alpha1.ComponentType) metav1.ObjectMeta {
-	var customMetadata *metav1.ObjectMeta
-
-	if hdb.Spec.VolumeClaimTemplate != nil {
-		customMetadata = &hdb.Spec.VolumeClaimTemplate.ObjectMeta
-	}
-	return GetObjectMetadata(hdb, customMetadata, compType)
 }

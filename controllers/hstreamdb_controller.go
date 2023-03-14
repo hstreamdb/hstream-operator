@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal/admin"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,7 +52,7 @@ type hdbSubReconciler interface {
 	If reconciliation cannot proceed, this should return a requeue object with
 	a `Message` field.
 	*/
-	reconcile(ctx context.Context, r *HStreamDBReconciler, cluster *appsv1alpha1.HStreamDB) *requeue
+	reconcile(ctx context.Context, r *HStreamDBReconciler, cluster *hapi.HStreamDB) *requeue
 }
 
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=hstreamdbs,verbs=get;list;watch;create;update;patch;delete
@@ -71,7 +71,7 @@ type hdbSubReconciler interface {
 func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	//_ = log.FromContext(ctx)
 
-	hdb := &appsv1alpha1.HStreamDB{}
+	hdb := &hapi.HStreamDB{}
 	if err = r.Get(ctx, req.NamespacedName, hdb); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			err = nil
@@ -83,6 +83,8 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	subReconcilers := []hdbSubReconciler{
 		updateConfigMap{},
 		addServices{},
+		addHMeta{},
+		checkHMetaStatus{},
 		addHStore{},
 		addAdminServer{},
 		bootstrapHStore{},
@@ -93,7 +95,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return r.subReconcile(ctx, hdb, subReconcilers)
 }
 
-func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *appsv1alpha1.HStreamDB, subReconcilers []hdbSubReconciler) (
+func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *hapi.HStreamDB, subReconcilers []hdbSubReconciler) (
 	ctrl.Result, error) {
 
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name)
@@ -131,6 +133,6 @@ func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *appsv1alpha
 // SetupWithManager sets up the controller with the Manager.
 func (r *HStreamDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1alpha1.HStreamDB{}).
+		For(&hapi.HStreamDB{}).
 		Complete(r)
 }

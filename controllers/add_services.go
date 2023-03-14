@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -13,7 +13,7 @@ import (
 
 type addServices struct{}
 
-func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	var err error
 	if err = a.addHStoreService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
@@ -24,73 +24,71 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 	if err = a.addHServerService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
+	if err = a.addHMetaService(ctx, r, hdb); err != nil {
+		return &requeue{curError: err}
+	}
 	return nil
 }
 
-func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) (err error) {
-	service := internal.GetHeadlessService(hdb, appsv1alpha1.ComponentTypeHServer)
-
-	hServer := &hdb.Spec.HServer
-	ports, err := a.getPorts(&hServer.Container, hServerPorts)
+func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+	ports, err := getPorts(&hdb.Spec.HServer.Container, hServerPorts)
 	if err != nil {
 		return fmt.Errorf("parse hServer args failed. %w", err)
 	}
-
-	for _, port := range ports {
-		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
-			Name:     port.Name,
-			Protocol: port.Protocol,
-			Port:     port.ContainerPort,
-		})
-	}
+	service := getHServerSvc(hdb, ports...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
-func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) (err error) {
-	service := internal.GetHeadlessService(hdb, appsv1alpha1.ComponentTypeHStore)
-
-	hStore := &hdb.Spec.HStore
-	ports, err := a.getPorts(&hStore.Container, hStorePorts)
+func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+	ports, err := getPorts(&hdb.Spec.HStore.Container, hStorePorts)
 	if err != nil {
 		return fmt.Errorf("parse hStore args failed. %w", err)
 	}
-
-	for _, port := range ports {
-		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
-			Name:     port.Name,
-			Protocol: port.Protocol,
-			Port:     port.ContainerPort,
-		})
-	}
+	service := getHStoreSvc(hdb, ports...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
-func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) (err error) {
-	adminServer := &hdb.Spec.AdminServer
-	ports, err := a.getPorts(&adminServer.Container, adminServerPorts)
+func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+	ports, err := getPorts(&hdb.Spec.AdminServer.Container, adminServerPorts)
 	if err != nil {
 		return fmt.Errorf("parse adminServer args failed. %w", err)
 	}
+	service := getAdminServerSvc(hdb, ports...)
+	return a.createOrUpdate(ctx, r, hdb, &service)
+}
 
-	var servicePorts []corev1.ServicePort
-	for _, port := range ports {
-		servicePorts = append(servicePorts, corev1.ServicePort{
-			Name:     port.Name,
-			Protocol: port.Protocol,
-			Port:     port.ContainerPort,
-		})
+func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+	if hdb.Spec.ExternalHMeta != nil {
+		return nil
 	}
-	service := internal.GetService(hdb, servicePorts, appsv1alpha1.ComponentTypeAdminServer)
 
+	hmeta := hdb.Spec.HMeta
+
+	flags := internal.FlagSet{}
+	if err = flags.Parse(hmeta.Container.Args); err != nil {
+		return fmt.Errorf("parse hmeta args failed. %w", err)
+	}
+
+	parsedArgs := flags.Flags()
+	ports := getHMetaContainerPorts(&hmeta.Container, parsedArgs)
+	servicePorts := convertToServicePort(ports)
+
+	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta, servicePorts...)
+	service.Spec.PublishNotReadyAddresses = true
+	if err = a.createOrUpdate(ctx, r, hdb, &service); err != nil {
+		return
+	}
+
+	service = internal.GetService(hdb, hapi.ComponentTypeHMeta, servicePorts...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
 // createOrUpdate create or updates selected safe fields on a service based on a new
 // service definition.
-func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB,
+func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB,
 	newService *corev1.Service) (err error) {
 
-	newService.Annotations[appsv1alpha1.LastSpecKey] = internal.GetObjectHash(newService)
+	newService.Annotations[hapi.LastSpecKey] = internal.GetObjectHash(newService)
 
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "service", newService.Name)
 
@@ -121,8 +119,8 @@ func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
 	return r.Update(ctx, existingService)
 }
 
-func (a addServices) getPorts(container *appsv1alpha1.Container, defaultPorts []corev1.ContainerPort) (
-	[]corev1.ContainerPort, error) {
+func getPorts(container *hapi.Container, defaultPorts []corev1.ContainerPort) (
+	[]corev1.ServicePort, error) {
 
 	flags := internal.FlagSet{}
 	if err := flags.Parse(container.Args); err != nil {
@@ -131,6 +129,29 @@ func (a addServices) getPorts(container *appsv1alpha1.Container, defaultPorts []
 
 	args := flags.Flags()
 	ports := extendPorts(args, container.Ports, defaultPorts)
-	return ports, nil
+	return convertToServicePort(ports), nil
+}
 
+func convertToServicePort(ports []corev1.ContainerPort) []corev1.ServicePort {
+	var servicePorts []corev1.ServicePort
+	for _, port := range ports {
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     port.Name,
+			Protocol: port.Protocol,
+			Port:     port.ContainerPort,
+		})
+	}
+	return servicePorts
+}
+
+func getHStoreSvc(hdb *hapi.HStreamDB, ports ...corev1.ServicePort) corev1.Service {
+	return internal.GetHeadlessService(hdb, hapi.ComponentTypeHStore, ports...)
+}
+
+func getHServerSvc(hdb *hapi.HStreamDB, ports ...corev1.ServicePort) corev1.Service {
+	return internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, ports...)
+}
+
+func getAdminServerSvc(hdb *hapi.HStreamDB, ports ...corev1.ServicePort) corev1.Service {
+	return internal.GetService(hdb, hapi.ComponentTypeAdminServer, ports...)
 }

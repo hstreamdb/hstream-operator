@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -11,10 +11,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"strconv"
 )
 
 var _ = Describe("UpdateConfigMap", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 	var requeue *requeue
 	updateConfigMap := updateConfigMap{}
 	ctx := context.TODO()
@@ -63,10 +64,11 @@ var _ = Describe("UpdateConfigMap", func() {
 				})
 			})
 
-			Context("update config name", func() {
+			Context("update config", func() {
+				var oldNShard int32
 				BeforeEach(func() {
-					nshard := int32(2)
-					hdb.Spec.Config.NShards = &nshard
+					oldNShard = hdb.Spec.Config.NShards
+					hdb.Spec.Config.NShards = 2
 					hdb.Spec.Config.LogDeviceConfig = runtime.RawExtension{
 						Raw: []byte(`
 					{
@@ -104,10 +106,42 @@ var _ = Describe("UpdateConfigMap", func() {
 					}))
 				})
 
-				It("should get new nShard", func() {
+				It("should get old nShard", func() {
 					cm, _ := internal.ConfigMaps.Get(internal.NShardsConfig)
 					Expect(newNShard.Data).To(HaveKey(cm.MapKey))
-					Expect(newNShard.Data).To(HaveKeyWithValue("NSHARDS", "2"))
+					Expect(newNShard.Data).To(HaveKeyWithValue("NSHARDS", strconv.Itoa(int(oldNShard))))
+				})
+			})
+
+			Context("use external hmeta cluster", func() {
+				BeforeEach(func() {
+					hdb.Spec.ExternalHMeta = &hapi.ExternalHMeta{
+						Host:      "rqlite-svc",
+						Port:      4001,
+						Namespace: "default",
+					}
+
+					requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
+					Expect(requeue).To(BeNil())
+				})
+
+				var newLogDevice *corev1.ConfigMap
+				It("should get new config map", func() {
+					var err error
+					newLogDevice, _, err = getConfigMaps(hdb)
+					Expect(err).To(BeNil())
+				})
+
+				It("should get new server_setting", func() {
+					cm, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
+					Expect(newLogDevice.Data).To(HaveKey(cm.MapKey))
+					file := newLogDevice.Data[cm.MapKey]
+					m := make(map[string]any)
+					err := json.UnmarshalFromString(file, &m)
+					Expect(err).To(BeNil())
+					Expect(m).To(HaveKeyWithValue("rqlite", map[string]any{
+						"rqlite_uri": "ip://rqlite-svc.default:4001",
+					}))
 				})
 			})
 		})
@@ -127,13 +161,13 @@ var _ = Describe("UpdateConfigMap", func() {
 
 		It("get error 'invalid raw'", func() {
 			Expect(requeue.curError).NotTo(BeNil())
-			Expect(requeue.curError.Error()).To(ContainSubstring("incorrect json raw"))
+			Expect(requeue.curError.Error()).To(ContainSubstring("parse log device config failed: invalid json format"))
 		})
 	})
 
 	Context("with default nshard", func() {
 		BeforeEach(func() {
-			hdb.Spec.Config.NShards = nil
+			hdb.Spec.Config.NShards = 0
 			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 		})
 		It("should not requeue", func() {
@@ -153,7 +187,7 @@ var _ = Describe("UpdateConfigMap", func() {
 	})
 })
 
-func getConfigMaps(hdb *appsv1alpha1.HStreamDB) (logDevice, nShards *corev1.ConfigMap, err error) {
+func getConfigMaps(hdb *hapi.HStreamDB) (logDevice, nShards *corev1.ConfigMap, err error) {
 	config, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,

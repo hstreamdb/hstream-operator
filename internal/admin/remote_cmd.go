@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -17,15 +18,19 @@ import (
 )
 
 type Executor struct {
-	clientSet *kubernetes.Clientset
-	Config    rest.Config
+	clientSet  *kubernetes.Clientset
+	httpClient *http.Client
+	Config     rest.Config
 }
 
 func NewExecutor(config *rest.Config) *Executor {
+	config.Timeout = 10 * time.Second
+	httpClient, _ := rest.HTTPClientFor(config)
 	clientSet, _ := kubernetes.NewForConfig(config)
 	return &Executor{
-		clientSet: clientSet,
-		Config:    *config,
+		clientSet:  clientSet,
+		httpClient: httpClient,
+		Config:     *config,
 	}
 }
 
@@ -76,6 +81,7 @@ func (e *Executor) ExecToPod(namespace string, targetPod, containerName, command
 		option,
 		scheme.ParameterCodec,
 	)
+
 	exec, err := remotecommand.NewSPDYExecutor(&e.Config, http.MethodPost, req.URL())
 	if err != nil {
 		err = fmt.Errorf("error while creating Executor: %v", err)
@@ -83,6 +89,7 @@ func (e *Executor) ExecToPod(namespace string, targetPod, containerName, command
 	}
 
 	var stdout, stderr bytes.Buffer
+
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdout: &stdout,
 		Stderr: &stderr,
@@ -93,5 +100,32 @@ func (e *Executor) ExecToPod(namespace string, targetPod, containerName, command
 	}
 
 	output = stdout.String()
+	return
+}
+
+// GetAPIByService call pod http api by service
+// the supported formats for the serviceName segment of the URL are:
+// <service_name> - proxies to the default or unnamed port using http
+// <service_name>:<port_name> - proxies to the specified port name or port number using http
+// https:<service_name>: - proxies to the default or unnamed port using https (note the trailing colon)
+// https:<service_name>:<port_name> - proxies to the specified port name or port number using https
+// More info: https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster-services/#manually-constructing-apiserver-proxy-urls
+func (e *Executor) GetAPIByService(namespace, serviceName, path string) (output []byte, statusCode int, err error) {
+	req := e.clientSet.CoreV1().RESTClient().Get().Resource("services").
+		Namespace(namespace).SubResource("proxy").
+		Name(serviceName).Suffix(path)
+
+	resp, err := e.httpClient.Get(req.URL().String())
+	if err != nil {
+		err = fmt.Errorf("err from http request %w", err)
+		return
+	}
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	statusCode = resp.StatusCode
+	output, err = io.ReadAll(resp.Body)
 	return
 }

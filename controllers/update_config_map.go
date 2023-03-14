@@ -3,12 +3,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	jsoniter "github.com/json-iterator/go"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
@@ -16,42 +17,39 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+const (
+	maxRecommendedLogReplication = 3
+)
+
 type updateConfigMap struct {
 }
 
-func (u updateConfigMap) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
-	configMap, err := u.getLogDeviceConfigMap(hdb)
+func (u updateConfigMap) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
+	configMap, err := getLogDeviceConfigMap(hdb)
 	if err != nil {
 		return &requeue{curError: err}
 	}
 
-	if err = u.createOrUpdateConfigMap(ctx, r, hdb, &configMap); err != nil {
+	if err = u.createOrUpdate(ctx, r, hdb, &configMap); err != nil {
 		return &requeue{curError: err}
 	}
 
-	nshardsMap, err := u.getNShardsMap(hdb)
+	nShardsMap, err := getNShardsMap(hdb)
 	if err != nil {
 		return &requeue{curError: err}
 	}
 
-	if err = u.createOrUpdateConfigMap(ctx, r, hdb, &nshardsMap); err != nil {
+	// nshard doesn't support update
+	if _, err = u.create(ctx, r, hdb, &nShardsMap); err != nil {
 		return &requeue{curError: err}
 	}
 	return nil
 }
 
-func (u updateConfigMap) getLogDeviceConfigMap(hdb *appsv1alpha1.HStreamDB) (configMap corev1.ConfigMap, err error) {
-	config, err := internal.ParseLogDeviceConfig(hdb.Spec.Config.LogDeviceConfig.Raw)
+func getLogDeviceConfigMap(hdb *hapi.HStreamDB) (configMap corev1.ConfigMap, err error) {
+	config, err := getLogDeviceConfig(hdb)
 	if err != nil {
-		err = fmt.Errorf("invalid log device config: %w", err)
 		return
-	}
-
-	defConfig := internal.GetLogDeviceConfig()
-	for key, value := range defConfig {
-		if _, ok := config[key]; !ok {
-			config[key] = value
-		}
 	}
 
 	cm, has := internal.ConfigMaps.Get(internal.LogDeviceConfig)
@@ -70,44 +68,34 @@ func (u updateConfigMap) getLogDeviceConfigMap(hdb *appsv1alpha1.HStreamDB) (con
 	return
 }
 
-func (u updateConfigMap) getNShardsMap(hdb *appsv1alpha1.HStreamDB) (configMap corev1.ConfigMap, err error) {
+func getNShardsMap(hdb *hapi.HStreamDB) (configMap corev1.ConfigMap, err error) {
 	cm, has := internal.ConfigMaps.Get(internal.NShardsConfig)
 	if !has {
 		err = fmt.Errorf("no such config map %s", internal.NShardsConfig)
 		return
 	}
 
-	var nshards string
-	if hdb.Spec.Config.NShards == nil {
-		nshards = "1"
-	} else {
-		nshards = strconv.Itoa(int(*hdb.Spec.Config.NShards))
+	nShards := getMinNShards(hdb)
+	configMap = corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      internal.GetResNameOnPanic(hdb, "nshards"),
+			Namespace: hdb.GetNamespace(),
+		},
+		Data: map[string]string{
+			cm.MapKey: strconv.Itoa(int(nShards)),
+		},
 	}
-
-	configMap.Data = map[string]string{
-		cm.MapKey: nshards,
-	}
-	configMap.Name = internal.GetResNameOnPanic(hdb, "nshards")
-	configMap.Namespace = hdb.GetNamespace()
 	return
 }
 
-func (u updateConfigMap) createOrUpdateConfigMap(ctx context.Context, r *HStreamDBReconciler,
-	hdb *appsv1alpha1.HStreamDB, configMap *corev1.ConfigMap) (err error) {
+func (u updateConfigMap) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
+	hdb *hapi.HStreamDB, configMap *corev1.ConfigMap) (err error) {
 
 	logger := log.WithValues("namespace", configMap.Namespace,
 		"instance", hdb.Name, "name", configMap.Name, "reconciler", "UpdateConfigMap")
 
-	existing := &corev1.ConfigMap{}
-	err = r.Get(ctx, client.ObjectKeyFromObject(configMap), existing)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			if err = ctrl.SetControllerReference(hdb, configMap, r.Scheme); err != nil {
-				return
-			}
-			logger.Info("Creating config map", "name", configMap.Name)
-			return r.Create(ctx, configMap)
-		}
+	existing, err := u.create(ctx, r, hdb, configMap)
+	if err != nil || existing == nil {
 		return
 	}
 
@@ -126,4 +114,124 @@ func (u updateConfigMap) createOrUpdateConfigMap(ctx context.Context, r *HStream
 	existing.Data = configMap.Data
 	existing.BinaryData = configMap.BinaryData
 	return r.Update(ctx, existing)
+}
+
+func (u updateConfigMap) create(ctx context.Context, r *HStreamDBReconciler,
+	hdb *hapi.HStreamDB, newConfigMap *corev1.ConfigMap) (existing *corev1.ConfigMap, err error) {
+
+	logger := log.WithValues("namespace", newConfigMap.Namespace,
+		"instance", hdb.Name, "name", newConfigMap.Name, "reconciler", "UpdateConfigMap")
+
+	existing = &corev1.ConfigMap{}
+	err = r.Get(ctx, client.ObjectKeyFromObject(newConfigMap), existing)
+	if err != nil {
+		existing = nil
+		if k8sErrors.IsNotFound(err) {
+			if err = ctrl.SetControllerReference(hdb, newConfigMap, r.Scheme); err == nil {
+				logger.Info("Creating config map", "name", newConfigMap.Name)
+				err = r.Create(ctx, newConfigMap)
+				return
+			}
+		}
+		return
+	}
+	return
+}
+
+func getLogDeviceConfig(hdb *hapi.HStreamDB) (config map[string]any, err error) {
+	// parse json config from cr
+	config = make(map[string]any)
+	raw := hdb.Spec.Config.LogDeviceConfig.Raw
+	if len(raw) != 0 {
+		if !jsoniter.Valid(raw) {
+			err = fmt.Errorf("parse log device config failed: invalid json format")
+			return
+		}
+		_ = json.Unmarshal(raw, &config)
+	}
+
+	// append hmeta addr to the logDevice config
+	hmetaAddr, err := getHMetaAddr(hdb)
+	if err != nil {
+		return
+	}
+
+	// merge default config if user doesn't set
+	defaultLogDeviceConfig := generateDefaultConfig(hdb.Spec.HStore.Replicas, hmetaAddr)
+	for key, value := range defaultLogDeviceConfig {
+		if _, ok := config[key]; !ok {
+			config[key] = value
+		}
+	}
+	return
+}
+
+func generateDefaultConfig(podReplicas int32, hmetaAddr string) map[string]any {
+	replicaAcross := getRecommendedLogReplicaAcross(podReplicas)
+
+	return map[string]any{
+		"server_settings": map[string]any{
+			"enable-nodes-configuration-manager":                  "true",
+			"use-nodes-configuration-manager-nodes-configuration": "true",
+			"enable-node-self-registration":                       "true",
+			"enable-cluster-maintenance-state-machine":            "true",
+		},
+		"client_settings": map[string]any{
+			"enable-nodes-configuration-manager":                  "true",
+			"use-nodes-configuration-manager-nodes-configuration": "true",
+			"admin-client-capabilities":                           "true",
+		},
+		"cluster": "hstore",
+		"internal_logs": map[string]any{
+			"config_log_deltas": map[string]any{
+				"replicate_across": map[string]any{
+					"node": replicaAcross,
+				},
+			},
+			"config_log_snapshots": map[string]any{
+				"replicate_across": map[string]any{
+					"node": replicaAcross,
+				},
+			},
+			"event_log_deltas": map[string]any{
+				"replicate_across": map[string]any{
+					"node": replicaAcross,
+				},
+			},
+			"event_log_snapshots": map[string]any{
+				"replicate_across": map[string]any{
+					"node": replicaAcross,
+				},
+			},
+			"maintenance_log_deltas": map[string]any{
+				"replicate_across": map[string]any{
+					"node": replicaAcross,
+				},
+			},
+			"maintenance_log_snapshots": map[string]any{
+				"replicate_across": map[string]any{
+					"node": replicaAcross,
+				},
+			},
+		},
+		"rqlite": map[string]string{
+			"rqlite_uri": "ip://" + hmetaAddr,
+		},
+		"version": 1,
+	}
+}
+
+// the recommended max replica across is 3 and must be less than or equal to pod num
+func getRecommendedLogReplicaAcross(podReplicas int32) int32 {
+	if podReplicas <= maxRecommendedLogReplication {
+		return podReplicas
+	}
+	return maxRecommendedLogReplication
+}
+
+func getMinNShards(hdb *hapi.HStreamDB) int32 {
+	if hdb.Spec.Config.NShards == 0 {
+		return 1
+	}
+	return hdb.Spec.Config.NShards
 }

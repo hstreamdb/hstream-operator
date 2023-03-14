@@ -1,4 +1,4 @@
-package v1alpha1
+package v1alpha2
 
 const (
 	// LastSpecKey provides the annotation name we use to store the hash of the

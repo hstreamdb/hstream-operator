@@ -1,14 +1,23 @@
-package v1alpha1
+package v1alpha2
 
 import corev1 "k8s.io/api/core/v1"
 
 type Component struct {
+	//+kubebuilder:validation:Required
+	Image string `json:"image"`
+
+	// Image pull policy.
+	// One of Always, Never, IfNotPresent.
+	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
-	// If unspecified, defaults to 3.
-	//+kubebuilder:default:=3
-	Replicas *int32 `json:"replicas,omitempty"`
+	// +kubebuilder:validation:Required
+	Replicas int32 `json:"replicas"`
 
 	// List of volumes that can be mounted by containers belonging to the pod.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes
@@ -41,8 +50,6 @@ type Component struct {
 	// container belonging to the pod.
 	// Container cannot currently be added or removed.
 	// Cannot be updated.
-	// +patchMergeKey=name
-	// +patchStrategy=merge
 	Container Container `json:"container" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=container"`
 	// NodeSelector is a selector which must be true for the pod to fit on a node.
 	// Selector which must match a node's labels for the pod to be scheduled on that node.
@@ -65,6 +72,10 @@ type Component struct {
 	// If specified, the pod's tolerations.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty" protobuf:"bytes,22,opt,name=tolerations"`
+
+	// VolumeClaimTemplate allows customizing the persistent volume claim for the pod.
+	// +optional
+	VolumeClaimTemplate *corev1.PersistentVolumeClaimTemplate `json:"volumeClaimTemplate,omitempty"`
 }
 
 // Container A single application container that you want to run within a pod.

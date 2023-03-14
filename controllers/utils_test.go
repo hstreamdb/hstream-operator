@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -263,12 +263,12 @@ var _ = Describe("Utils", func() {
 		BeforeEach(func() {
 			obj1 = &metav1.ObjectMeta{
 				Annotations: map[string]string{
-					appsv1alpha1.LastSpecKey: "hash1",
+					hapi.LastSpecKey: "hash1",
 				},
 			}
 			obj2 = &metav1.ObjectMeta{
 				Annotations: map[string]string{
-					appsv1alpha1.LastSpecKey: "hash1",
+					hapi.LastSpecKey: "hash1",
 				},
 			}
 		})
@@ -278,8 +278,58 @@ var _ = Describe("Utils", func() {
 		})
 
 		It("hash changed", func() {
-			obj1.Annotations[appsv1alpha1.LastSpecKey] = "hash3"
+			obj1.Annotations[hapi.LastSpecKey] = "hash3"
 			Expect(isHashChanged(obj1, obj2)).To(BeTrue())
 		})
+	})
+
+	It("test getHMetaAddr by external hmeta cluster", func() {
+		hdb := &hapi.HStreamDB{
+			Spec: hapi.HStreamDBSpec{
+				ExternalHMeta: &hapi.ExternalHMeta{
+					Host:      "rqlite-svc",
+					Port:      4001,
+					Namespace: "default",
+				}},
+		}
+		addr, err := getHMetaAddr(hdb)
+		Expect(err).To(Succeed())
+		Expect(addr).To(Equal("rqlite-svc.default:4001"))
+	})
+
+	It("test getHMetaAddr by internal hmeta", func() {
+		hdb := &hapi.HStreamDB{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hstreamdb-sample",
+				Namespace: "default",
+			},
+			Spec: hapi.HStreamDBSpec{
+				HMeta: hapi.Component{
+					Replicas: 1,
+				},
+			},
+		}
+		addr, err := getHMetaAddr(hdb)
+		Expect(err).To(Succeed())
+		Expect(addr).To(Equal("hstreamdb-sample-hmeta.default:4001"))
+	})
+
+	It("test getHMetaAddr with invalid arg", func() {
+		hdb := &hapi.HStreamDB{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hstreamdb-sample",
+				Namespace: "default",
+			},
+			Spec: hapi.HStreamDBSpec{
+				HMeta: hapi.Component{
+					Replicas: 1,
+					Container: hapi.Container{
+						Args: []string{"invalid arg"},
+					},
+				},
+			},
+		}
+		_, err := getHMetaAddr(hdb)
+		Expect(err).To(HaveOccurred())
 	})
 })

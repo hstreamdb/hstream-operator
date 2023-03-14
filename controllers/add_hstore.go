@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -55,16 +55,19 @@ var hStoreArg = map[string]string{
 	"--address":              "$(POD_IP)",
 	"--name":                 "$(POD_NAME)",
 	"--local-log-store-path": internal.HStoreDataPath,
-	"--num-shards":           "1",
+	//"--num-shards":           "1",
 }
 
 type addHStore struct{}
 
-func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *appsv1alpha1.HStreamDB) *requeue {
+func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add hstore")
 
-	sts := a.getSts(hdb)
+	// modify nShard will impact the data storage path of hstore,
+	// so we need to get old nshards config from the existing config map
+	nShard := a.getNShardFromExistingConfigMap(ctx, r, hdb)
 
+	sts := a.getSts(hdb, nShard)
 	existingSts := &appsv1.StatefulSet{}
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(&sts), existingSts)
 	if err != nil {
@@ -100,19 +103,19 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *a
 	return nil
 }
 
-func (a addHStore) getSts(hdb *appsv1alpha1.HStreamDB) appsv1.StatefulSet {
-	podTemplate := a.getPodTemplate(hdb)
+func (a addHStore) getSts(hdb *hapi.HStreamDB, nShard int32) appsv1.StatefulSet {
+	podTemplate := a.getPodTemplate(hdb, nShard)
 	pvcs := a.getPVC(hdb)
 
-	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HStore, &podTemplate, appsv1alpha1.ComponentTypeHStore)
+	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HStore, &podTemplate, hapi.ComponentTypeHStore)
 	sts.Spec.VolumeClaimTemplates = pvcs
 	return sts
 }
 
-func (a addHStore) getPodTemplate(hdb *appsv1alpha1.HStreamDB) corev1.PodTemplateSpec {
+func (a addHStore) getPodTemplate(hdb *hapi.HStreamDB, nShard int32) corev1.PodTemplateSpec {
 	hStore := hdb.Spec.HStore
 	podTemplate := corev1.PodTemplateSpec{
-		ObjectMeta: internal.GetObjectMetadata(hdb, nil, appsv1alpha1.ComponentTypeHStore),
+		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHStore),
 		Spec: corev1.PodSpec{
 			Affinity:        hStore.Affinity,
 			Tolerations:     hStore.Tolerations,
@@ -120,27 +123,27 @@ func (a addHStore) getPodTemplate(hdb *appsv1alpha1.HStreamDB) corev1.PodTemplat
 			NodeSelector:    hStore.NodeSelector,
 			SecurityContext: hStore.PodSecurityContext,
 			InitContainers:  hStore.InitContainers,
-			Containers:      a.getContainer(hdb),
+			Containers:      a.getContainer(hdb, nShard),
 			Volumes:         append(hStore.Volumes, a.getVolumes(hdb)...),
 		},
 	}
 
-	podTemplate.Name = appsv1alpha1.ComponentTypeHStore.GetResName(hdb.Name)
+	podTemplate.Name = hapi.ComponentTypeHStore.GetResName(hdb.Name)
 	return podTemplate
 }
 
-func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container {
+func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Container {
 	hStore := &hdb.Spec.HStore
 	container := corev1.Container{
-		Image:           hdb.Spec.Image,
-		ImagePullPolicy: hdb.Spec.ImagePullPolicy,
+		Image:           hdb.Spec.HStore.Image,
+		ImagePullPolicy: hdb.Spec.HStore.ImagePullPolicy,
 	}
 
 	structAssign(&container, &hStore.Container)
 	extendEnv(&container, hStoreEnvVar)
 
 	if container.Name == "" {
-		container.Name = string(appsv1alpha1.ComponentTypeHStore)
+		container.Name = string(hapi.ComponentTypeHStore)
 	}
 
 	if len(container.Command) == 0 {
@@ -151,10 +154,12 @@ func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container 
 	for k, v := range hStoreArg {
 		args[k] = v
 	}
-	args["--num-shards"] = strconv.Itoa(int(*hdb.Spec.Config.NShards))
-	args, _ = extendArg(&container, args)
 
-	container.Ports = extendPorts(args, container.Ports, hStorePorts)
+	args["--num-shards"] = strconv.Itoa(int(nShard))
+
+	parsedArgs, _ := extendArg(&container, args)
+
+	container.Ports = extendPorts(parsedArgs, container.Ports, hStorePorts)
 
 	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -164,10 +169,10 @@ func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container 
 		})
 	})
 
-	for i := int32(0); i < *hdb.Spec.Config.NShards; i++ {
+	for i := int32(0); i < nShard; i++ {
 		container.VolumeMounts = append(container.VolumeMounts,
 			corev1.VolumeMount{
-				Name:      internal.GetPvcName(hdb),
+				Name:      internal.GetPvcName(hdb, hdb.Spec.HStore.VolumeClaimTemplate),
 				SubPath:   fmt.Sprintf("shard%d", i),
 				MountPath: fmt.Sprintf("%s/shard%d", internal.HStoreDataPath, i),
 			})
@@ -175,7 +180,7 @@ func (a addHStore) getContainer(hdb *appsv1alpha1.HStreamDB) []corev1.Container 
 	return append([]corev1.Container{container}, hStore.SidecarContainers...)
 }
 
-func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Volume) {
+func (a addHStore) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
 	volumes = make([]corev1.Volume, 0)
 	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
 		volumes = append(volumes, corev1.Volume{
@@ -194,9 +199,10 @@ func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Vol
 		})
 	})
 
-	if hdb.Spec.VolumeClaimTemplate == nil {
+	// add an emptyDir volume if the pvc is null
+	if hdb.Spec.HStore.VolumeClaimTemplate == nil {
 		volumes = append(volumes, corev1.Volume{
-			Name: internal.GetPvcName(hdb),
+			Name: internal.GetPvcName(hdb, hdb.Spec.HStore.VolumeClaimTemplate),
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
@@ -205,9 +211,28 @@ func (a addHStore) getVolumes(hdb *appsv1alpha1.HStreamDB) (volumes []corev1.Vol
 	return
 }
 
-func (a addHStore) getPVC(hdb *appsv1alpha1.HStreamDB) (pvc []corev1.PersistentVolumeClaim) {
-	if hdb.Spec.VolumeClaimTemplate != nil {
-		return []corev1.PersistentVolumeClaim{internal.GetPvc(hdb)}
+func (a addHStore) getPVC(hdb *hapi.HStreamDB) (pvc []corev1.PersistentVolumeClaim) {
+	if hdb.Spec.HStore.VolumeClaimTemplate != nil {
+		return []corev1.PersistentVolumeClaim{
+			internal.GetPvc(hdb, hdb.Spec.HStore.VolumeClaimTemplate, hapi.ComponentTypeHStore),
+		}
 	}
 	return nil
+}
+
+// return nShard config from existing configmap, or new config if not found
+func (a addHStore) getNShardFromExistingConfigMap(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) int32 {
+	nShard := hdb.Spec.Config.NShards
+
+	var existingConfigMap corev1.ConfigMap
+	nShardConfigMap, _ := getNShardsMap(hdb)
+	err := r.Client.Get(ctx, client.ObjectKeyFromObject(&nShardConfigMap), &existingConfigMap)
+	if err == nil {
+		for _, v := range existingConfigMap.Data {
+			if num, err := strconv.Atoi(v); err == nil {
+				nShard = int32(num)
+			}
+		}
+	}
+	return nShard
 }

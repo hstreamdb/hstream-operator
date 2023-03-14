@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"context"
-	appsv1alpha1 "github.com/hstreamdb/hstream-operator/api/v1alpha1"
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -12,7 +13,7 @@ import (
 )
 
 var _ = Describe("AddServices", func() {
-	var hdb *appsv1alpha1.HStreamDB
+	var hdb *hapi.HStreamDB
 	var requeue *requeue
 	addServices := addServices{}
 	ctx := context.TODO()
@@ -26,7 +27,7 @@ var _ = Describe("AddServices", func() {
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, hdb)
+		_ = k8sClient.Delete(ctx, hdb)
 	})
 
 	Context("with a reconciled cluster", func() {
@@ -38,11 +39,15 @@ var _ = Describe("AddServices", func() {
 		var hstore *corev1.Service
 		It("should successfully get services", func() {
 			var err error
-			hstore, err = getService(hdb, appsv1alpha1.ComponentTypeHStore)
+			hstore, err = getHeadlessService(hdb, hapi.ComponentTypeHStore)
 			Expect(err).To(BeNil())
-			_, err = getService(hdb, appsv1alpha1.ComponentTypeHServer)
+			_, err = getHeadlessService(hdb, hapi.ComponentTypeHServer)
 			Expect(err).To(BeNil())
-			_, err = getService(hdb, appsv1alpha1.ComponentTypeAdminServer)
+			_, err = getService(hdb, hapi.ComponentTypeAdminServer)
+			Expect(err).To(BeNil())
+			_, err = getService(hdb, hapi.ComponentTypeHMeta)
+			Expect(err).To(BeNil())
+			_, err = getHeadlessService(hdb, hapi.ComponentTypeHMeta)
 			Expect(err).To(BeNil())
 		})
 
@@ -57,7 +62,7 @@ var _ = Describe("AddServices", func() {
 				})
 
 				It("should get same uid", func() {
-					newHStore, err := getService(hdb, appsv1alpha1.ComponentTypeHStore)
+					newHStore, err := getHeadlessService(hdb, hapi.ComponentTypeHStore)
 					Expect(err).To(BeNil())
 					Expect(hstore.UID).To(Equal(newHStore.UID))
 				})
@@ -79,7 +84,7 @@ var _ = Describe("AddServices", func() {
 				})
 
 				It("should get new service name", func() {
-					svc, err := getService(hdb, appsv1alpha1.ComponentTypeHStore)
+					svc, err := getHeadlessService(hdb, hapi.ComponentTypeHStore)
 					Expect(err).To(BeNil())
 					Expect(svc.Spec.Ports).To(ContainElement(corev1.ServicePort{
 						Name:     "user-defined-port",
@@ -92,14 +97,32 @@ var _ = Describe("AddServices", func() {
 					}))
 				})
 			})
+
+			Context("check hmete headless service", func() {
+				It("PublishNotReadyAddresses should be true", func() {
+					svc, err := getHeadlessService(hdb, hapi.ComponentTypeHMeta)
+					Expect(err).To(BeNil())
+					Expect(svc.Spec.PublishNotReadyAddresses).To(BeTrue())
+				})
+			})
 		})
 	})
 })
 
-func getService(hdb *appsv1alpha1.HStreamDB, compType appsv1alpha1.ComponentType) (svc *corev1.Service, err error) {
+func getService(hdb *hapi.HStreamDB, compType hapi.ComponentType) (svc *corev1.Service, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
 		Name:      compType.GetResName(hdb.Name),
+	}
+	svc = &corev1.Service{}
+	err = k8sClient.Get(context.TODO(), keyObj, svc)
+	return
+}
+
+func getHeadlessService(hdb *hapi.HStreamDB, compType hapi.ComponentType) (svc *corev1.Service, err error) {
+	keyObj := types.NamespacedName{
+		Namespace: hdb.Namespace,
+		Name:      internal.GetResNameOnPanic(hdb, "internal-"+string(compType)),
 	}
 	svc = &corev1.Service{}
 	err = k8sClient.Get(context.TODO(), keyObj, svc)
