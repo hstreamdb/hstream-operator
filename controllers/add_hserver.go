@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
@@ -129,6 +130,16 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	container := corev1.Container{
 		Image:           hdb.Spec.HServer.Image,
 		ImagePullPolicy: hdb.Spec.HServer.ImagePullPolicy,
+		StartupProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromString("port"),
+				},
+			},
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      2,
+			FailureThreshold:    3,
+		},
 	}
 
 	structAssign(&container, &hServer.Container)
