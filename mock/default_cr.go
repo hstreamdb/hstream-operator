@@ -7,7 +7,6 @@ import (
 )
 
 func CreateDefaultCR() *hapi.HStreamDB {
-	metadataReplication := int32(1)
 	return &hapi.HStreamDB{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HStreamDB",
@@ -19,7 +18,7 @@ func CreateDefaultCR() *hapi.HStreamDB {
 		},
 		Spec: hapi.HStreamDBSpec{
 			Config: hapi.Config{
-				MetadataReplicateAcross: &metadataReplication,
+				MetadataReplicateAcross: &[]int32{1}[0],
 				NShards:                 1,
 				LogDeviceConfig: runtime.RawExtension{
 					Raw: []byte("{}"),
