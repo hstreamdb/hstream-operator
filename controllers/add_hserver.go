@@ -164,7 +164,7 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 		// TODO: rename "rq" to "ip"
 		args["--metastore-uri"] = "rq://" + hmeta
 
-		adminServerSvc := getAdminServerSvc(hdb)
+		adminServerSvc := internal.GetService(hdb, hapi.ComponentTypeAdminServer)
 		args["--store-admin-host"] = fmt.Sprintf("%s.%s", adminServerSvc.Name, adminServerSvc.Namespace)
 
 		parsedArgs, _ := extendArg(&container, args)
@@ -179,7 +179,7 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 				}
 			}
 
-			hServerSvc := getHServerSvc(hdb)
+			hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
 			seedNodes := make([]string, hdb.Spec.HServer.Replicas)
 			for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
 				// ep. hdbName-hserver-0.svcName.namespace:6571

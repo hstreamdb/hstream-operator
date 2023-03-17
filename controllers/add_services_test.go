@@ -43,6 +43,8 @@ var _ = Describe("AddServices", func() {
 			Expect(err).To(BeNil())
 			_, err = getHeadlessService(hdb, hapi.ComponentTypeHServer)
 			Expect(err).To(BeNil())
+			_, err = getService(hdb, hapi.ComponentTypeHServer)
+			Expect(err).To(BeNil())
 			_, err = getService(hdb, hapi.ComponentTypeAdminServer)
 			Expect(err).To(BeNil())
 			_, err = getService(hdb, hapi.ComponentTypeHMeta)
