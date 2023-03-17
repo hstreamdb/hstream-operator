@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"go.uber.org/zap/zapcore"
 	"os"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,7 +56,15 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	opts := zap.Options{
+		TimeEncoder: zapcore.RFC3339TimeEncoder,
+	}
+	logger := zap.New(
+		zap.UseDevMode(true),
+		zap.UseFlagOptions(&opts),
+		zap.WriteTo(GinkgoWriter))
+
+	logf.SetLogger(logger)
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
