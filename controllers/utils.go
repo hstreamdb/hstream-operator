@@ -175,15 +175,12 @@ func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 }
 
 func getHMetaContainerPorts(container *hapi.Container, parsedArgs map[string]string) (ports []corev1.ContainerPort) {
-	hmetaPort, ok := parseHMetaPort(parsedArgs)
-	if !ok {
-		ports = mergePorts(hmetaPorts, container.Ports)
-	} else {
-		ports = extendPorts(map[string]string{
+	if hmetaPort, ok := parseHMetaPort(parsedArgs); ok {
+		return extendPorts(map[string]string{
 			"port": hmetaPort,
 		}, container.Ports, hmetaPorts)
 	}
-	return
+	return mergePorts(hmetaPorts, container.Ports)
 }
 
 func parseHMetaPort(parsedArgs map[string]string) (port string, ok bool) {

@@ -31,11 +31,19 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 }
 
 func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	ports, err := getPorts(&hdb.Spec.HServer.Container, hServerPorts)
+	hserver := hdb.Spec.HServer
+	ports, err := getPorts(&hserver.Container, hServerPorts)
 	if err != nil {
 		return fmt.Errorf("parse hServer args failed. %w", err)
 	}
-	service := getHServerSvc(hdb, ports...)
+
+	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, ports...)
+	service.Spec.PublishNotReadyAddresses = true
+	if err = a.createOrUpdate(ctx, r, hdb, &service); err != nil {
+		return
+	}
+
+	service = internal.GetService(hdb, hapi.ComponentTypeHServer, ports...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -44,7 +52,7 @@ func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconcile
 	if err != nil {
 		return fmt.Errorf("parse hStore args failed. %w", err)
 	}
-	service := getHStoreSvc(hdb, ports...)
+	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHStore, ports...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -53,7 +61,7 @@ func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReco
 	if err != nil {
 		return fmt.Errorf("parse adminServer args failed. %w", err)
 	}
-	service := getAdminServerSvc(hdb, ports...)
+	service := internal.GetService(hdb, hapi.ComponentTypeAdminServer, ports...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -142,16 +150,4 @@ func convertToServicePort(ports []corev1.ContainerPort) []corev1.ServicePort {
 		})
 	}
 	return servicePorts
-}
-
-func getHStoreSvc(hdb *hapi.HStreamDB, ports ...corev1.ServicePort) corev1.Service {
-	return internal.GetHeadlessService(hdb, hapi.ComponentTypeHStore, ports...)
-}
-
-func getHServerSvc(hdb *hapi.HStreamDB, ports ...corev1.ServicePort) corev1.Service {
-	return internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, ports...)
-}
-
-func getAdminServerSvc(hdb *hapi.HStreamDB, ports ...corev1.ServicePort) corev1.Service {
-	return internal.GetService(hdb, hapi.ComponentTypeAdminServer, ports...)
 }
