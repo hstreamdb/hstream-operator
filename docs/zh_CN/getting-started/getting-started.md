@@ -26,7 +26,7 @@ hstreamdb-sample-admin-server-57c4fbd996-kqlv4   1/1     Running             0  
 hstreamdb-sample-hstore-0                        1/1     Running             0          3s
 hstreamdb-sample-hstore-1                        0/1     ContainerCreating   0          3s
 hstreamdb-sample-hstore-2                        0/1     ContainerCreating   0          3s
-rqlite-0                                         1/1     Running             0          78s
+hstreamdb-sample-rqlite-0                        1/1     Running             0          78s
 ```
 
 查看资源状态以等待`hstore`完成 boostrap

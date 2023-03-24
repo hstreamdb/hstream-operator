@@ -1,8 +1,9 @@
 # hstream-operator
-// TODO(user): Add simple overview of use/purpose
+The purpose of the project is to simplify the deployment of hstream cluster
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+Hstream cluster is consist of hserver, hstore, admin-server and rqlite.
+The controller will deploy a rqlite cluster in default, you can specify an external cluster by `spec.externalHmeta`
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
