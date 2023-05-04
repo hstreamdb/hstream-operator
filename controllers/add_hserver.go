@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 const (
@@ -42,17 +43,16 @@ var hServerEnvVar = []corev1.EnvVar{
 	},
 }
 
-var hServerPorts = []corev1.ContainerPort{
-	{
-		Name:          "port",
-		ContainerPort: 6570,
-		Protocol:      corev1.ProtocolTCP,
-	},
-	{
-		Name:          "internal-port",
-		ContainerPort: 6571,
-		Protocol:      corev1.ProtocolTCP,
-	},
+var hServerPort = corev1.ContainerPort{
+	Name:          "port",
+	ContainerPort: 6570,
+	Protocol:      corev1.ProtocolTCP,
+}
+
+var hServerInternalPort = corev1.ContainerPort{
+	Name:          "internal-port",
+	ContainerPort: 6571,
+	Protocol:      corev1.ProtocolTCP,
 }
 
 type addHServer struct{}
@@ -168,7 +168,9 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 		args["--store-admin-host"] = fmt.Sprintf("%s.%s", adminServerSvc.Name, adminServerSvc.Namespace)
 
 		parsedArgs, _ := extendArg(&container, args)
-		container.Ports = extendPorts(parsedArgs, container.Ports, hServerPorts)
+		container.Ports = extendPorts(parsedArgs, container.Ports, []corev1.ContainerPort{
+			hServerPort, hServerInternalPort,
+		})
 
 		// TODO: remove seed nodes
 		if _, ok := parsedArgs["seed-nodes"]; !ok {

@@ -20,6 +20,7 @@ func GetObjectMetadata(hdb *hapi.HStreamDB, base *metav1.ObjectMeta, compType ha
 		metadata.Labels = make(map[string]string)
 	}
 
+	metadata.Labels[hapi.InstanceKey] = hdb.Name
 	metadata.Labels[hapi.ComponentKey] = string(compType)
 
 	if metadata.Annotations == nil {

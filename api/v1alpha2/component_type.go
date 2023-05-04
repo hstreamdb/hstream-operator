@@ -5,9 +5,10 @@ import "fmt"
 type ComponentType string
 
 const (
+	ComponentTypeGateway     ComponentType = "gateway"
+	ComponentTypeAdminServer ComponentType = "admin-server"
 	ComponentTypeHServer     ComponentType = "hserver"
 	ComponentTypeHStore      ComponentType = "hstore"
-	ComponentTypeAdminServer ComponentType = "admin-server"
 	ComponentTypeHMeta       ComponentType = "hmeta"
 )
 

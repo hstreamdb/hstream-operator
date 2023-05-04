@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,9 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 
 func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
 	hserver := hdb.Spec.HServer
-	ports, err := getPorts(&hserver.Container, hServerPorts)
+	ports, err := getPorts(&hserver.Container, []corev1.ContainerPort{
+		hServerPort, hServerInternalPort,
+	})
 	if err != nil {
 		return fmt.Errorf("parse hServer args failed. %w", err)
 	}
