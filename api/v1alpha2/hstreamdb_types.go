@@ -17,9 +17,10 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"strconv"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"strconv"
 )
 
 //+kubebuilder:object:root=true
@@ -52,9 +53,10 @@ type HStreamDBSpec struct {
 
 	Config Config `json:"config,omitempty"`
 
+	Gateway     *Gateway  `json:"gateway,omitempty"`
+	AdminServer Component `json:"adminServer,omitempty"`
 	HServer     Component `json:"hserver,omitempty"`
 	HStore      Component `json:"hstore,omitempty"`
-	AdminServer Component `json:"adminServer,omitempty"`
 	HMeta       Component `json:"hmeta,omitempty"`
 }
 

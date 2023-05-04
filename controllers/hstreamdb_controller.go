@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal/admin"
 	corev1 "k8s.io/api/core/v1"
@@ -90,6 +91,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		bootstrapHStore{},
 		addHServer{},
 		bootstrapHServer{},
+		addGateway{},
 		updateStatus{},
 	}
 	return r.subReconcile(ctx, hdb, subReconcilers)

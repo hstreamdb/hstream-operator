@@ -1,3 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hstreamdb-sample
+spec:
+  selector:
+    hstream.io/instance: hstreamdb-sample
+    hstream.io/component: gateway
+  type: ClusterIP
+  ports:
+    - name: port
+      port: 14789
+      targetPort: 14789
+---
 apiVersion: apps.hstream.io/v1alpha2
 kind: HStreamDB
 metadata:
@@ -65,7 +79,22 @@ spec:
 #        },
 #        "version": 1
 #      }
-
+  gateway:
+    endpoint: "hstreamdb-sample.default"
+    image: hstreamdb/hstream-gateway
+    replicas: 1
+    container:
+      name: gateway
+  adminServer:
+    image: hstreamdb/hstream:rqlite
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: admin-server
+      # the name of port can't be changed
+      ports:
+        - name: admin-port
+          containerPort: 6440
   hserver:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
@@ -116,16 +145,6 @@ spec:
 #        resources:
 #          requests:
 #            storage: 1Gi
-  adminServer:
-    image: hstreamdb/hstream:rqlite
-    imagePullPolicy: IfNotPresent
-    replicas: 1
-    container:
-      name: admin-server
-      # the name of port can't be changed
-      ports:
-        - name: admin-port
-          containerPort: 6440
   hmeta:
     image: rqlite/rqlite:latest
     imagePullPolicy: IfNotPresent

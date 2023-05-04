@@ -21,6 +21,7 @@ var _ = Describe("PodHelper", func() {
 			meta := internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer)
 			Expect(meta.Labels).NotTo(BeNil())
 			Expect(meta.Annotations).NotTo(BeNil())
+			Expect(meta.Labels).To(HaveKeyWithValue(hapi.InstanceKey, hdb.Name))
 			Expect(meta.Labels).To(HaveKeyWithValue(hapi.ComponentKey, string(hapi.ComponentTypeHServer)))
 			Expect(meta.Namespace).To(Equal(hdb.Namespace))
 		})
@@ -36,6 +37,7 @@ var _ = Describe("PodHelper", func() {
 				},
 			}
 			meta := internal.GetObjectMetadata(hdb, base, hapi.ComponentTypeHServer)
+			Expect(meta.Labels).To(HaveKeyWithValue(hapi.InstanceKey, hdb.Name))
 			Expect(meta.Labels).To(HaveKeyWithValue(hapi.ComponentKey, string(hapi.ComponentTypeHServer)))
 			Expect(meta.Labels).To(HaveKeyWithValue("label", "testLabel"))
 			Expect(meta.Annotations).To(HaveKeyWithValue("annotation", "testAnnotation"))
