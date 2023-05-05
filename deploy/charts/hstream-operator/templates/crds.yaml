@@ -4752,6 +4752,12 @@ spec:
                   replicas:
                     format: int32
                     type: integer
+                  secretRef:
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
                   sidecarContainers:
                     items:
                       properties:
