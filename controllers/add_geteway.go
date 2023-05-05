@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -129,14 +128,12 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 	)
 
 	port := findHServerPort(hdb, podList.Items[0])
-	addresses := []string{}
-	for _, pod := range podList.Items {
-		addresses = append(addresses, fmt.Sprintf("hstream://%s:%d", pod.Status.PodIP, port))
-	}
+	hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, corev1.ServicePort{})
+	address := fmt.Sprintf("hstream://%s:%d", hServerSvc.Name+"."+hdb.Namespace, port)
 
 	extendEnv(&container, []corev1.EnvVar{
 		{Name: "ENDPOINT_HOST", Value: gateway.Endpoint},
-		{Name: "HSTREAM_SERVICE_URL", Value: strings.Join(addresses, ",")},
+		{Name: "HSTREAM_SERVICE_URL", Value: address},
 	})
 
 	if gateway.SecretRef == nil {
