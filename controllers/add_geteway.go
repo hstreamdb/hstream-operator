@@ -85,9 +85,18 @@ func (a addGateway) getPodTemplate(ctx context.Context, r *HStreamDBReconciler, 
 			Volumes:         gateway.Volumes,
 		},
 	}
+	if gateway.SecretRef != nil {
+		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
+			Name: "cert",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: gateway.SecretRef.Name,
+				},
+			},
+		})
+	}
 
 	pod.Name = hapi.ComponentTypeAdminServer.GetResName(hdb.Name)
-	pod.Spec.Volumes = append(pod.Spec.Volumes, a.getVolumes(hdb)...)
 	return pod
 }
 
@@ -126,18 +135,29 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 	}
 
 	extendEnv(&container, []corev1.EnvVar{
-		{Name: "ENABLE_TLS", Value: "false"},
 		{Name: "ENDPOINT_HOST", Value: gateway.Endpoint},
 		{Name: "HSTREAM_SERVICE_URL", Value: strings.Join(addresses, ",")},
 	})
 
-	return append([]corev1.Container{container}, gateway.SidecarContainers...)
-}
+	if gateway.SecretRef == nil {
+		extendEnv(&container, []corev1.EnvVar{
+			{Name: "ENABLE_TLS", Value: "false"},
+		})
+	} else {
+		extendEnv(&container, []corev1.EnvVar{
+			{Name: "ENABLE_TLS", Value: "true"},
+			{Name: "TLS_KEY_PATH", Value: "/certs/tls.key"},
+			{Name: "TLS_CERT_PATH", Value: "/certs/tls.crt"},
+			{Name: "TLS_CA_PATH", Value: "/certs/ca.crt"},
+		})
+		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
+			{Name: "cert", MountPath: "/certs/tls.key", SubPath: "tls.key"},
+			{Name: "cert", MountPath: "/certs/tls.crt", SubPath: "tls.crt"},
+			{Name: "cert", MountPath: "/certs/ca.crt", SubPath: "ca.crt"},
+		}...)
+	}
 
-func (a addGateway) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
-	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
-	volumes = []corev1.Volume{internal.GetVolume(hdb, m)}
-	return
+	return append([]corev1.Container{container}, gateway.SidecarContainers...)
 }
 
 func findHServerPort(hdb *hapi.HStreamDB, pod corev1.Pod) int32 {
