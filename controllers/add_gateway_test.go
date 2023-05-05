@@ -82,7 +82,7 @@ var _ = Describe("AddGateway", func() {
 
 	When("gateway pointer is set, and hserver is ready, not enable mTLS", func() {
 		JustBeforeEach(func() {
-			prepareFakePod(ctx, hdb)
+			Expect(k8sClient.Create(ctx, getFakePod(hdb))).Should(Succeed())
 
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"
@@ -125,7 +125,7 @@ var _ = Describe("AddGateway", func() {
 			}))
 			Expect(container.Env).To(ContainElements(
 				corev1.EnvVar{Name: "ENDPOINT_HOST", Value: "localhost"},
-				corev1.EnvVar{Name: "HSTREAM_SERVICE_URL", Value: "hstream://10.9.8.7:6570"},
+				corev1.EnvVar{Name: "HSTREAM_SERVICE_URL", Value: "hstream://hstreamdb-sample-internal-hserver.default:6570"},
 				corev1.EnvVar{Name: "ENABLE_TLS", Value: "false"},
 			))
 			Expect(container.VolumeMounts).To(BeEmpty())
@@ -135,7 +135,7 @@ var _ = Describe("AddGateway", func() {
 
 	When("gateway pointer is set, and hserver is ready, enable mTLS", func() {
 		JustBeforeEach(func() {
-			prepareFakePod(ctx, hdb)
+			Expect(k8sClient.Create(ctx, getFakePod(hdb))).Should(Succeed())
 
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"
@@ -181,7 +181,7 @@ var _ = Describe("AddGateway", func() {
 			}))
 			Expect(container.Env).To(ContainElements(
 				corev1.EnvVar{Name: "ENDPOINT_HOST", Value: "localhost"},
-				corev1.EnvVar{Name: "HSTREAM_SERVICE_URL", Value: "hstream://10.9.8.7:6570"},
+				corev1.EnvVar{Name: "HSTREAM_SERVICE_URL", Value: "hstream://hstreamdb-sample-internal-hserver.default:6570"},
 				corev1.EnvVar{Name: "ENABLE_TLS", Value: "true"},
 				corev1.EnvVar{Name: "TLS_KEY_PATH", Value: "/certs/tls.key"},
 				corev1.EnvVar{Name: "TLS_CERT_PATH", Value: "/certs/tls.crt"},
@@ -225,18 +225,4 @@ func getFakePod(hdb *hapi.HStreamDB) *corev1.Pod {
 			},
 		},
 	}
-}
-
-func prepareFakePod(ctx context.Context, hdb *hapi.HStreamDB) {
-	pod := getFakePod(hdb)
-	Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
-	Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).Should(Succeed())
-	patchBytes, _ := json.Marshal(corev1.Pod{
-		Status: corev1.PodStatus{
-			PodIP: "10.9.8.7",
-		},
-	})
-	Expect(k8sClient.Status().Patch(ctx, pod.DeepCopy(), client.RawPatch(
-		types.StrategicMergePatchType, patchBytes,
-	))).Should(Succeed())
 }
