@@ -11,7 +11,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,8 +81,6 @@ var _ = Describe("AddGateway", func() {
 
 	When("gateway pointer is set, and hserver is ready, not enable mTLS", func() {
 		JustBeforeEach(func() {
-			Expect(k8sClient.Create(ctx, getFakePod(hdb))).Should(Succeed())
-
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"
 			gateway.Port = 14789
@@ -96,10 +93,6 @@ var _ = Describe("AddGateway", func() {
 
 			hdb.Status.HServer.Bootstrapped = true
 			Expect(k8sClient.Status().Patch(ctx, hdb.DeepCopy(), client.MergeFrom(hdb))).Should(Succeed())
-		})
-
-		JustAfterEach(func() {
-			Expect(k8sClient.Delete(ctx, getFakePod(hdb))).Should(Succeed())
 		})
 
 		It("should create gateway, but secret is not mount", func() {
@@ -135,8 +128,6 @@ var _ = Describe("AddGateway", func() {
 
 	When("gateway pointer is set, and hserver is ready, enable mTLS", func() {
 		JustBeforeEach(func() {
-			Expect(k8sClient.Create(ctx, getFakePod(hdb))).Should(Succeed())
-
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"
 			gateway.Port = 14789
@@ -152,10 +143,6 @@ var _ = Describe("AddGateway", func() {
 
 			hdb.Status.HServer.Bootstrapped = true
 			Expect(k8sClient.Status().Patch(ctx, hdb.DeepCopy(), client.MergeFrom(hdb))).Should(Succeed())
-		})
-
-		JustAfterEach(func() {
-			Expect(k8sClient.Delete(ctx, getFakePod(hdb))).Should(Succeed())
 		})
 
 		It("should create gateway, and secret is mount", func() {
@@ -205,24 +192,3 @@ var _ = Describe("AddGateway", func() {
 		})
 	})
 })
-
-func getFakePod(hdb *hapi.HStreamDB) *corev1.Pod {
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: hdb.Namespace,
-			Name:      hdb.Name + "-hserver",
-			Labels: map[string]string{
-				hapi.InstanceKey:  hdb.Name,
-				hapi.ComponentKey: string(hapi.ComponentTypeHServer),
-			},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:  "hserver",
-					Image: "hstreamdb/hstream-hserver:latest",
-				},
-			},
-		},
-	}
-}
