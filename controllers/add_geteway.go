@@ -95,7 +95,7 @@ func (a addGateway) getPodTemplate(ctx context.Context, r *HStreamDBReconciler, 
 		})
 	}
 
-	pod.Name = hapi.ComponentTypeAdminServer.GetResName(hdb.Name)
+	pod.Name = hapi.ComponentTypeGateway.GetResName(hdb.Name)
 	return pod
 }
 
@@ -106,7 +106,7 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 		ImagePullPolicy: hdb.Spec.Gateway.ImagePullPolicy,
 	}
 
-	structAssign(&container, gateway.Container.DeepCopy())
+	structAssign(&container, &gateway.Container)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeGateway)
@@ -119,16 +119,8 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 		},
 	)
 
-	podList := corev1.PodList{}
-	_ = r.List(ctx, &podList,
-		client.InNamespace(hdb.Namespace),
-		client.MatchingLabels(
-			internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer).Labels,
-		),
-	)
-
-	port := findHServerPort(hdb, podList.Items[0])
-	hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, corev1.ServicePort{})
+	port := findHServerPort(ctx, r, hdb)
+	hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
 	address := fmt.Sprintf("hstream://%s:%d", hServerSvc.Name+"."+hdb.Namespace, port)
 
 	extendEnv(&container, []corev1.EnvVar{
@@ -136,6 +128,7 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 		{Name: "HSTREAM_SERVICE_URL", Value: address},
 	})
 
+	// If no secret is specified, set `ENABLE_TLS = false`. because in HStream gateway, the `ENABLE_TLS = true` by default.
 	if gateway.SecretRef == nil {
 		extendEnv(&container, []corev1.EnvVar{
 			{Name: "ENABLE_TLS", Value: "false"},
@@ -157,13 +150,18 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 	return append([]corev1.Container{container}, gateway.SidecarContainers...)
 }
 
-func findHServerPort(hdb *hapi.HStreamDB, pod corev1.Pod) int32 {
+func findHServerPort(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) int32 {
 	hServerContainerName := hdb.Spec.HServer.Container.Name
 	if hServerContainerName == "" {
 		hServerContainerName = string(hapi.ComponentTypeHServer)
 	}
 
-	for _, container := range pod.Spec.Containers {
+	hServer := &appsv1.StatefulSet{
+		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer),
+	}
+	_ = r.Get(ctx, client.ObjectKeyFromObject(hServer), hServer)
+
+	for _, container := range hServer.Spec.Template.Spec.Containers {
 		if container.Name == hServerContainerName {
 			for _, p := range container.Ports {
 				if p.Name == "port" {
