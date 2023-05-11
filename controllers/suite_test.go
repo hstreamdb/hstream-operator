@@ -17,12 +17,13 @@ limitations under the License.
 package controllers
 
 import (
-	"go.uber.org/zap/zapcore"
 	"os"
 	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strconv"
 	"testing"
+
+	"go.uber.org/zap/zapcore"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/hstreamdb/hstream-operator/internal/admin"
 	"github.com/hstreamdb/hstream-operator/mock"

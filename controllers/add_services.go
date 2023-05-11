@@ -33,9 +33,7 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 
 func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
 	hserver := hdb.Spec.HServer
-	ports, err := getPorts(&hserver.Container, []corev1.ContainerPort{
-		hServerPort, hServerInternalPort,
-	})
+	ports, err := getPorts(&hserver.Container, hServerPort, hServerInternalPort)
 	if err != nil {
 		return fmt.Errorf("parse hServer args failed. %w", err)
 	}
@@ -46,7 +44,7 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 }
 
 func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	ports, err := getPorts(&hdb.Spec.HStore.Container, hStorePorts)
+	ports, err := getPorts(&hdb.Spec.HStore.Container, hStorePorts...)
 	if err != nil {
 		return fmt.Errorf("parse hStore args failed. %w", err)
 	}
@@ -55,7 +53,7 @@ func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconcile
 }
 
 func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	ports, err := getPorts(&hdb.Spec.AdminServer.Container, adminServerPorts)
+	ports, err := getPorts(&hdb.Spec.AdminServer.Container, adminServerPort)
 	if err != nil {
 		return fmt.Errorf("parse adminServer args failed. %w", err)
 	}
@@ -75,8 +73,8 @@ func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler
 		return fmt.Errorf("parse hmeta args failed. %w", err)
 	}
 
-	parsedArgs := flags.Flags()
-	ports := getHMetaContainerPorts(&hmeta.Container, parsedArgs)
+	port, _ := parseHMetaPort(hdb.Spec.HMeta.Container.Args)
+	ports := extendPorts(hdb.Spec.HMeta.Container.Ports, port)
 	servicePorts := convertToServicePort(ports)
 
 	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta, servicePorts...)
@@ -120,16 +118,8 @@ func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
 	return r.Update(ctx, existingService)
 }
 
-func getPorts(container *hapi.Container, defaultPorts []corev1.ContainerPort) (
-	[]corev1.ServicePort, error) {
-
-	flags := internal.FlagSet{}
-	if err := flags.Parse(container.Args); err != nil {
-		return nil, err
-	}
-
-	args := flags.Flags()
-	ports := extendPorts(args, container.Ports, defaultPorts)
+func getPorts(container *hapi.Container, defaultPorts ...corev1.ContainerPort) ([]corev1.ServicePort, error) {
+	ports := coverPortsFromArgs(container.Args, extendPorts(container.Ports, defaultPorts...))
 	return convertToServicePort(ports), nil
 }
 

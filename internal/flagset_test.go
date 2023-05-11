@@ -34,17 +34,17 @@ var _ = Describe("Flagset", func() {
 			flag.Visit(func(flag, _ string) {
 				sorted = append(sorted, flag)
 			})
-			Expect(sorted).To(Equal([]string{"a", "b", "c", "d", "e"}))
+			Expect(sorted).To(Equal([]string{"--a", "--b", "--c", "--d", "--e"}))
 		})
 		It("get the actual flags", func() {
 			actual := flag.Flags()
 			Expect(actual).To(HaveLen(5))
 			Expect(actual).Should(BeComparableTo(map[string]string{
-				"a": "1",
-				"b": "$(POD_IP)",
-				"c": "/etc/logdevice",
-				"d": "$(POD_NAME)",
-				"e": "/config.json",
+				"--a": "1",
+				"--b": "$(POD_IP)",
+				"--c": "/etc/logdevice",
+				"--d": "$(POD_NAME)",
+				"--e": "/config.json",
 			}))
 		})
 	})
@@ -62,9 +62,9 @@ var _ = Describe("Flagset", func() {
 
 			actual := flag.Flags()
 			Expect(actual).To(BeComparableTo(map[string]string{
-				"a": "",
-				"b": "1",
-				"c": "",
+				"--a": "",
+				"--b": "1",
+				"--c": "",
 			}))
 		})
 		It("should successfully parse 2", func() {
@@ -78,9 +78,9 @@ var _ = Describe("Flagset", func() {
 
 			actual := flag.Flags()
 			Expect(actual).To(BeComparableTo(map[string]string{
-				"a": "",
-				"b": "1",
-				"c": "",
+				"--a": "",
+				"--b": "1",
+				"--c": "",
 			}))
 		})
 		It("should successfully parse 3", func() {
@@ -91,7 +91,7 @@ var _ = Describe("Flagset", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			actual := flag.Flags()
-			Expect(actual).To(HaveKeyWithValue("a", ""))
+			Expect(actual).To(HaveKeyWithValue("--a", ""))
 		})
 		It("should successfully parse 4", func() {
 			args = []string{
@@ -101,7 +101,7 @@ var _ = Describe("Flagset", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			actual := flag.Flags()
-			Expect(actual).To(HaveKeyWithValue("a", "1"))
+			Expect(actual).To(HaveKeyWithValue("--a", "1"))
 		})
 	})
 	Context("invalid args", func() {

@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	jsoniter "github.com/json-iterator/go"
@@ -12,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary

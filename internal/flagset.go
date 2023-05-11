@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 type FlagSet struct {
@@ -43,21 +44,13 @@ func (f *FlagSet) parseOne() (bool, error) {
 
 	s := f.args[0]
 	if len(s) != 0 {
-		if s[0] == '-' {
+		if strings.HasPrefix(s, "-") {
 			if f.lastName != "" {
 				return false, fmt.Errorf("bad flag syntax: %s", s)
 			}
 
-			numMinuses := 1
-			if s[1] == '-' {
-				numMinuses++
-				if len(s) == 2 { // "--" terminates the flags
-					f.args = f.args[1:]
-					return false, nil
-				}
-			}
 			// it's a flag, value is the next arg
-			f.lastName = s[numMinuses:]
+			f.lastName = s
 			f.actual[f.lastName] = ""
 		} else {
 			if f.lastName == "" {

@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 var hStoreEnvVar = []corev1.EnvVar{
@@ -51,12 +52,12 @@ var hStorePorts = []corev1.ContainerPort{
 	},
 }
 
-var hStoreArg = map[string]string{
-	"--config-path":          internal.HStoreConfigPath + "/config.json",
-	"--address":              "$(POD_IP)",
-	"--name":                 "$(POD_NAME)",
-	"--local-log-store-path": internal.HStoreDataPath,
-	//"--num-shards":           "1",
+var hStoreArgs = []string{
+	"--config-path", internal.HStoreConfigPath + "/config.json",
+	"--address", "$(POD_IP)",
+	"--name", "$(POD_NAME)",
+	"--local-log-store-path", internal.HStoreDataPath,
+	//"--num-shards", "1",
 }
 
 type addHStore struct{}
@@ -151,7 +152,8 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 	}
 
 	structAssign(&container, &hStore.Container)
-	extendEnv(&container, hStoreEnvVar)
+
+	container.Env = extendEnvs(container.Env, hStoreEnvVar...)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHStore)
@@ -161,16 +163,11 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 		container.Command = []string{"/usr/local/bin/logdeviced"}
 	}
 
-	args := make(map[string]string)
-	for k, v := range hStoreArg {
-		args[k] = v
-	}
+	args := hStoreArgs
+	args = append(args, "--num-shards", strconv.Itoa(int(nShard)))
 
-	args["--num-shards"] = strconv.Itoa(int(nShard))
-
-	parsedArgs, _ := extendArg(&container, args)
-
-	container.Ports = extendPorts(parsedArgs, container.Ports, hStorePorts)
+	container.Args, _ = extendArgs(container.Args, args...)
+	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, hStorePorts...))
 
 	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
