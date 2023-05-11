@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -13,7 +15,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
-	"strconv"
 )
 
 var _ = Describe("AddHMeta", func() {
@@ -56,16 +57,16 @@ var _ = Describe("AddHMeta", func() {
 			})
 
 			It("bootstrap-expect should be equal to replica", func() {
-				Expect(flag.Flags()).Should(HaveKeyWithValue("bootstrap-expect", strconv.Itoa(int(hdb.Spec.HMeta.Replicas))))
+				Expect(flag.Flags()).Should(HaveKeyWithValue("--bootstrap-expect", strconv.Itoa(int(hdb.Spec.HMeta.Replicas))))
 			})
 
 			It("disco-mode should be dns", func() {
-				Expect(flag.Flags()).Should(HaveKeyWithValue("bootstrap-expect", strconv.Itoa(int(hdb.Spec.HMeta.Replicas))))
+				Expect(flag.Flags()).Should(HaveKeyWithValue("--bootstrap-expect", strconv.Itoa(int(hdb.Spec.HMeta.Replicas))))
 			})
 
 			It("disco-config should be internal-svc name", func() {
 				svc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta)
-				Expect(flag.Flags()).Should(HaveKeyWithValue("disco-config",
+				Expect(flag.Flags()).Should(HaveKeyWithValue("--disco-config",
 					fmt.Sprintf(`{"name":"%s"}`, svc.Name)))
 			})
 		})
@@ -150,7 +151,7 @@ var _ = Describe("AddHMeta", func() {
 			})
 
 			It("http-addr should be equal to \"localhost:4002\"", func() {
-				Expect(flag.Flags()).Should(HaveKeyWithValue("http-addr", httpAddr))
+				Expect(flag.Flags()).Should(HaveKeyWithValue("--http-addr", httpAddr))
 			})
 		})
 

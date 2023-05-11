@@ -39,7 +39,7 @@ var _ = Describe("Utils", func() {
 		}))
 	})
 
-	It("test extendEnv", func() {
+	It("test extendEnvs", func() {
 		container := &corev1.Container{
 			Env: []corev1.EnvVar{
 				{
@@ -62,21 +62,23 @@ var _ = Describe("Utils", func() {
 				Value: "2",
 			},
 		}
-		extendEnv(container, newEnv)
-		Expect(container.Env).To(ContainElements([]corev1.EnvVar{
-			{
-				Name:  "a",
-				Value: "1",
+
+		Eventually(extendEnvs(container.Env, newEnv...)).Should(ContainElements(
+			[]corev1.EnvVar{
+				{
+					Name:  "a",
+					Value: "1",
+				},
+				{
+					Name:  "b",
+					Value: "2",
+				},
+				{
+					Name:  "c",
+					Value: "1",
+				},
 			},
-			{
-				Name:  "b",
-				Value: "2",
-			},
-			{
-				Name:  "c",
-				Value: "1",
-			},
-		}))
+		))
 	})
 
 	It("test extendArg", func() {
@@ -86,17 +88,15 @@ var _ = Describe("Utils", func() {
 				"--b", "1",
 			},
 		}
-		defaultArgs := map[string]string{
-			"--a": "2",
-			"--c": "2",
+		defaultArgs := []string{
+			"--a", "2",
+			"--c", "2",
 		}
-		args, err := extendArg(container, defaultArgs)
-		Expect(err).To(BeNil())
-		Expect(container.Args).To(ContainElements("--a", "1", "--b", "1", "--c", "2"))
-		Expect(args).To(BeComparableTo(map[string]string{
-			"a": "1",
-			"b": "1",
-			"c": "2",
+		args, _ := extendArgs(container.Args, defaultArgs...)
+		Expect(args).To(Equal([]string{
+			"--a", "1",
+			"--b", "1",
+			"--c", "2",
 		}))
 	})
 
@@ -186,11 +186,11 @@ var _ = Describe("Utils", func() {
 				ContainerPort: 1,
 			},
 		}
-		userDefinedArgs := map[string]string{
-			"unknown-port": "1",
-			"port":         "2",
+		userDefinedArgs := []string{
+			"--unknown-port", "1",
+			"--port", "2",
 		}
-		newPorts := coverPorts(userDefinedArgs, required)
+		newPorts := coverPortsFromArgs(userDefinedArgs, required)
 		Expect(newPorts).To(Equal([]corev1.ContainerPort{
 			{
 				Name:          "port",
@@ -220,8 +220,8 @@ var _ = Describe("Utils", func() {
 				},
 			},
 		}
-		args := map[string]string{
-			"port": "2",
+		args := []string{
+			"--port", "2",
 		}
 		required := []corev1.ContainerPort{
 			{
@@ -237,8 +237,8 @@ var _ = Describe("Utils", func() {
 				ContainerPort: 1,
 			},
 		}
-		container.Ports = extendPorts(args, container.Ports, required)
-		Expect(container.Ports).To(Equal([]corev1.ContainerPort{
+		container.Ports = coverPortsFromArgs(args, extendPorts(container.Ports, required...))
+		Expect(container.Ports).To(ConsistOf([]corev1.ContainerPort{
 			{
 				Name:          "port",
 				ContainerPort: 2,

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,19 +16,17 @@ const (
 	adminServerConfigPath = "/etc/logdevice"
 )
 
-var adminServerArg = map[string]string{
-	"--config-path":                                  adminServerConfigPath + "/config.json",
-	"--enable-maintenance-manager":                   "",
-	"--maintenance-log-snapshotting":                 "",
-	"--enable-safety-check-periodic-metadata-update": "",
+var adminServerArgs = []string{
+	"--config-path", adminServerConfigPath + "/config.json",
+	"--enable-maintenance-manager", "",
+	"--maintenance-log-snapshotting", "",
+	"--enable-safety-check-periodic-metadata-update", "",
 }
 
-var adminServerPorts = []corev1.ContainerPort{
-	{
-		Name:          "admin-port",
-		ContainerPort: 6440,
-		Protocol:      corev1.ProtocolTCP,
-	},
+var adminServerPort = corev1.ContainerPort{
+	Name:          "admin-port",
+	ContainerPort: 6440,
+	Protocol:      corev1.ProtocolTCP,
 }
 
 type addAdminServer struct{}
@@ -116,13 +115,8 @@ func (a addAdminServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 		container.Command = []string{"/usr/local/bin/ld-admin-server"}
 	}
 
-	args := make(map[string]string)
-	for k, v := range adminServerArg {
-		args[k] = v
-	}
-	args, _ = extendArg(&container, args)
-
-	container.Ports = extendPorts(args, container.Ports, adminServerPorts)
+	container.Args, _ = extendArgs(container.Args, adminServerArgs...)
+	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, adminServerPort))
 
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	container.VolumeMounts = append(container.VolumeMounts,

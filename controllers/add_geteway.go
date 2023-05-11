@@ -112,34 +112,27 @@ func (a addGateway) getContainer(ctx context.Context, r *HStreamDBReconciler, hd
 		container.Name = string(hapi.ComponentTypeGateway)
 	}
 
-	container.Ports = extendPorts(map[string]string{},
-		container.Ports,
-		[]corev1.ContainerPort{
-			{Name: "port", ContainerPort: gateway.Port},
-		},
-	)
+	container.Ports = extendPorts(container.Ports, corev1.ContainerPort{Name: "port", ContainerPort: gateway.Port})
 
 	port := findHServerPort(ctx, r, hdb)
 	hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
 	address := fmt.Sprintf("hstream://%s:%d", hServerSvc.Name+"."+hdb.Namespace, port)
 
-	extendEnv(&container, []corev1.EnvVar{
+	container.Env = extendEnvs(container.Env, []corev1.EnvVar{
 		{Name: "ENDPOINT_HOST", Value: gateway.Endpoint},
 		{Name: "HSTREAM_SERVICE_URL", Value: address},
-	})
+	}...)
 
 	// If no secret is specified, set `ENABLE_TLS = false`. because in HStream gateway, the `ENABLE_TLS = true` by default.
 	if gateway.SecretRef == nil {
-		extendEnv(&container, []corev1.EnvVar{
-			{Name: "ENABLE_TLS", Value: "false"},
-		})
+		container.Env = extendEnvs(container.Env, corev1.EnvVar{Name: "ENABLE_TLS", Value: "false"})
 	} else {
-		extendEnv(&container, []corev1.EnvVar{
+		container.Env = extendEnvs(container.Env, []corev1.EnvVar{
 			{Name: "ENABLE_TLS", Value: "true"},
 			{Name: "TLS_KEY_PATH", Value: "/certs/tls.key"},
 			{Name: "TLS_CERT_PATH", Value: "/certs/tls.crt"},
 			{Name: "TLS_CA_PATH", Value: "/certs/ca.crt"},
-		})
+		}...)
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{Name: "cert", MountPath: "/certs/tls.key", SubPath: "tls.key"},
 			{Name: "cert", MountPath: "/certs/tls.crt", SubPath: "tls.crt"},

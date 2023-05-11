@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,23 +13,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
-var hmetaPorts = []corev1.ContainerPort{
-	{
-		Name:          "port",
-		ContainerPort: 4001,
-		Protocol:      corev1.ProtocolTCP,
-	},
+var hmetaPort = corev1.ContainerPort{
+	Name:          "port",
+	ContainerPort: 4001,
+	Protocol:      corev1.ProtocolTCP,
 }
 
-var hmetaArg = map[string]string{
-	"--disco-mode":    "dns",
-	"--join-interval": "1s",
-	"--join-attempts": "120",
-	//"--disco-config":          "{\"name\":\"rqlite-svc-internal\"}",
-	//"--bootstrap-expect": 1,
+var hmetaArgs = []string{
+	"--disco-mode", "dns",
+	"--join-interval", "1s",
+	"--join-attempts", "120",
+	//"--disco-config", "{\"name\":\"rqlite-svc-internal\"}",
+	//"--bootstrap-expect", 1,
 }
 
 type addHMeta struct{}
@@ -144,18 +143,12 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 		container.Name = string(hapi.ComponentTypeHMeta)
 	}
 
-	args := make(map[string]string)
-	for k, v := range hmetaArg {
-		args[k] = v
-	}
-	args["--bootstrap-expect"] = strconv.Itoa(int(hmeta.Replicas))
-	svc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta)
-	args["--disco-config"] = fmt.Sprintf(`{"name":"%s"}`, svc.Name)
-
-	// parsedArgs don't contain prefix "-" or "--"
-	parsedArgs, _ := extendArg(&container, args)
-	container.Ports = getHMetaContainerPorts(&hmeta.Container, parsedArgs)
-
+	args := hmetaArgs
+	args = append(args, "--bootstrap-expect", strconv.Itoa(int(hmeta.Replicas)))
+	args = append(args, "--disco-config", fmt.Sprintf(`{"name":"%s"}`, internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta).Name))
+	container.Args, _ = extendArgs(container.Args, args...)
+	port, _ := parseHMetaPort(container.Args)
+	container.Ports = extendPorts(container.Ports, port)
 	container.VolumeMounts = append(container.VolumeMounts,
 		corev1.VolumeMount{
 			Name:      internal.GetPvcName(hdb, hdb.Spec.HMeta.VolumeClaimTemplate),

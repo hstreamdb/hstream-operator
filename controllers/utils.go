@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -66,65 +65,89 @@ func mergeMap(target map[string]string, desired map[string]string) bool {
 
 // extendEnv adds environment variables to an existing environment, unless
 // environment variables with the same name are already present.
-func extendEnv(container *corev1.Container, env []corev1.EnvVar) {
-	existingVars := make(map[string]bool, len(container.Env))
+func extendEnvs(envs []corev1.EnvVar, externalEnvs ...corev1.EnvVar) []corev1.EnvVar {
+	existingVars := make(map[string]struct{}, len(envs))
 
-	for _, envVar := range container.Env {
-		existingVars[envVar.Name] = true
+	for _, envVar := range envs {
+		existingVars[envVar.Name] = struct{}{}
 	}
 
-	for _, envVar := range env {
-		if !existingVars[envVar.Name] {
-			container.Env = append(container.Env, envVar)
+	for _, envVar := range externalEnvs {
+		if _, ok := existingVars[envVar.Name]; !ok {
+			envs = append(envs, envVar)
 		}
 	}
+	return envs
 }
 
-func extendArg(container *corev1.Container, defaultArgs map[string]string) (args map[string]string, err error) {
-	flags := internal.FlagSet{}
-	if err = flags.Parse(container.Args); err != nil {
-		return
+func extendArgs(args []string, externalArgs ...string) ([]string, error) {
+	containerArgFlags := internal.FlagSet{}
+	err := containerArgFlags.Parse(args)
+	if err != nil {
+		return nil, err
 	}
 
-	// flag in the args doesn't contain prefix '-' or '--'
-	args = flags.Flags()
-	for flag, value := range defaultArgs {
-		// we need to cut the prefix '-' or '--' before comparing with existingVars
-		flag = strings.TrimLeft(flag, "-")
-		if _, ok := args[flag]; !ok {
-			args[flag] = value
+	existKeys := make(map[string]struct{}, len(containerArgFlags.Flags()))
+	for flag := range containerArgFlags.Flags() {
+		key := strings.TrimLeft(flag, "-")
+		if flag == "-p" {
+			key = "port"
+		}
+		existKeys[key] = struct{}{}
+	}
+
+	externalArgFlags := internal.FlagSet{}
+	_ = externalArgFlags.Parse(externalArgs)
+
+	for flag, value := range externalArgFlags.Flags() {
+		key := strings.TrimLeft(flag, "-")
+		if _, ok := existKeys[key]; !ok {
+			containerArgFlags.Flags()[flag] = value
 		}
 	}
 
-	container.Args = make([]string, 0, len(args)*2)
-	// sort the arg list
-	flags.Visit(func(flag, value string) {
-		container.Args = append(container.Args, "--"+flag)
-		if value != "" {
-			container.Args = append(container.Args, value)
-		}
+	mergedArgs := make([]string, 0, len(existKeys)*2)
+	containerArgFlags.Visit(func(flag, value string) {
+		mergedArgs = append(mergedArgs, flag, value)
 	})
-	return
+	return mergedArgs, nil
 }
 
-func extendPorts(args map[string]string, userDefinedPorts, defaultPorts []corev1.ContainerPort) []corev1.ContainerPort {
-	// copy default ports and cover the containerPort with user-defined port arg
-	required := coverPorts(args, defaultPorts)
-	// merge user-defined ports to required
-	return mergePorts(required, userDefinedPorts)
-}
-
-// coverPorts use the port in user-defined args to cover the default port
-func coverPorts(args map[string]string, required []corev1.ContainerPort) []corev1.ContainerPort {
-	ports := make([]corev1.ContainerPort, len(required))
-	copy(ports, required)
-
-	for i := range required {
-		if port, ok := args[(&required[i]).Name]; ok {
-			ports[i].ContainerPort = intstr.Parse(port).IntVal
+func extendPorts(ports []corev1.ContainerPort, externalPorts ...corev1.ContainerPort) []corev1.ContainerPort {
+	for i := range externalPorts {
+		found := false
+		for j := range ports {
+			if (&ports[j]).Name == (&externalPorts[i]).Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if (&externalPorts[i]).Name == "" {
+				(&externalPorts[i]).Name = fmt.Sprintf("unset-%d", (&externalPorts[i]).ContainerPort)
+			}
+			ports = append(ports, externalPorts[i])
 		}
 	}
 	return ports
+}
+
+// coverPorts use the port in user-defined args to cover the default port
+func coverPortsFromArgs(args []string, ports []corev1.ContainerPort) []corev1.ContainerPort {
+	newPorts := make([]corev1.ContainerPort, len(ports))
+	copy(newPorts, ports)
+
+	flags := internal.FlagSet{}
+	_ = flags.Parse(args)
+	parsedArgs := flags.Flags()
+
+	for i := range ports {
+		name := (&ports[i]).Name
+		if port, ok := parsedArgs["--"+name]; ok {
+			newPorts[i].ContainerPort = intstr.Parse(port).IntVal
+		}
+	}
+	return newPorts
 }
 
 // mergePorts merge the same name of user defined port to required port
@@ -160,38 +183,29 @@ func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 		hmetaAddr = hdb.Spec.ExternalHMeta.GetAddr()
 	} else {
 		svc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta)
-		flags := internal.FlagSet{}
-		if err := flags.Parse(hdb.Spec.HMeta.Container.Args); err != nil {
-			err = fmt.Errorf("parse hmeta args failed. %w", err)
+		port, err := parseHMetaPort(hdb.Spec.HMeta.Container.Args)
+		if err != nil {
 			return "", err
 		}
-		parsedArgs := flags.Flags()
-		port, ok := parseHMetaPort(parsedArgs)
-		if !ok {
-			port = strconv.Itoa(int(hmetaPorts[0].ContainerPort))
-		}
-		hmetaAddr = svc.Name + "." + svc.Namespace + ":" + port
+		hmetaAddr = fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, port.ContainerPort)
 	}
 	return hmetaAddr, nil
 }
 
-func getHMetaContainerPorts(container *hapi.Container, parsedArgs map[string]string) (ports []corev1.ContainerPort) {
-	if hmetaPort, ok := parseHMetaPort(parsedArgs); ok {
-		return extendPorts(map[string]string{
-			"port": hmetaPort,
-		}, container.Ports, hmetaPorts)
+func parseHMetaPort(args []string) (corev1.ContainerPort, error) {
+	flags := internal.FlagSet{}
+	if err := flags.Parse(args); err != nil {
+		return hmetaPort, err
 	}
-	return mergePorts(hmetaPorts, container.Ports)
-}
+	if addr, ok := flags.Flags()["--http-addr"]; ok {
+		if slice := strings.Split(addr, ":"); len(slice) == 2 {
+			return corev1.ContainerPort{
+				Name:          "port",
+				ContainerPort: intstr.Parse(slice[1]).IntVal,
+				Protocol:      corev1.ProtocolTCP,
+			}, nil
+		}
+	}
 
-func parseHMetaPort(parsedArgs map[string]string) (port string, ok bool) {
-	addr := parsedArgs["http-addr"]
-	if addr == "" {
-		return
-	}
-
-	if slice := strings.Split(addr, ":"); len(slice) == 2 {
-		return slice[1], true
-	}
-	return
+	return hmetaPort, nil
 }

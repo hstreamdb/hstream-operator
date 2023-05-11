@@ -19,17 +19,17 @@ const (
 	hServerStoreConfig = "/etc/logdevice"
 )
 
-var hServerArg = map[string]string{
-	"--config-path":        "/etc/hstream/config.yaml",
-	"--bind-address":       "0.0.0.0",
-	"--advertised-address": "$(POD_IP)",
-	"--store-config":       hServerStoreConfig + "/config.json",
-	//"--port":             "6570",
-	//"--internal-port":    "6571",
-	//"--seed-nodes":       "hstream-server-0.hstream-server:6571", // fill this while reconciling deployment
-	//"--server-id":        "", // fill this while reconciling deployment
-	//"--metastore-uri":    "rqlite://rqlite-svc.default:4001",
-	//"--store-admin-host": "", // fill this while reconciling deployment
+var hServerArgs = []string{
+	"--config-path", "/etc/hstream/config.yaml",
+	"--bind-address", "0.0.0.0",
+	"--advertised-address", "$(POD_IP)",
+	"--store-config", hServerStoreConfig + "/config.json",
+	//"--port",             "6570",
+	//"--internal-port",    "6571",
+	//"--seed-nodes",       "hstream-server-0.hstream-server:6571", // fill this while reconciling deployment
+	//"--server-id",        "", // fill this while reconciling deployment
+	//"--store-admin-host", "", // fill this while reconciling deployment
+	//"--metastore-uri",    "rqlite://rqlite-svc.default:4001",
 }
 
 var hServerEnvVar = []corev1.EnvVar{
@@ -143,7 +143,7 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	}
 
 	structAssign(&container, &hServer.Container)
-	extendEnv(&container, hServerEnvVar)
+	container.Env = extendEnvs(container.Env, hServerEnvVar...)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHServer)
@@ -152,28 +152,21 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	if len(container.Command) == 0 {
 		container.Command = []string{"/usr/local/bin/hstream-server"}
 
-		args := make(map[string]string)
-		for k, v := range hServerArg {
-			args[k] = v
-		}
-
+		args := hServerArgs
 		// TODO: remove server-id
-		args["--server-id"] = "100"
-
-		hmeta, _ := getHMetaAddr(hdb)
+		args = append(args, "--server-id", "100")
 		// TODO: rename "rq" to "ip"
-		args["--metastore-uri"] = "rq://" + hmeta
+		hmeta, _ := getHMetaAddr(hdb)
+		args = append(args, "--metastore-uri", "rq://"+hmeta)
+		args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
 
-		adminServerSvc := internal.GetService(hdb, hapi.ComponentTypeAdminServer)
-		args["--store-admin-host"] = fmt.Sprintf("%s.%s", adminServerSvc.Name, adminServerSvc.Namespace)
-
-		parsedArgs, _ := extendArg(&container, args)
-		container.Ports = extendPorts(parsedArgs, container.Ports, []corev1.ContainerPort{
-			hServerPort, hServerInternalPort,
-		})
+		container.Args, _ = extendArgs(container.Args, args...)
+		container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, hServerPort, hServerInternalPort))
 
 		// TODO: remove seed nodes
-		if _, ok := parsedArgs["seed-nodes"]; !ok {
+		flags := internal.FlagSet{}
+		_ = flags.Parse(container.Args)
+		if _, ok := flags.Flags()["--seed-nodes"]; !ok {
 			var internalPort int32
 			for _, port := range container.Ports {
 				if port.Name == "internal-port" {

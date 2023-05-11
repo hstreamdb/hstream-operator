@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -114,9 +115,8 @@ var _ = Describe("AddHserver", func() {
 					flags := internal.FlagSet{}
 					err = flags.Parse(sts.Spec.Template.Spec.Containers[0].Args)
 					Expect(err).To(BeNil())
-					Expect(flags.Flags()).To(HaveKeyWithValue("internal-port", internalPort))
-					Expect(flags.Flags()).To(HaveKey("seed-nodes"))
-					Expect(flags.Flags()["seed-nodes"]).To(ContainSubstring(internalPort))
+					Expect(flags.Flags()).To(HaveKeyWithValue("--internal-port", internalPort))
+					Expect(flags.Flags()).To(HaveKeyWithValue("--seed-nodes", ContainSubstring(internalPort)))
 				})
 			})
 		})
