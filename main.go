@@ -18,9 +18,10 @@ package main
 
 import (
 	"flag"
+	"os"
+
 	"github.com/hstreamdb/hstream-operator/internal/admin"
 	"go.uber.org/zap/zapcore"
-	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -70,7 +71,6 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
-		Development: true,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
