@@ -62,6 +62,7 @@ type HStreamDBSpec struct {
 
 // HStreamDBStatus defines the observed state of HStreamDB
 type HStreamDBStatus struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// HStore store the status of hstore cluster
 	HStore HStoreStatus `json:"hstore"`
 	// HServer store the status of hserver cluster
