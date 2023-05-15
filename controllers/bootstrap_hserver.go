@@ -2,10 +2,11 @@ package controllers
 
 import (
 	"context"
+	"time"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 type bootstrapHServer struct{}

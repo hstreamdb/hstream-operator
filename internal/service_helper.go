@@ -10,7 +10,6 @@ func GetService(hdb *hapi.HStreamDB, compType hapi.ComponentType, ports ...corev
 	service := corev1.Service{
 		ObjectMeta: GetObjectMetadata(hdb, nil, compType),
 	}
-	service.Name = compType.GetResName(hdb.Name)
 	service.Spec.Ports = make([]corev1.ServicePort, len(ports))
 	for i := range ports {
 		service.Spec.Ports[i] = *ports[i].DeepCopy()

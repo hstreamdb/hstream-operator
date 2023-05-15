@@ -3,13 +3,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	jsoniter "github.com/json-iterator/go"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 type bootstrapHStore struct{}

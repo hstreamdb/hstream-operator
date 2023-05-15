@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/mitchellh/hashstructure/v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,7 +24,6 @@ func GetDeployment(hdb *hapi.HStreamDB, comp *hapi.Component, podSpec *corev1.Po
 		},
 	}
 
-	deploy.Name = compType.GetResName(hdb.Name)
 	deploy.Annotations[hapi.LastSpecKey] = GetObjectHash(&deploy)
 
 	return deploy
@@ -46,7 +46,6 @@ func GetStatefulSet(hdb *hapi.HStreamDB, comp *hapi.Component, podSpec *corev1.P
 		},
 	}
 
-	sts.Name = compType.GetResName(hdb.Name)
 	sts.Annotations[hapi.LastSpecKey] = GetObjectHash(&sts)
 
 	return sts
