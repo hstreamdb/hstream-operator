@@ -16,16 +16,16 @@ type addServices struct{}
 
 func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	var err error
-	if err = a.addHStoreService(ctx, r, hdb); err != nil {
+	if err = a.addHMetaService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
 	if err = a.addAdminServerService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
-	if err = a.addHServerService(ctx, r, hdb); err != nil {
+	if err = a.addHStoreService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
-	if err = a.addHMetaService(ctx, r, hdb); err != nil {
+	if err = a.addHServerService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
 	return nil
@@ -42,11 +42,6 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 
 	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, ports...)
 	service.Spec.PublishNotReadyAddresses = true
-	if err = a.createOrUpdate(ctx, r, hdb, &service); err != nil {
-		return
-	}
-
-	service = internal.GetService(hdb, hapi.ComponentTypeHServer, ports...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -86,11 +81,6 @@ func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler
 
 	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta, servicePorts...)
 	service.Spec.PublishNotReadyAddresses = true
-	if err = a.createOrUpdate(ctx, r, hdb, &service); err != nil {
-		return
-	}
-
-	service = internal.GetService(hdb, hapi.ComponentTypeHMeta, servicePorts...)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 

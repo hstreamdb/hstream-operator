@@ -2,15 +2,16 @@ package admin
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	jsoniter "github.com/json-iterator/go"
 	"k8s.io/client-go/rest"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -123,7 +124,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 		hmetaAddr = ac.hdb.Spec.ExternalHMeta.Host + ":" + strconv.Itoa(int(ac.hdb.Spec.ExternalHMeta.Port))
 	} else {
 		namespace = ac.hdb.Namespace
-		svc := internal.GetService(ac.hdb, hapi.ComponentTypeHMeta)
+		svc := internal.GetHeadlessService(ac.hdb, hapi.ComponentTypeHMeta)
 		hmetaAddr = fmt.Sprintf("%s:port", svc.Name)
 	}
 

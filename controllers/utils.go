@@ -2,14 +2,15 @@ package controllers
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"reflect"
-	"strconv"
-	"strings"
 )
 
 // structAssign copy the value of struct from src to dist
@@ -158,7 +159,7 @@ func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 	if hdb.Spec.ExternalHMeta != nil {
 		hmetaAddr = hdb.Spec.ExternalHMeta.GetAddr()
 	} else {
-		svc := internal.GetService(hdb, hapi.ComponentTypeHMeta)
+		svc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta)
 		flags := internal.FlagSet{}
 		if err := flags.Parse(hdb.Spec.HMeta.Container.Args); err != nil {
 			err = fmt.Errorf("parse hmeta args failed. %w", err)

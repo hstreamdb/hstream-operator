@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -43,11 +44,7 @@ var _ = Describe("AddServices", func() {
 			Expect(err).To(BeNil())
 			_, err = getHeadlessService(hdb, hapi.ComponentTypeHServer)
 			Expect(err).To(BeNil())
-			_, err = getService(hdb, hapi.ComponentTypeHServer)
-			Expect(err).To(BeNil())
 			_, err = getService(hdb, hapi.ComponentTypeAdminServer)
-			Expect(err).To(BeNil())
-			_, err = getService(hdb, hapi.ComponentTypeHMeta)
 			Expect(err).To(BeNil())
 			_, err = getHeadlessService(hdb, hapi.ComponentTypeHMeta)
 			Expect(err).To(BeNil())
