@@ -311,7 +311,7 @@ var _ = Describe("Utils", func() {
 		}
 		addr, err := getHMetaAddr(hdb)
 		Expect(err).To(Succeed())
-		Expect(addr).To(Equal("hstreamdb-sample-hmeta.default:4001"))
+		Expect(addr).To(Equal("hstreamdb-sample-internal-hmeta.default:4001"))
 	})
 
 	It("test getHMetaAddr with invalid arg", func() {
