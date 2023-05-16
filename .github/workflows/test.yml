@@ -53,13 +53,8 @@ jobs:
         tar -zxvf kubebuilder-tools
         sudo mv kubebuilder/ /usr/local/kubebuilder
 
-    - name: Mod tidy and install ginkgo
-      run: |
-        go mod tidy
-        go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.5.0
-        go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.5.0
-        go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.5.0
-        go install github.com/onsi/ginkgo/v2/ginkgo
+    - name: Install ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo
 
     - name: Run unit tests that don't depend on really k8s cluster
       if: matrix.testMode == 'unit-test'
