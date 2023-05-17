@@ -26,6 +26,9 @@ import (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=hdb
+//+kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".spec.gateway.endpoint"
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // HStreamDB is the Schema for the hstreamdbs API
 type HStreamDB struct {

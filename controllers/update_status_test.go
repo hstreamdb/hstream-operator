@@ -31,64 +31,46 @@ var _ = Describe("UpdateStatus", func() {
 		_ = k8sClient.DeleteAllOf(ctx, &appsv1.StatefulSet{}, client.InNamespace(hdb.Namespace))
 	})
 
-	Context("with a reconciled cluster", func() {
-		var requeue *requeue
-		BeforeEach(func() {
-			hdb.Status.HMeta.Nodes = []hapi.HMetaNode{
-				{
-					NodeId:    "node-id",
-					Reachable: true,
-					Leader:    false,
-					Error:     "",
-				},
-			}
-			requeue = updateStatus.reconcile(ctx, clusterReconciler, hdb)
+	Context("with a new cluster", func() {
+		nodes := []hapi.HMetaNode{
+			{
+				NodeId:    "node-id",
+				Reachable: true,
+				Leader:    false,
+				Error:     "",
+			},
+		}
+		JustBeforeEach(func() {
+			hdb.Status.HMeta.Nodes = nodes
+			hdb.Status.HStore.Bootstrapped = true
+			hdb.Status.HServer.Bootstrapped = true
+			_ = updateStatus.reconcile(ctx, clusterReconciler, hdb)
 		})
 
-		It("should not requeue", func() {
-			Expect(requeue).To(BeNil())
-		})
-
-		When("hmeta has been ready", func() {
-			BeforeEach(func() {
-				hdb.Status.HStore.Bootstrapped = true
-				requeue = updateStatus.reconcile(ctx, clusterReconciler, hdb)
-			})
-
-			It("should not requeue", func() {
-				Expect(requeue).To(BeNil())
-			})
-
-			When("hserver has been bootstrapped", func() {
-				BeforeEach(func() {
-					hdb.Status.HServer.Bootstrapped = true
-					requeue = updateStatus.reconcile(ctx, clusterReconciler, hdb)
-				})
-
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
-
-				It("should bootstrapped hserver", func() {
-					newHdb := &hapi.HStreamDB{}
-					err := k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), newHdb)
-					Expect(err).To(BeNil())
-					Expect(newHdb.Status.HStore.Bootstrapped).To(BeTrue())
-					Expect(newHdb.Status.HServer.Bootstrapped).To(BeTrue())
-				})
-			})
+		It("check store resource", func() {
+			storeHdb := &hapi.HStreamDB{}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
+			Expect(storeHdb.Status.HMeta.Nodes).To(ConsistOf(nodes))
+			Expect(storeHdb.Status.HStore.Bootstrapped).To(BeTrue())
+			Expect(storeHdb.Status.HServer.Bootstrapped).To(BeTrue())
 		})
 
 	})
-	Context("check conditions", Label("conditions"), func() {
-		When("just hStore has been ready", func() {
+
+	Context("check conditions", func() {
+		When("just hStore has been ready", Label("conditions"), func() {
 			JustBeforeEach(func() {
 				prepareHStoreReady(ctx, hdb)
+				hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
+				hdb.Status.HStore.Bootstrapped = true
+				hdb.Status.HServer.Bootstrapped = false
 			})
 
 			It("check conditions", func() {
-				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
-				Expect(hdb.Status.Conditions).To(ContainElements(
+				Expect(updateStatus.reconcile(ctx, clusterReconciler, hdb)).NotTo(BeNil())
+				storeHdb := &hapi.HStreamDB{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
+				Expect(storeHdb.Status.Conditions).To(ContainElements(
 					And(
 						HaveField("Type", Equal(hapi.HStoreReady)),
 						HaveField("Status", Equal(metav1.ConditionTrue)),
@@ -103,11 +85,16 @@ var _ = Describe("UpdateStatus", func() {
 		When("just hServer has been ready", func() {
 			JustBeforeEach(func() {
 				prepareHServerReady(ctx, hdb)
+				hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
+				hdb.Status.HStore.Bootstrapped = false
+				hdb.Status.HServer.Bootstrapped = true
 			})
 
 			It("check conditions", func() {
-				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
-				Expect(hdb.Status.Conditions).To(ContainElements(
+				Expect(updateStatus.reconcile(ctx, clusterReconciler, hdb)).NotTo(BeNil())
+				storeHdb := &hapi.HStreamDB{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
+				Expect(storeHdb.Status.Conditions).To(ContainElements(
 					And(
 						HaveField("Type", Equal(hapi.HServerReady)),
 						HaveField("Status", Equal(metav1.ConditionTrue)),
@@ -122,11 +109,16 @@ var _ = Describe("UpdateStatus", func() {
 		When("just gateway has been ready", func() {
 			JustBeforeEach(func() {
 				prepareGatewayReady(ctx, hdb)
+				hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
+				hdb.Status.HStore.Bootstrapped = false
+				hdb.Status.HServer.Bootstrapped = true
 			})
 
 			It("check conditions", func() {
-				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
-				Expect(hdb.Status.Conditions).To(ContainElements(
+				Expect(updateStatus.reconcile(ctx, clusterReconciler, hdb)).NotTo(BeNil())
+				storeHdb := &hapi.HStreamDB{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
+				Expect(storeHdb.Status.Conditions).To(ContainElements(
 					And(
 						HaveField("Type", Equal(hapi.GatewayReady)),
 						HaveField("Status", Equal(metav1.ConditionTrue)),
@@ -144,11 +136,16 @@ var _ = Describe("UpdateStatus", func() {
 				prepareHStoreReady(ctx, hdb)
 				prepareHServerReady(ctx, hdb)
 				prepareGatewayReady(ctx, hdb)
+				hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
+				hdb.Status.HStore.Bootstrapped = true
+				hdb.Status.HServer.Bootstrapped = true
 			})
 
 			It("check conditions", func() {
-				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
-				Expect(hdb.Status.Conditions).To(ConsistOf(
+				Expect(updateStatus.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
+				storeHdb := &hapi.HStreamDB{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
+				Expect(storeHdb.Status.Conditions).To(ConsistOf(
 					And(
 						HaveField("Type", Equal(hapi.HStoreReady)),
 						HaveField("Status", Equal(metav1.ConditionTrue)),
@@ -182,11 +179,6 @@ func prepareHStoreReady(ctx context.Context, hdb *hapi.HStreamDB) {
 	hStore.Status.Replicas = 1
 	hStore.Status.ReadyReplicas = 1
 	Expect(k8sClient.Status().Update(ctx, hStore)).To(BeNil())
-
-	Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
-	hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
-	hdb.Status.HStore.Bootstrapped = true
-	Expect(updateStatus{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 }
 
 func prepareHServerReady(ctx context.Context, hdb *hapi.HStreamDB) {
@@ -200,15 +192,9 @@ func prepareHServerReady(ctx context.Context, hdb *hapi.HStreamDB) {
 	hServer.Status.Replicas = 1
 	hServer.Status.ReadyReplicas = 1
 	Expect(k8sClient.Status().Update(ctx, hServer)).To(BeNil())
-
-	Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
-	hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
-	hdb.Status.HServer.Bootstrapped = true
-	Expect(updateStatus{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 }
 
 func prepareGatewayReady(ctx context.Context, hdb *hapi.HStreamDB) {
-	Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), hdb)).To(BeNil())
 	hdb.Spec.Gateway = &hapi.Gateway{}
 	hdb.Spec.Gateway.Endpoint = "fake"
 	hdb.Spec.Gateway.Port = 14789
@@ -225,7 +211,4 @@ func prepareGatewayReady(ctx context.Context, hdb *hapi.HStreamDB) {
 	gateway.Status.Replicas = 1
 	gateway.Status.ReadyReplicas = 1
 	Expect(k8sClient.Status().Update(ctx, gateway)).To(BeNil())
-
-	hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
-	Expect(updateStatus{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 }

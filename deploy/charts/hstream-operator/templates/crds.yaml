@@ -16,7 +16,17 @@ spec:
     singular: hstreamdb
   scope: Namespaced
   versions:
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - jsonPath: .spec.gateway.endpoint
+      name: Endpoint
+      type: string
+    - jsonPath: .status.conditions[?(@.status=="True")].type
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         properties:
