@@ -13,6 +13,14 @@ const (
 	Ready        string = "Ready"
 )
 
+func (hdb *HStreamDB) IsConditionTrue(conditionType string) bool {
+	_, condition := hdb.GetCondition(conditionType)
+	if condition == nil {
+		return false
+	}
+	return condition.Status == metav1.ConditionTrue
+}
+
 func (hdb *HStreamDB) GetCondition(conditionType string) (int, *metav1.Condition) {
 	for i := range hdb.Status.Conditions {
 		c := hdb.Status.Conditions[i]

@@ -26,6 +26,10 @@ func (a updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb
 		return &requeue{curError: err}
 	}
 
+	if !hdb.IsConditionTrue(hapi.Ready) {
+		return &requeue{message: "HStreamDB is not ready", delayedRequeue: true}
+	}
+
 	return nil
 }
 
