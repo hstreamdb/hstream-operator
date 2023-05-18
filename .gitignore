@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# Helm chart package
+*.tgz
+
 # Test binary, built with `go test -c`
 *.test
 
