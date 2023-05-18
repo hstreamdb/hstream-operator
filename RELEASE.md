@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-Hstream Operator 0.0.2 is released.
+Hstream Operator 0.0.3 is released.
 
 ### Supported version
 
@@ -12,8 +12,10 @@ Hstream Operator 0.0.2 is released.
 
 - `apps.hstream.io/v1alpha2`
 
-    - Integrate rqlite into operator, and named hmeta
-    - Upgrade the api version to v1alpha2 from v1alpha1
+    - Support HstreamDB gateway component
+
+    - Add condition for `HstreamDB` status
 
 ## Warning 🚨
-The api version `v1alpha2` isn't compatible with v1alpha1
+
+The API version `v1alpha2` isn't compatible with v1alpha1

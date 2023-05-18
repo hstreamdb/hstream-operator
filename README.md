@@ -1,12 +1,12 @@
-# hstream-operator
-The purpose of the project is to simplify the deployment of hstream cluster
+# HStream Operator
+The purpose of the project is to simplify the deployment of the HStream cluster
 
 ## Description
-Hstream cluster is consist of hserver, hstore, admin-server and rqlite.
-The controller will deploy a rqlite cluster in default, you can specify an external cluster by `spec.externalHmeta`
+HStream cluster consists of HServer, HStore, HMeta and AdminServer.
+The controller will deploy a rqlite cluster for HMeta in default, you can specify an external cluster by `spec.externalHmeta`
 
 ## Getting Started
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
+You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ### Running on the cluster
@@ -48,8 +48,8 @@ make undeploy
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
 
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
+It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)
+which provide a reconcile function responsible for synchronizing resources until the desired state is reached on the cluster
 
 ### Test It Out
 1. Install the CRDs into the cluster:
