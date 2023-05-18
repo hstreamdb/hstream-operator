@@ -1,0 +1,6 @@
+issues:
+  exclude-rules:
+    # TODO: Remove once https://github.com/dominikh/go-tools/issues/1294 is fixed
+    - linters:
+      - unused
+      path: 'internal/admin/client.go'
