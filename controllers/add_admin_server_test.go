@@ -40,7 +40,7 @@ var _ = Describe("AddAdminServer", func() {
 			Expect(err).To(BeNil())
 		})
 
-		When("admin server has been deploy", func() {
+		When("admin server has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
 					requeue = addAdminServer.reconcile(ctx, clusterReconciler, hdb)

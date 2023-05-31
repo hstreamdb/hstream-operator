@@ -46,7 +46,7 @@ var _ = Describe("UpdateConfigMap", func() {
 			Expect(err).To(BeNil())
 		})
 
-		When("config maps have been deploy", func() {
+		When("config maps have been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
 					requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)

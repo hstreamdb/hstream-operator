@@ -32,7 +32,7 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 }
 
 func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	hserver := hdb.Spec.HServer
+	hserver := &hdb.Spec.HServer
 	ports, err := getPorts(&hserver.Container, hServerPort, hServerInternalPort)
 	if err != nil {
 		return fmt.Errorf("parse hServer args failed. %w", err)
@@ -66,7 +66,7 @@ func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler
 		return nil
 	}
 
-	hmeta := hdb.Spec.HMeta
+	hmeta := &hdb.Spec.HMeta
 
 	flags := internal.FlagSet{}
 	if err = flags.Parse(hmeta.Container.Args); err != nil {
