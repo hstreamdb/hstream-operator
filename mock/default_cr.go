@@ -73,6 +73,11 @@ func CreateDefaultCR() *hapi.HStreamDB {
 				Replicas:            1,
 				VolumeClaimTemplate: nil,
 			},
+			Console: hapi.Component{
+				Image:           "hstreamdb/hstream-console",
+				ImagePullPolicy: "IfNotPresent",
+				Replicas:        1,
+			},
 		},
 		Status: hapi.HStreamDBStatus{},
 	}

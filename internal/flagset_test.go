@@ -48,6 +48,31 @@ var _ = Describe("Flagset", func() {
 			}))
 		})
 	})
+	Context("valid args that connect with '='", func() {
+		var args []string
+		var err error
+		BeforeEach(func() {
+			args = []string{
+				"--a", "1",
+				"-Dsever.port=5177",
+				"--c", "",
+				"-Dplain.hstream.privateAddress=hstreamdb-sample-internal-hserver:6570",
+			}
+			err = flag.Parse(args)
+		})
+		It("should successfully parse", func() {
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("get the actual flags", func() {
+			actual := flag.Flags()
+			Expect(actual).Should(BeComparableTo(map[string]string{
+				"--a":                            "1",
+				"-Dsever.port":                   "5177",
+				"--c":                            "",
+				"-Dplain.hstream.privateAddress": "hstreamdb-sample-internal-hserver:6570",
+			}))
+		})
+	})
 	Context("arg only has flag", func() {
 		var args []string
 		var err error
@@ -110,6 +135,14 @@ var _ = Describe("Flagset", func() {
 		It("flag isn't begin with '--' or '-'", func() {
 			args = []string{
 				"--e", "/config.json",
+				"b", "$(POD_IP)",
+			}
+			err = flag.Parse(args)
+			Expect(err).To(HaveOccurred())
+		})
+		It("flag is begin with '---'", func() {
+			args = []string{
+				"---e", "/config.json",
 				"b", "$(POD_IP)",
 			}
 			err = flag.Parse(args)
