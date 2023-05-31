@@ -12,6 +12,21 @@ spec:
       port: 14789
       targetPort: 14789
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hstreamdb-sample-console
+spec:
+  selector:
+    hstream.io/instance: hstreamdb-sample
+    hstream.io/component: console
+  type: NodePort
+  ports:
+    - name: port
+      port: 5177
+      targetPort: server-port
+      nodePort: 31777
+---
 apiVersion: apps.hstream.io/v1alpha2
 kind: HStreamDB
 metadata:
@@ -95,6 +110,26 @@ spec:
       ports:
         - name: admin-port
           containerPort: 6440
+  console:
+    image: hstreamdb/hstream-console
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    container:
+      name: console
+      ports:
+        - name: server-port
+          containerPort: 5177
+      env:
+        # This env config will be deprecated in the future.
+        - name: HSTREAM_PUBLIC_ADDRESS
+          # The HSTREAM_PUBLIC_ADDRESS will be shown on the overview of console dashboard
+          # to tell users how to connect HStream cluster through hserver or gateway component.
+          # If you deploy gateway, you should deploy a svc or LB for the gateway as the same time, and
+          # then set the svc name or LB addr of gateway to the HSTREAM_PUBLIC_ADDRESS
+          value: hstreamdb-sample.default:6570
+        # This env config will be deprecated in the future.
+        - name: PROMETHEUS_URL
+          value: http://localhost:9090
   hserver:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent

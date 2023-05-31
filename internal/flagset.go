@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"sort"
-	"strings"
 )
 
 type FlagSet struct {
@@ -44,14 +43,46 @@ func (f *FlagSet) parseOne() (bool, error) {
 
 	s := f.args[0]
 	if len(s) != 0 {
-		if strings.HasPrefix(s, "-") {
+		if s[0] == '-' {
 			if f.lastName != "" {
 				return false, fmt.Errorf("bad flag syntax: %s", s)
 			}
 
-			// it's a flag, value is the next arg
-			f.lastName = s
-			f.actual[f.lastName] = ""
+			numMinuses := 1
+			if s[1] == '-' {
+				numMinuses++
+				if len(s) == 2 { // "--" terminates the flags
+					f.args = f.args[1:]
+					return false, nil
+				}
+			}
+
+			name := s[numMinuses:]
+			if len(name) == 0 || name[0] == '-' || name[0] == '=' {
+				return false, fmt.Errorf("bad flag syntax: %s", s)
+			}
+
+			// it's a flag. does it have an argument?
+			hasValue := false
+			value := ""
+			for i := 1; i < len(name); i++ { // equals cannot be first
+				if name[i] == '=' {
+					value = name[i+1:]
+					hasValue = true
+					name = name[0:i]
+					break
+				}
+			}
+
+			// reserve the prefix "-" or "--"
+			name = s[:numMinuses+len(name)]
+			if hasValue {
+				f.actual[name] = value
+			} else {
+				// value is the next arg
+				f.actual[name] = ""
+				f.lastName = name
+			}
 		} else {
 			if f.lastName == "" {
 				return false, fmt.Errorf("bad flag syntax: %s", s)
@@ -63,11 +94,11 @@ func (f *FlagSet) parseOne() (bool, error) {
 				return false, fmt.Errorf("bad flag syntax: %s", s)
 			}
 			f.actual[f.lastName] = value
-			// reset lastName, next arg is flag
+			// reset lastName, next arg is a flag
 			f.lastName = ""
 		}
 	} else {
-		// reset lastName, next arg is flag
+		// reset lastName, next arg is a flag
 		f.lastName = ""
 	}
 

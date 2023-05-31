@@ -94,6 +94,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		addHServer{},
 		bootstrapHServer{},
 		addGateway{},
+		addConsole{},
 		updateStatus{},
 	}
 	return r.subReconcile(ctx, hdb, subReconcilers)
