@@ -50,7 +50,7 @@ var _ = Describe("AddServices", func() {
 			Expect(err).To(BeNil())
 		})
 
-		When("services has been deploy", func() {
+		When("services has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
 					requeue = addServices.reconcile(ctx, clusterReconciler, hdb)

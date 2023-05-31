@@ -42,7 +42,7 @@ var _ = Describe("AddHserver", func() {
 			Expect(err).To(BeNil())
 		})
 
-		When("hserver has been deploy", func() {
+		When("hserver has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
 					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)

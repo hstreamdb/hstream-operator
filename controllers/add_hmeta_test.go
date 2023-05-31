@@ -71,7 +71,7 @@ var _ = Describe("AddHMeta", func() {
 			})
 		})
 
-		When("hmeta has been deploy", func() {
+		When("hmeta has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
 					requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
