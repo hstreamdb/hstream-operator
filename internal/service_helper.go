@@ -25,5 +25,6 @@ func GetHeadlessService(hdb *hapi.HStreamDB, compType hapi.ComponentType, ports 
 	service := GetService(hdb, compType, ports...)
 	service.Name = GetResNameOnPanic(hdb, "internal-"+string(compType))
 	service.Spec.ClusterIP = corev1.ClusterIPNone
+	service.Spec.PublishNotReadyAddresses = true
 	return service
 }
