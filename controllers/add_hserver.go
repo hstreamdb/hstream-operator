@@ -97,10 +97,6 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 func (a addHServer) getSts(hdb *hapi.HStreamDB) appsv1.StatefulSet {
 	podTemplate := a.getPodTemplate(hdb)
 	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HServer, &podTemplate, hapi.ComponentTypeHServer)
-	// TODO: delete this special handle while hstream remove the seen-nodes and server-id arg
-	if len(hdb.Spec.HServer.Container.Command) == 0 {
-		sts.Spec.Replicas = &[]int32{1}[0]
-	}
 	return sts
 }
 
@@ -150,22 +146,24 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	}
 
 	if len(container.Command) == 0 {
-		container.Command = []string{"/usr/local/bin/hstream-server"}
+		// Use shell form, because the exec form does not invoke a command shell
+		container.Command = []string{"bash", "-c"}
 
-		args := hServerArgs
+		args := []string{}
+		args = append(args, hServerArgs...)
 		// TODO: remove server-id
-		args = append(args, "--server-id", "100")
+		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
 		// TODO: rename "rq" to "ip"
 		hmeta, _ := getHMetaAddr(hdb)
 		args = append(args, "--metastore-uri", "rq://"+hmeta)
 		args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
 
-		container.Args, _ = extendArgs(container.Args, args...)
-		container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, hServerPort, hServerInternalPort))
+		// Get the internal port
+		container.Ports = coverPortsFromArgs(args, extendPorts(container.Ports, hServerPort, hServerInternalPort))
 
 		// TODO: remove seed nodes
 		flags := internal.FlagSet{}
-		_ = flags.Parse(container.Args)
+		_ = flags.Parse(args)
 		if _, ok := flags.Flags()["--seed-nodes"]; !ok {
 			var internalPort int32
 			for _, port := range container.Ports {
@@ -177,16 +175,20 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
 			seedNodes := make([]string, hdb.Spec.HServer.Replicas)
 			for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
-				// ep. hdbName-hserver-0.svcName.namespace:6571
+				// ep. hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571
 				seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%d",
 					hapi.ComponentTypeHServer.GetResName(hdb.Name),
 					i,
 					hServerSvc.Name,
 					hServerSvc.Namespace,
-					internalPort)
+					internalPort,
+				)
 			}
-			container.Args = append(container.Args, "--seed-nodes", strings.Join(seedNodes, ","))
+			args = append(args, "--seed-nodes", strings.Join(seedNodes, ","))
 		}
+		args, _ = extendArgs(container.Args, args...)
+		args = append([]string{"/usr/local/bin/hstream-server"}, args...)
+		container.Args = []string{strings.Join(args, " ")}
 	}
 
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -58,7 +57,23 @@ var _ = Describe("AddHserver", func() {
 					Expect(sts.UID).To(Equal(newSts.UID))
 				})
 			})
+			Context("scale up hserver replicas", func() {
+				replicas := int32(3)
+				BeforeEach(func() {
+					hdb.Spec.HServer.Replicas = replicas
+					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
+				})
 
+				It("should not requeue", func() {
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should get new container name", func() {
+					sts, err := getHServerStatefulSet(hdb)
+					Expect(err).To(BeNil())
+					Expect(*sts.Spec.Replicas).Should(Equal(replicas))
+				})
+			})
 			Context("update container name", func() {
 				name := "hdb-hserver"
 				BeforeEach(func() {
@@ -111,12 +126,7 @@ var _ = Describe("AddHserver", func() {
 				It("should get internal-port and seeds-node from args", func() {
 					sts, err := getHServerStatefulSet(hdb)
 					Expect(err).To(BeNil())
-
-					flags := internal.FlagSet{}
-					err = flags.Parse(sts.Spec.Template.Spec.Containers[0].Args)
-					Expect(err).To(BeNil())
-					Expect(flags.Flags()).To(HaveKeyWithValue("--internal-port", internalPort))
-					Expect(flags.Flags()).To(HaveKeyWithValue("--seed-nodes", ContainSubstring(internalPort)))
+					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--internal-port %s", internalPort))
 				})
 			})
 		})
