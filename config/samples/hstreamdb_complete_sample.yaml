@@ -133,7 +133,7 @@ spec:
   hserver:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
-    replicas: 1
+    replicas: 3
     container:
       name: hserver
 #      command:

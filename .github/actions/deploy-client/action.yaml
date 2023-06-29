@@ -1,0 +1,57 @@
+name: Deployment rqlite
+description: "Deployment HStream client"
+inputs:
+  image:
+    description: "HStream client image"
+    required: false 
+    default: "hstreamdb/hstream:rqlite"
+  host:
+    description: "HStream server host"
+    required: false
+    default: "hstreamdb-sample.default"
+  port:
+    description: "HStream server endpoint"
+    required: false
+    default: "14789" 
+runs:
+  using: "composite"
+  steps:
+    - name: create job
+      shell: bash
+      run: |
+        set -euo pipefail
+        kubectl apply -f - <<EOF
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: client
+          spec:
+            backoffLimit: 10
+            template:
+              spec:
+                containers:
+                - name: client
+                  image: ${{ inputs.image }}
+                  command:
+                  - bash 
+                  - -c
+                  - |
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "CREATE STREAM demo;"
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "INSERT INTO demo (temperature, humidity) VALUES (22, 80);"
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "INSERT INTO demo (temperature, humidity) VALUES (15, 20);"
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "INSERT INTO demo (temperature, humidity) VALUES (31, 76);"
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "INSERT INTO demo (temperature, humidity) VALUES ( 5, 45);"
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "INSERT INTO demo (temperature, humidity) VALUES (27, 82);"
+                    hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "INSERT INTO demo (temperature, humidity) VALUES (28, 86);"
+                restartPolicy: OnFailure
+        EOF
+    - name: check status
+      shell: bash
+      run: |
+        set -euo pipefail
+        while
+          [[ "$(kubectl get job client -o json | jq .status.succeeded)" != "1" ]]
+        do
+          [[ "$(kubectl get job client -o json | jq .status.failed)" == "1" ]] && exit 1
+          echo "waiting job succeeded" && sleep 1
+        done
