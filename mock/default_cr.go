@@ -27,7 +27,7 @@ func CreateDefaultCR() *hapi.HStreamDB {
 			HServer: hapi.Component{
 				Image:           "hstreamdb/hstream:rqlite",
 				ImagePullPolicy: "IfNotPresent",
-				Replicas:        1,
+				Replicas:        3,
 				Container:       hapi.Container{
 					//Command: []string{
 					//	"/usr/local/bin/hstream-server",
