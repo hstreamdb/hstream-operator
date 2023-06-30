@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -14,23 +15,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-const (
-	hServerStoreConfig = "/etc/logdevice"
-)
-
-var hServerArgs = []string{
-	"--config-path", "/etc/hstream/config.yaml",
-	"--bind-address", "0.0.0.0",
-	"--advertised-address", "$(POD_IP)",
-	"--store-config", hServerStoreConfig + "/config.json",
-	//"--port",             "6570",
-	//"--internal-port",    "6571",
-	//"--seed-nodes",       "hstream-server-0.hstream-server:6571", // fill this while reconciling deployment
-	//"--server-id",        "", // fill this while reconciling deployment
-	//"--store-admin-host", "", // fill this while reconciling deployment
-	//"--metastore-uri",    "rqlite://rqlite-svc.default:4001",
-}
 
 var hServerEnvVar = []corev1.EnvVar{
 	{
@@ -145,51 +129,7 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 		container.Name = string(hapi.ComponentTypeHServer)
 	}
 
-	if len(container.Command) == 0 {
-		// Use shell form, because the exec form does not invoke a command shell
-		container.Command = []string{"bash", "-c"}
-
-		args := []string{}
-		args = append(args, hServerArgs...)
-		// TODO: remove server-id
-		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
-		// TODO: rename "rq" to "ip"
-		hmeta, _ := getHMetaAddr(hdb)
-		args = append(args, "--metastore-uri", "rq://"+hmeta)
-		args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
-
-		// Get the internal port
-		container.Ports = coverPortsFromArgs(args, extendPorts(container.Ports, hServerPort, hServerInternalPort))
-
-		// TODO: remove seed nodes
-		flags := internal.FlagSet{}
-		_ = flags.Parse(args)
-		if _, ok := flags.Flags()["--seed-nodes"]; !ok {
-			var internalPort int32
-			for _, port := range container.Ports {
-				if port.Name == "internal-port" {
-					internalPort = port.ContainerPort
-				}
-			}
-
-			hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
-			seedNodes := make([]string, hdb.Spec.HServer.Replicas)
-			for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
-				// ep. hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571
-				seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%d",
-					hapi.ComponentTypeHServer.GetResName(hdb.Name),
-					i,
-					hServerSvc.Name,
-					hServerSvc.Namespace,
-					internalPort,
-				)
-			}
-			args = append(args, "--seed-nodes", strings.Join(seedNodes, ","))
-		}
-		args, _ = extendArgs(container.Args, args...)
-		args = append([]string{"/usr/local/bin/hstream-server"}, args...)
-		container.Args = []string{strings.Join(args, " ")}
-	}
+	container.Command, container.Args, container.Ports = a.defaultCommandArgsAndPorts(hdb)
 
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	container.VolumeMounts = append(container.VolumeMounts,
@@ -202,4 +142,83 @@ func (a addHServer) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
 	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
 	volumes = []corev1.Volume{internal.GetVolume(hdb, m)}
 	return
+}
+
+func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, args []string, ports []corev1.ContainerPort) {
+	if len(hdb.Spec.HServer.Container.Command) > 0 {
+		return hdb.Spec.HServer.Container.Command, hdb.Spec.HServer.Container.Args, coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(hdb.Spec.HServer.Container.Ports, hServerPort, hServerInternalPort))
+	}
+	if len(hdb.Spec.HServer.Container.Args) > 0 {
+		if strings.HasPrefix(hdb.Spec.HServer.Container.Args[0], "bash") ||
+			strings.HasPrefix(hdb.Spec.HServer.Container.Args[0], "sh") ||
+			strings.HasPrefix(hdb.Spec.HServer.Container.Args[0], "-c") {
+			return hdb.Spec.HServer.Container.Command, hdb.Spec.HServer.Container.Args, coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(hdb.Spec.HServer.Container.Ports, hServerPort, hServerInternalPort))
+		}
+	}
+
+	command = []string{"bash", "-c"}
+	preArgs := []string{"/usr/local/bin/hstream-server"}
+	ports = hdb.Spec.HServer.Container.Ports
+
+	flags := internal.FlagSet{}
+	if len(hdb.Spec.HServer.Container.Args) > 0 {
+		_ = flags.Parse(hdb.Spec.HServer.Container.Args)
+	}
+	if _, ok := flags.Flags()["--config-path"]; !ok {
+		args = append(args, "--config-path", "/etc/hstream/config.yaml")
+	}
+	if _, ok := flags.Flags()["--bind-address"]; !ok {
+		args = append(args, "--bind-address", "0.0.0.0")
+	}
+	if _, ok := flags.Flags()["--advertised-address"]; !ok {
+		args = append(args, "--advertised-address", "$(POD_IP)")
+	}
+	if _, ok := flags.Flags()["--store-config"]; !ok {
+		args = append(args, "--store-config", "/etc/logdevice/config.json")
+	}
+	if _, ok := flags.Flags()["--store-admin-host"]; !ok {
+		args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
+	}
+	if _, ok := flags.Flags()["--metastore-uri"]; !ok {
+		hmeta, _ := getHMetaAddr(hdb)
+		args = append(args, "--metastore-uri", "rq://"+hmeta)
+	}
+	if _, ok := flags.Flags()["--server-id"]; !ok {
+		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
+	}
+	if _, ok := flags.Flags()["--seed-nodes"]; !ok {
+		hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
+		seedNodes := make([]string, hdb.Spec.HServer.Replicas)
+
+		f := internal.FlagSet{}
+		_ = f.Parse(args)
+		internalPort := f.Flags()["--internal-port"]
+
+		for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
+			// ep. hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571
+			seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%s",
+				hapi.ComponentTypeHServer.GetResName(hdb.Name),
+				i,
+				hServerSvc.Name,
+				hServerSvc.Namespace,
+				internalPort,
+			)
+		}
+	}
+	if _, ok := flags.Flags()["--port"]; !ok {
+		args = append(args, "--port", strconv.Itoa(int(hServerPort.ContainerPort)))
+		ports = coverPortsFromArgs(args, extendPorts(ports, hServerPort))
+	} else {
+		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, hServerPort))
+	}
+	if _, ok := flags.Flags()["--internal-port"]; !ok {
+		args = append(args, "--internal-port", strconv.Itoa(int(hServerInternalPort.ContainerPort)))
+		ports = coverPortsFromArgs(args, extendPorts(ports, hServerInternalPort))
+	} else {
+		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, hServerInternalPort))
+	}
+
+	args = append(preArgs, args...)
+	args = append(args, hdb.Spec.HServer.Container.Args...)
+	return command, []string{strings.Join(args, " ")}, ports
 }

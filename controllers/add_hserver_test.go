@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
+	"strconv"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -123,10 +125,31 @@ var _ = Describe("AddHserver", func() {
 					Expect(requeue).To(BeNil())
 				})
 
-				It("should get internal-port and seeds-node from args", func() {
+				It("should get internal-port", func() {
 					sts, err := getHServerStatefulSet(hdb)
 					Expect(err).To(BeNil())
 					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--internal-port %s", internalPort))
+					Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
+						WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(internalPort)),
+					))
+				})
+			})
+			Context("define log level in args", func() {
+				BeforeEach(func() {
+					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+						"--log-level", "debug")
+					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should not requeue", func() {
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should get internal-port and seeds-node from args", func() {
+					sts, err := getHServerStatefulSet(hdb)
+					Expect(err).To(BeNil())
+					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--log-level debug"))
 				})
 			})
 		})

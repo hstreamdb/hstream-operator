@@ -136,30 +136,11 @@ spec:
     replicas: 3
     container:
       name: hserver
-#      command:
-#        - bash
-#        - "-c"
-#        - |
-#          set -ex
-#          [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
-#          ordinal=${BASH_REMATCH[1]}
-#          /usr/local/bin/hstream-server \
-#          --config-path /etc/hstream/config.yaml \
-#          --bind-address 0.0.0.0 \
-#          --advertised-address $(POD_IP) \
-#          --port 6570 \
-#          --internal-port 6571 \
-#          --seed-nodes "hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver:6571" \
-#          --server-id $((100 + $ordinal)) \
-#          --metastore-uri rq://hstreamdb-sample-hmeta.default:4001 \
-#          --store-config /etc/logdevice/config.json \
-#          --store-admin-host hstreamdb-sample-admin-server
-      # the name of port can't be changed
-      ports:
-        - name: port
-          containerPort: 6570
-        - name: internal-port
-          containerPort: 6571
+      args:
+      - --log-level
+      - debug
+      - --store-admin-host
+      - hstreamdb-sample-admin-server
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
