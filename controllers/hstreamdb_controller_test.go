@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"errors"
+	"time"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -11,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 // this test case requires to connect to the running k8s cluster in local or anywhere
@@ -87,14 +88,14 @@ var _ = Describe("HstreamdbController", func() {
 		mockRec.rq = &requeue{delayedRequeue: true}
 		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
-		Expect(res).To(Equal(ctrl.Result{Requeue: true}))
+		Expect(res).To(Equal(ctrl.Result{RequeueAfter: time.Second}))
 	})
 
 	It("should requeue delay", func() {
 		mockRec.rq = &requeue{message: "requeue delay", delay: time.Second}
 		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
-		Expect(res).To(Equal(ctrl.Result{Requeue: true, RequeueAfter: time.Second}))
+		Expect(res).To(Equal(ctrl.Result{RequeueAfter: time.Second}))
 	})
 
 	It("should requeue delay with conflict error", func() {
@@ -104,7 +105,7 @@ var _ = Describe("HstreamdbController", func() {
 
 		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
-		Expect(res).To(Equal(ctrl.Result{Requeue: true, RequeueAfter: time.Minute}))
+		Expect(res).To(Equal(ctrl.Result{RequeueAfter: time.Second}))
 	})
 })
 

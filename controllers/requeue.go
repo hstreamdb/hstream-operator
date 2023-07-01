@@ -2,13 +2,14 @@ package controllers
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"time"
 )
 
 // requeue provides a wrapper around different results from a subreconciler.
@@ -41,7 +42,7 @@ func processRequeue(requeue *requeue, subReconciler interface{}, object runtime.
 	if err != nil && k8sErrors.IsConflict(err) {
 		err = nil
 		if requeue.delay == time.Duration(0) {
-			requeue.delay = time.Minute
+			requeue.delay = time.Second
 		}
 	}
 
@@ -53,5 +54,5 @@ func processRequeue(requeue *requeue, subReconciler interface{}, object runtime.
 	}
 	curLog.Info("Reconciliation terminated early", "message", requeue.message)
 
-	return ctrl.Result{Requeue: true, RequeueAfter: requeue.delay}, nil
+	return ctrl.Result{RequeueAfter: requeue.delay}, nil
 }
