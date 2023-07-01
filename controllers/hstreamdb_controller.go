@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal/admin"
@@ -126,7 +127,7 @@ func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *hapi.HStrea
 
 	if delayedRequeue {
 		logger.Info("HStream was not fully reconciled by reconciliation process")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	logger.Info("Reconciliation complete")

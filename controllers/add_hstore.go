@@ -145,9 +145,7 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 					Port: intstr.FromString("admin-port"),
 				},
 			},
-			InitialDelaySeconds: 5,
-			TimeoutSeconds:      2,
-			FailureThreshold:    3,
+			PeriodSeconds: 1,
 		},
 	}
 

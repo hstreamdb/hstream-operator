@@ -119,9 +119,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 					Scheme: "HTTP",
 				},
 			},
-			PeriodSeconds:       5,
-			TimeoutSeconds:      2,
-			InitialDelaySeconds: 2,
+			PeriodSeconds: 1,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -131,9 +129,6 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 					Scheme: "HTTP",
 				},
 			},
-			InitialDelaySeconds: 2,
-			TimeoutSeconds:      2,
-			FailureThreshold:    3,
 		},
 	}
 
