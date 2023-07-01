@@ -119,7 +119,8 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 					Scheme: "HTTP",
 				},
 			},
-			PeriodSeconds: 1,
+			FailureThreshold: 30,
+			PeriodSeconds:    1,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
