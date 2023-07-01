@@ -19,7 +19,6 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hstore")
 
 	if hdb.Status.HStore.Bootstrapped {
-		logger.Info("HStore has been bootstrapped before")
 		return nil
 	}
 
