@@ -46,12 +46,8 @@ var _ = Describe("BootstrapHServer", Label("k8s"), func() {
 	It("check status", func() {
 		Eventually(func() bool {
 			existHDB := &hapi.HStreamDB{}
-			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), existHDB)
-			if err == nil {
-				return existHDB.Status.HServer.Bootstrapped == true &&
-					existHDB.Status.HStore.Bootstrapped == true
-			}
-			return false
+			_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), existHDB)
+			return existHDB.IsConditionTrue(hapi.HStoreReady) && existHDB.IsConditionTrue(hapi.HServerReady)
 		}, timeout, 10*time.Second).Should(BeTrue())
 	})
 })

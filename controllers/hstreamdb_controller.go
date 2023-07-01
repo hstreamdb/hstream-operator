@@ -88,7 +88,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		updateConfigMap{},
 		addServices{},
 		addHMeta{},
-		checkHMetaStatus{},
+		updateHMetaStatus{},
 		addAdminServer{},
 		addHStore{},
 		bootstrapHStore{},

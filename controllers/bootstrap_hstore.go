@@ -18,7 +18,7 @@ type bootstrapHStore struct{}
 func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hstore")
 
-	if hdb.Status.HStore.Bootstrapped {
+	if hdb.IsConditionTrue(hapi.HStoreReady) {
 		return nil
 	}
 
@@ -47,7 +47,12 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
-	hdb.Status.HStore.Bootstrapped = true
+	hdb.SetCondition(metav1.Condition{
+		Type:    hapi.HStoreReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  hapi.HStoreReady,
+		Message: "HStore has been bootstrapped",
+	})
 	logger.Info("Update hstore status")
 	if err = r.Status().Update(ctx, hdb); err != nil {
 		return &requeue{curError: fmt.Errorf("update HStore status failed: %w", err)}

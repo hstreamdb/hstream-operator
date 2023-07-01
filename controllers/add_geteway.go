@@ -22,7 +22,7 @@ func (a addGateway) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 	}
 
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add gateway")
-	if !hdb.Status.HServer.Bootstrapped {
+	if !hdb.IsConditionTrue(hapi.HServerReady) {
 		return &requeue{message: "wait for HServer nodes to be ready", delay: 10 * time.Second}
 	}
 

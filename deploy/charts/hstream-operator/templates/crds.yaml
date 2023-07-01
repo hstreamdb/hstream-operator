@@ -18517,39 +18517,8 @@ spec:
                 - nodes
                 - version
                 type: object
-              hserver:
-                properties:
-                  bootstrapped:
-                    type: boolean
-                  nodes:
-                    items:
-                      properties:
-                        address:
-                          type: string
-                        serverId:
-                          type: string
-                        state:
-                          type: string
-                      required:
-                      - address
-                      - serverId
-                      - state
-                      type: object
-                    type: array
-                required:
-                - bootstrapped
-                type: object
-              hstore:
-                properties:
-                  bootstrapped:
-                    type: boolean
-                required:
-                - bootstrapped
-                type: object
             required:
             - hmeta
-            - hserver
-            - hstore
             type: object
         type: object
     served: true

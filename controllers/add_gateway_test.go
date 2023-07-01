@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,7 +92,10 @@ var _ = Describe("AddGateway", func() {
 			hdb.Spec.Gateway = gateway
 			Expect(k8sClient.Update(ctx, hdb.DeepCopy())).Should(Succeed())
 
-			hdb.Status.HServer.Bootstrapped = true
+			hdb.SetCondition(metav1.Condition{
+				Type:   hapi.HServerReady,
+				Status: metav1.ConditionTrue,
+			})
 			Expect(k8sClient.Status().Patch(ctx, hdb.DeepCopy(), client.MergeFrom(hdb))).Should(Succeed())
 		})
 
@@ -141,7 +145,10 @@ var _ = Describe("AddGateway", func() {
 			hdb.Spec.Gateway = gateway
 			Expect(k8sClient.Update(ctx, hdb.DeepCopy())).Should(Succeed())
 
-			hdb.Status.HServer.Bootstrapped = true
+			hdb.SetCondition(metav1.Condition{
+				Type:   hapi.HServerReady,
+				Status: metav1.ConditionTrue,
+			})
 			Expect(k8sClient.Status().Patch(ctx, hdb.DeepCopy(), client.MergeFrom(hdb))).Should(Succeed())
 		})
 

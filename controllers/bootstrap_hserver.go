@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -14,7 +15,7 @@ type bootstrapHServer struct{}
 func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hServer")
 
-	if hdb.Status.HServer.Bootstrapped {
+	if hdb.IsConditionTrue(hapi.HServerReady) {
 		return nil
 	}
 
@@ -38,6 +39,15 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
-	hdb.Status.HServer.Bootstrapped = true
+	hdb.SetCondition(metav1.Condition{
+		Type:    hapi.HServerReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  hapi.HServerReady,
+		Message: "HServer has been bootstrapped",
+	})
+	logger.Info("Update hserver status")
+	if err := r.Status().Update(ctx, hdb); err != nil {
+		return &requeue{curError: fmt.Errorf("update HStore status failed: %w", err)}
+	}
 	return nil
 }
