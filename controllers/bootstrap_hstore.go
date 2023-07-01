@@ -33,7 +33,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	}
 	if err = checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
 		// print message only to log, wait for reconciling after several second
-		return &requeue{message: err.Error(), delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
 	logger.Info("Bootstrap hstore")
@@ -45,7 +45,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		metadataReplication = *hdb.Spec.Config.MetadataReplicateAcross
 	}
 	if err = r.AdminClientProvider.GetAdminClient(hdb).BootstrapHStore(metadataReplication); err != nil {
-		return &requeue{message: err.Error(), delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
 	hdb.Status.HStore.Bootstrapped = true
@@ -56,7 +56,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 
 	// we still need to delay several second before deploying hServer
 	// while the first time we bootstrap successfully
-	return &requeue{delay: 10 * time.Second}
+	return &requeue{delay: time.Second}
 }
 
 func checkPodRunningStatus(ctx context.Context, client client.Client, hdb *hapi.HStreamDB, obj client.Object) error {
