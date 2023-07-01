@@ -110,14 +110,14 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	container := corev1.Container{
 		Image:           hdb.Spec.HServer.Image,
 		ImagePullPolicy: hdb.Spec.HServer.ImagePullPolicy,
-		StartupProbe: &corev1.Probe{
+		ReadinessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromString("port"),
 				},
 			},
-			PeriodSeconds:       1,
-			InitialDelaySeconds: 5,
+			FailureThreshold: 30,
+			PeriodSeconds:    1,
 		},
 	}
 
