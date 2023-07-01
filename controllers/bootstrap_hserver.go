@@ -31,12 +31,12 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	}
 	if err := checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
 		// we only set the message to log, and reconcile after several second
-		return &requeue{message: err.Error(), delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
 	logger.Info("Bootstrap hServer")
 	if err := r.AdminClientProvider.GetAdminClient(hdb).BootstrapHServer(); err != nil {
-		return &requeue{message: err.Error(), delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
 	hdb.Status.HServer.Bootstrapped = true

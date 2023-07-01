@@ -26,16 +26,16 @@ func (a checkHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler,
 		}
 		if err = checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
 			// print message only to log, wait for reconciling after several second
-			return &requeue{message: err.Error(), delay: 10 * time.Second}
+			return &requeue{message: err.Error(), delay: time.Second}
 		}
 	}
 
 	var cluster admin.HMetaStatus
 	if cluster, err = r.AdminClientProvider.GetAdminClient(hdb).GetHMetaStatus(); err != nil {
-		return &requeue{message: err.Error(), delay: 10 * time.Second}
+		return &requeue{message: err.Error(), delay: time.Second}
 	}
 	if !cluster.IsAllReady() {
-		return &requeue{message: "wait for hmeta cluster to be ready", delay: 10 * time.Second}
+		return &requeue{message: "wait for hmeta cluster to be ready", delay: time.Second}
 	}
 
 	logger.Info("HMete is ready")
