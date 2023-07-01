@@ -15,7 +15,6 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hServer")
 
 	if hdb.Status.HServer.Bootstrapped {
-		logger.Info("HServer has been bootstrapped before")
 		return nil
 	}
 

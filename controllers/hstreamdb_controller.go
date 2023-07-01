@@ -108,14 +108,14 @@ func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *hapi.HStrea
 
 	delayedRequeue := false
 	for _, subReconciler := range subReconcilers {
-		logger.Info("Attempting to run sub-reconciler", "subReconciler", fmt.Sprintf("%T", subReconciler))
+		logger.V(1).Info("Attempting to run sub-reconciler", "subReconciler", fmt.Sprintf("%T", subReconciler))
 		requeue := subReconciler.reconcile(ctx, r, hdb)
 		if requeue == nil {
 			continue
 		}
 
 		if requeue.delayedRequeue {
-			logger.Info("Delaying requeue for sub-reconciler",
+			logger.V(1).Info("Delaying requeue for sub-reconciler",
 				"subReconciler", fmt.Sprintf("%T", subReconciler),
 				"message", requeue.message,
 				"error", requeue.curError)
@@ -126,7 +126,7 @@ func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *hapi.HStrea
 	}
 
 	if delayedRequeue {
-		logger.Info("HStream was not fully reconciled by reconciliation process")
+		logger.V(1).Info("HStream was not fully reconciled by reconciliation process")
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 

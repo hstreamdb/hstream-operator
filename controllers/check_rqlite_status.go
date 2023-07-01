@@ -13,8 +13,6 @@ import (
 type checkHMetaStatus struct{}
 
 func (a checkHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "check hmeta cluster")
-
 	var err error
 
 	if hdb.Spec.ExternalHMeta == nil {
@@ -38,7 +36,6 @@ func (a checkHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler,
 		return &requeue{message: "wait for hmeta cluster to be ready", delay: time.Second}
 	}
 
-	logger.Info("HMete is ready")
 	hdb.Status.HMeta.Nodes = make([]hapi.HMetaNode, 0, len(cluster.Nodes))
 	for id, node := range cluster.Nodes {
 		hdb.Status.HMeta.Nodes = append(hdb.Status.HMeta.Nodes, hapi.HMetaNode{
