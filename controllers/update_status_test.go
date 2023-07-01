@@ -120,6 +120,11 @@ func prepareGatewayReady(ctx context.Context, hdb *hapi.HStreamDB) {
 }
 
 func prepareConsoleReady(ctx context.Context, hdb *hapi.HStreamDB) {
+	hdb.Spec.Console = &hapi.Component{}
+	hdb.Spec.Console.Image = "hstreamdb/hstream-console"
+	hdb.Spec.Console.ImagePullPolicy = "IfNotPresent"
+	hdb.Spec.Console.Replicas = 1
+
 	Expect(addConsole{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 
 	console := &appsv1.Deployment{

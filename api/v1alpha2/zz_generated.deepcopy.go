@@ -340,7 +340,11 @@ func (in *HStreamDBSpec) DeepCopyInto(out *HStreamDBSpec) {
 		*out = new(Gateway)
 		(*in).DeepCopyInto(*out)
 	}
-	in.Console.DeepCopyInto(&out.Console)
+	if in.Console != nil {
+		in, out := &in.Console, &out.Console
+		*out = new(Component)
+		(*in).DeepCopyInto(*out)
+	}
 	in.AdminServer.DeepCopyInto(&out.AdminServer)
 	in.HServer.DeepCopyInto(&out.HServer)
 	in.HStore.DeepCopyInto(&out.HStore)
