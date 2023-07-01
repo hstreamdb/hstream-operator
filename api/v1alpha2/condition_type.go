@@ -7,9 +7,11 @@ import (
 )
 
 const (
+	HMetaReady   string = "HMetaReady"
 	HStoreReady  string = "HStoreReady"
 	HServerReady string = "HServerReady"
 	GatewayReady string = "GatewayReady"
+	ConsoleReady string = "ConsoleReady"
 	Ready        string = "Ready"
 )
 

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -10,9 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type checkHMetaStatus struct{}
+type updateHMetaStatus struct{}
 
-func (a checkHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
+func (u updateHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	var err error
 
 	if hdb.Spec.ExternalHMeta == nil {
@@ -44,6 +45,15 @@ func (a checkHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler,
 			Leader:    node.Leader,
 			Error:     node.Error,
 		})
+	}
+	hdb.SetCondition(metav1.Condition{
+		Type:    hapi.HMetaReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  hapi.HMetaReady,
+		Message: "HMeta is ready",
+	})
+	if err := r.Status().Update(ctx, hdb); err != nil {
+		return &requeue{curError: fmt.Errorf("update HMeta status failed: %w", err)}
 	}
 	return nil
 }

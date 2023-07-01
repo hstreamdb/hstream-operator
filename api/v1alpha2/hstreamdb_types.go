@@ -64,17 +64,6 @@ type HStreamDBSpec struct {
 	HMeta       Component `json:"hmeta,omitempty"`
 }
 
-// HStreamDBStatus defines the observed state of HStreamDB
-type HStreamDBStatus struct {
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// HStore store the status of hstore cluster
-	HStore HStoreStatus `json:"hstore"`
-	// HServer store the status of hserver cluster
-	HServer HServerStatus `json:"hserver"`
-	// HMeta store the status of hmeta cluster
-	HMeta HMetaStatus `json:"hmeta"`
-}
-
 type ExternalHMeta struct {
 	// Host set external hmeta cluster host, it can be ip addr or service name
 	// +kubebuilder:validation:Required
@@ -109,22 +98,11 @@ type Config struct {
 	LogDeviceConfig runtime.RawExtension `json:"logDeviceConfig,omitempty"`
 }
 
-type HStoreStatus struct {
-	// Bootstrapped defines whether we have bootstrapped the hstore yet.
-	Bootstrapped bool `json:"bootstrapped"`
-}
-
-type HServerStatus struct {
-	// Bootstrapped defines whether we have initialized the hserver yet.
-	Bootstrapped bool `json:"bootstrapped"`
-	// Nodes the status of node that return by cmd 'hstream node status' in hserver pod
-	Nodes []HServerNode `json:"nodes,omitempty"`
-}
-
-type HServerNode struct {
-	ServerId string `json:"serverId"`
-	State    string `json:"state"`
-	Address  string `json:"address"`
+// HStreamDBStatus defines the observed state of HStreamDB
+type HStreamDBStatus struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// HMeta store the status of hmeta cluster
+	HMeta HMetaStatus `json:"hmeta"`
 }
 
 type HMetaStatus struct {
