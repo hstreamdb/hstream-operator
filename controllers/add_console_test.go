@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -24,6 +25,11 @@ var _ = Describe("AddConsole", func() {
 
 	BeforeEach(func() {
 		hdb = mock.CreateDefaultCR()
+		hdb.Spec.Console = &hapi.Component{
+			Image:           "hstreamdb/hstream-console",
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Replicas:        1,
+		}
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
 

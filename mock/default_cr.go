@@ -24,11 +24,6 @@ func CreateDefaultCR() *hapi.HStreamDB {
 					Raw: []byte("{}"),
 				},
 			},
-			Console: hapi.Component{
-				Image:           "hstreamdb/hstream-console",
-				ImagePullPolicy: "IfNotPresent",
-				Replicas:        1,
-			},
 			AdminServer: hapi.Component{
 				Image:           "hstreamdb/hstream:rqlite",
 				ImagePullPolicy: "IfNotPresent",

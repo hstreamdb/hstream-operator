@@ -56,12 +56,12 @@ type HStreamDBSpec struct {
 
 	Config Config `json:"config,omitempty"`
 
-	Gateway     *Gateway  `json:"gateway,omitempty"`
-	Console     Component `json:"console,omitempty"`
-	AdminServer Component `json:"adminServer,omitempty"`
-	HServer     Component `json:"hserver,omitempty"`
-	HStore      Component `json:"hstore,omitempty"`
-	HMeta       Component `json:"hmeta,omitempty"`
+	Gateway     *Gateway   `json:"gateway,omitempty"`
+	Console     *Component `json:"console,omitempty"`
+	AdminServer Component  `json:"adminServer,omitempty"`
+	HServer     Component  `json:"hserver,omitempty"`
+	HStore      Component  `json:"hstore,omitempty"`
+	HMeta       Component  `json:"hmeta,omitempty"`
 }
 
 type ExternalHMeta struct {

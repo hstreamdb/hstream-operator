@@ -37,9 +37,13 @@ func (u updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb
 }
 
 func (u updateStatus) checkComponentsReady(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) error {
-	componentsMap := map[hapi.ComponentType]string{
-		hapi.ComponentTypeConsole: hapi.ConsoleReady,
-		hapi.ComponentTypeGateway: hapi.GatewayReady,
+	componentsMap := make(map[hapi.ComponentType]string)
+
+	if hdb.Spec.Console != nil {
+		componentsMap[hapi.ComponentTypeConsole] = hapi.ConsoleReady
+	}
+	if hdb.Spec.Gateway != nil {
+		componentsMap[hapi.ComponentTypeGateway] = hapi.GatewayReady
 	}
 
 	for component, condition := range componentsMap {

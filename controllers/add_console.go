@@ -41,6 +41,10 @@ var consolePort = corev1.ContainerPort{
 type addConsole struct{}
 
 func (a addConsole) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
+	if hdb.Spec.Console == nil {
+		return nil
+	}
+
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add console")
 
 	deploy, err := a.getDeployment(hdb)
@@ -86,13 +90,13 @@ func (a addConsole) getDeployment(hdb *hapi.HStreamDB) (deploy appsv1.Deployment
 		return
 	}
 
-	deploy = internal.GetDeployment(hdb, &hdb.Spec.Console,
+	deploy = internal.GetDeployment(hdb, hdb.Spec.Console,
 		&podTemplate, hapi.ComponentTypeConsole)
 	return
 }
 
 func (a addConsole) getPodTemplate(hdb *hapi.HStreamDB) (spec corev1.PodTemplateSpec, err error) {
-	console := &hdb.Spec.Console
+	console := hdb.Spec.Console
 
 	containers, err := a.getContainer(hdb)
 	if err != nil {
@@ -118,7 +122,7 @@ func (a addConsole) getPodTemplate(hdb *hapi.HStreamDB) (spec corev1.PodTemplate
 }
 
 func (a addConsole) getContainer(hdb *hapi.HStreamDB) ([]corev1.Container, error) {
-	console := &hdb.Spec.Console
+	console := hdb.Spec.Console
 	container := corev1.Container{
 		Image:           hdb.Spec.Console.Image,
 		ImagePullPolicy: hdb.Spec.Console.ImagePullPolicy,
