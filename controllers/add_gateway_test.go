@@ -50,7 +50,7 @@ var _ = Describe("AddGateway", func() {
 		}).Should(BeTrue())
 	})
 
-	When("gateway pointer is set, but hserver not ready", func() {
+	When("gateway pointer is set, but HServer not ready", func() {
 		JustBeforeEach(func() {
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"
@@ -63,7 +63,7 @@ var _ = Describe("AddGateway", func() {
 			Expect(k8sClient.Update(ctx, hdb.DeepCopy())).Should(Succeed())
 		})
 
-		It("should not create gateway if hserver not ready", func() {
+		It("should not create gateway if HServer not ready", func() {
 			By("reconcile")
 			requeue = addGateway.reconcile(ctx, clusterReconciler, hdb)
 			Expect(requeue.curError).To(BeNil())
@@ -80,7 +80,7 @@ var _ = Describe("AddGateway", func() {
 		})
 	})
 
-	When("gateway pointer is set, and hserver is ready, not enable mTLS", func() {
+	When("gateway pointer is set, and HServer is ready, not enable mTLS", func() {
 		JustBeforeEach(func() {
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"
@@ -130,7 +130,7 @@ var _ = Describe("AddGateway", func() {
 		})
 	})
 
-	When("gateway pointer is set, and hserver is ready, enable mTLS", func() {
+	When("gateway pointer is set, and HServer is ready, enable mTLS", func() {
 		JustBeforeEach(func() {
 			gateway := &hapi.Gateway{}
 			gateway.Endpoint = "localhost"

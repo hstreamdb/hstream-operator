@@ -151,7 +151,7 @@ func getLogDeviceConfig(hdb *hapi.HStreamDB) (config map[string]any, err error) 
 		_ = json.Unmarshal(raw, &config)
 	}
 
-	// append hmeta addr to the logDevice config
+	// append HMeta addr to the logDevice config
 	hmetaAddr, err := getHMetaAddr(hdb)
 	if err != nil {
 		return

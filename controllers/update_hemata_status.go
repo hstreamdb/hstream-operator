@@ -17,7 +17,7 @@ func (u updateHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler
 	var err error
 
 	if hdb.Spec.ExternalHMeta == nil {
-		// determine if all hmeta pods are running
+		// determine if all HMeta pods are running
 		sts := &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: hapi.ComponentTypeHMeta.GetResName(hdb.Name),
@@ -34,7 +34,7 @@ func (u updateHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 	if !cluster.IsAllReady() {
-		return &requeue{message: "wait for hmeta cluster to be ready", delay: time.Second}
+		return &requeue{message: "wait for HMeta cluster to be ready", delay: time.Second}
 	}
 
 	hdb.Status.HMeta.Nodes = make([]hapi.HMetaNode, 0, len(cluster.Nodes))

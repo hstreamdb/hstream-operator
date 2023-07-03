@@ -16,7 +16,7 @@ import (
 type bootstrapHStore struct{}
 
 func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap hstore")
+	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "bootstrap HStore")
 
 	if hdb.IsConditionTrue(hapi.HStoreReady) {
 		return nil
@@ -24,7 +24,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 
 	var err error
 
-	// determine if all hstore pods are running
+	// determine if all HStore pods are running
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: hapi.ComponentTypeHStore.GetResName(hdb.Name),
@@ -35,7 +35,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
-	logger.Info("Bootstrap hstore")
+	logger.Info("Bootstrap HStore")
 
 	metadataReplication := int32(0)
 	if hdb.Spec.Config.MetadataReplicateAcross == nil || *hdb.Spec.Config.MetadataReplicateAcross > hdb.Spec.HStore.Replicas {
@@ -53,7 +53,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		Reason:  hapi.HStoreReady,
 		Message: "HStore has been bootstrapped",
 	})
-	logger.Info("Update hstore status")
+	logger.Info("Update HStore status")
 	if err = r.Status().Update(ctx, hdb); err != nil {
 		return &requeue{curError: fmt.Errorf("update HStore status failed: %w", err)}
 	}

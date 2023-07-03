@@ -50,7 +50,7 @@ type HStreamDBList struct {
 
 // HStreamDBSpec defines the desired state of HStreamDB
 type HStreamDBSpec struct {
-	// ExternalHMeta set external hmeta cluster addr
+	// ExternalHMeta set external HMeta cluster addr
 	// +optional
 	ExternalHMeta *ExternalHMeta `json:"externalHmeta,omitempty"`
 
@@ -65,27 +65,27 @@ type HStreamDBSpec struct {
 }
 
 type ExternalHMeta struct {
-	// Host set external hmeta cluster host, it can be ip addr or service name
+	// Host set external HMeta cluster host, it can be ip addr or service name
 	// +kubebuilder:validation:Required
 	Host string `json:"host"`
 	// +kubebuilder:validation:Required
 	Port int32 `json:"port"`
-	// Namespace the namespace of external hmeta cluster
+	// Namespace the namespace of external HMeta cluster
 	// +kubebuilder:default:=default
 	// +optional
 	Namespace string `json:"namespace"`
 }
 
 type Config struct {
-	// MetadataReplicateAcross metadata replication must less than or equal to hstore replicas.
-	// If this is not specified, it will be set to hstore replicas or 3 if hstore replica more than 3
+	// MetadataReplicateAcross metadata replication must less than or equal to HStore replicas.
+	// If this is not specified, it will be set to HStore replicas or 3 if HStore replica more than 3
 	// Cannot be updated.
 	// More info: https://logdevice.io/docs/Config.html#metadata-logs-metadata-logs
 	// +kubebuilder:validation:Minimum:=1
 	// +optional
 	MetadataReplicateAcross *int32 `json:"metadata-replicate-across,omitempty"`
 
-	// NShards the number of hstore data shard
+	// NShards the number of HStore data shard
 	// Cannot be updated.
 	// +kubebuilder:default:=1
 	// +kubebuilder:validation:Minimum:=1
@@ -101,12 +101,12 @@ type Config struct {
 // HStreamDBStatus defines the observed state of HStreamDB
 type HStreamDBStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// HMeta store the status of hmeta cluster
+	// HMeta store the status of HMeta cluster
 	HMeta HMetaStatus `json:"hmeta"`
 }
 
 type HMetaStatus struct {
-	// Nodes the status of node that return by api http://localhost:4001/status?pretty in hmeta pod
+	// Nodes the status of node that return by api http://localhost:4001/status?pretty in HMeta pod
 	Nodes   []HMetaNode `json:"nodes"`
 	Version string      `json:"version"`
 }

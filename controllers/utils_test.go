@@ -283,7 +283,7 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	It("test getHMetaAddr by external hmeta cluster", func() {
+	It("test getHMetaAddr by external HMeta cluster", func() {
 		hdb := &hapi.HStreamDB{
 			Spec: hapi.HStreamDBSpec{
 				ExternalHMeta: &hapi.ExternalHMeta{
@@ -297,7 +297,7 @@ var _ = Describe("Utils", func() {
 		Expect(addr).To(Equal("rqlite-svc.default:4001"))
 	})
 
-	It("test getHMetaAddr by internal hmeta", func() {
+	It("test getHMetaAddr by internal HMeta", func() {
 		hdb := &hapi.HStreamDB{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hstreamdb-sample",

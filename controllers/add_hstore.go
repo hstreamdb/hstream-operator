@@ -63,9 +63,9 @@ var hStoreArgs = []string{
 type addHStore struct{}
 
 func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add hstore")
+	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add HStore")
 
-	// modify nShard will impact the data storage path of hstore,
+	// modify nShard will impact the data storage path of HStore,
 	// so we need to get old nshards config from the existing config map
 	nShard := a.getNShardFromExistingConfigMap(ctx, r, hdb)
 
@@ -80,7 +80,7 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *h
 			return &requeue{curError: err}
 		}
 
-		logger.Info("Create hstore")
+		logger.Info("Create HStore")
 		if err = r.Client.Create(ctx, &sts); err != nil {
 			return &requeue{curError: err}
 		}
@@ -90,7 +90,7 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *h
 		return nil
 	}
 
-	logger.Info("Update hstore")
+	logger.Info("Update HStore")
 	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHStore", "")
 
 	existingSts.Annotations = sts.Annotations

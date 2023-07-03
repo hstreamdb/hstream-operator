@@ -130,7 +130,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 
 	resp, statusCode, err := ac.remoteExec.GetAPIByService(namespace, hmetaAddr, "nodes")
 	if err != nil {
-		err = fmt.Errorf("get hmeta status failed. %w", err)
+		err = fmt.Errorf("get HMeta status failed. %w", err)
 		return
 	}
 	if statusCode != http.StatusOK {
@@ -140,7 +140,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 
 	err = json.Unmarshal(resp, &status.Nodes)
 	if err != nil {
-		err = fmt.Errorf("unmarshal hmeta staus failed. %w", err)
+		err = fmt.Errorf("unmarshal HMeta staus failed. %w", err)
 		return
 	}
 	return
