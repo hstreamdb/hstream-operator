@@ -59,7 +59,7 @@ var _ = Describe("AddHserver", func() {
 					Expect(sts.UID).To(Equal(newSts.UID))
 				})
 			})
-			Context("scale up hserver replicas", func() {
+			Context("scale up HServer replicas", func() {
 				replicas := int32(3)
 				BeforeEach(func() {
 					hdb.Spec.HServer.Replicas = replicas

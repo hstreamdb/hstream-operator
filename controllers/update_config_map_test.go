@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -11,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"strconv"
 )
 
 var _ = Describe("UpdateConfigMap", func() {
@@ -113,7 +114,7 @@ var _ = Describe("UpdateConfigMap", func() {
 				})
 			})
 
-			Context("use external hmeta cluster", func() {
+			Context("use external HMeta cluster", func() {
 				BeforeEach(func() {
 					hdb.Spec.ExternalHMeta = &hapi.ExternalHMeta{
 						Host:      "rqlite-svc",

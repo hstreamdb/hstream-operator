@@ -203,7 +203,7 @@ var _ = Describe("AddHMeta", func() {
 		})
 	})
 
-	Context("use external hmeta cluster", func() {
+	Context("use external HMeta cluster", func() {
 		BeforeEach(func() {
 			hdb.Spec.ExternalHMeta = &hapi.ExternalHMeta{
 				Host:      "rqlite-svc",

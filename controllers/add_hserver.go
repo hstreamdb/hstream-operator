@@ -42,7 +42,7 @@ var hServerInternalPort = corev1.ContainerPort{
 type addHServer struct{}
 
 func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add hserver")
+	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add HServer")
 
 	sts := a.getSts(hdb)
 

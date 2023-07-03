@@ -70,7 +70,7 @@ func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler
 
 	flags := internal.FlagSet{}
 	if err = flags.Parse(hmeta.Container.Args); err != nil {
-		return fmt.Errorf("parse hmeta args failed. %w", err)
+		return fmt.Errorf("parse HMeta args failed. %w", err)
 	}
 
 	port, _ := parseHMetaPort(hdb.Spec.HMeta.Container.Args)

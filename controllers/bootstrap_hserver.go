@@ -45,7 +45,7 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 		Reason:  hapi.HServerReady,
 		Message: "HServer has been bootstrapped",
 	})
-	logger.Info("Update hserver status")
+	logger.Info("Update HServer status")
 	if err := r.Status().Update(ctx, hdb); err != nil {
 		return &requeue{curError: fmt.Errorf("update HStore status failed: %w", err)}
 	}

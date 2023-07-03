@@ -37,7 +37,7 @@ false
 
 待`bootstrapped`状态转为`true`时即表示`hstore`已初始化成功，此时 operator 将继续部署1个节点的`hserver`
 ```shell
-kubectl get po | grep hserver
+kubectl get po | grep HServer
 hstreamdb-sample-hserver-0   1/1   Running   0   15m
 ```
 

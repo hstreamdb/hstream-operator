@@ -32,10 +32,10 @@ var hmetaArgs = []string{
 type addHMeta struct{}
 
 func (a addHMeta) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add hmeta")
+	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add HMeta")
 
 	if hdb.Spec.ExternalHMeta != nil {
-		logger.Info("Using external hmeta cluster")
+		logger.Info("Using external HMeta cluster")
 		return nil
 	}
 
@@ -51,7 +51,7 @@ func (a addHMeta) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *ha
 			return &requeue{curError: err}
 		}
 
-		logger.Info("Create hmeta")
+		logger.Info("Create HMeta")
 		if err = r.Client.Create(ctx, &sts); err != nil {
 			return &requeue{curError: err}
 		}
@@ -61,7 +61,7 @@ func (a addHMeta) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *ha
 		return nil
 	}
 
-	logger.Info("Update hmeta")
+	logger.Info("Update HMeta")
 	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHMeta", "")
 
 	existingSts.Annotations = sts.Annotations
