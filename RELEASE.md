@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-Hstream Operator 0.0.4 is released.
+Hstream Operator 0.0.5 is released.
 
 ### Supported version
 
@@ -12,9 +12,11 @@ Hstream Operator 0.0.4 is released.
 
 - `apps.hstream.io/v1alpha2`
 
-    - Support HStreamDB console component
+    - More better parse HServer args
 
-    - Remove the restriction on HSrver replicas
+### Enhancements 🌟
+
+- More faster to deploy HStreamDB
 
 ### Warning 🚨
 
