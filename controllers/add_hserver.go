@@ -185,6 +185,18 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	if _, ok := flags.Flags()["--server-id"]; !ok {
 		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
 	}
+	if _, ok := flags.Flags()["--port"]; !ok {
+		args = append(args, "--port", strconv.Itoa(int(hServerPort.ContainerPort)))
+		ports = coverPortsFromArgs(args, extendPorts(ports, hServerPort))
+	} else {
+		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, hServerPort))
+	}
+	if _, ok := flags.Flags()["--internal-port"]; !ok {
+		args = append(args, "--internal-port", strconv.Itoa(int(hServerInternalPort.ContainerPort)))
+		ports = coverPortsFromArgs(args, extendPorts(ports, hServerInternalPort))
+	} else {
+		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, hServerInternalPort))
+	}
 	if _, ok := flags.Flags()["--seed-nodes"]; !ok {
 		hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
 		seedNodes := make([]string, hdb.Spec.HServer.Replicas)
@@ -203,18 +215,8 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 				internalPort,
 			)
 		}
-	}
-	if _, ok := flags.Flags()["--port"]; !ok {
-		args = append(args, "--port", strconv.Itoa(int(hServerPort.ContainerPort)))
-		ports = coverPortsFromArgs(args, extendPorts(ports, hServerPort))
-	} else {
-		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, hServerPort))
-	}
-	if _, ok := flags.Flags()["--internal-port"]; !ok {
-		args = append(args, "--internal-port", strconv.Itoa(int(hServerInternalPort.ContainerPort)))
-		ports = coverPortsFromArgs(args, extendPorts(ports, hServerInternalPort))
-	} else {
-		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, hServerInternalPort))
+
+		args = append(args, "--seed-nodes", strings.Join(seedNodes, ","))
 	}
 
 	args = append(preArgs, args...)
