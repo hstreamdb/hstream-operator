@@ -138,6 +138,30 @@ var _ = Describe("AddHserver", func() {
 					Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(command))
 				})
 			})
+			Context("if port is defined in args", func() {
+				port := "6571"
+
+				BeforeEach(func() {
+					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+						"--port", port)
+					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
+				})
+
+				It("should not requeue", func() {
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should use the specified port", func() {
+					sts, err := getHServerStatefulSet(hdb)
+
+					Expect(err).To(BeNil())
+
+					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--port %s", port))
+					Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
+						WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(port)),
+					))
+				})
+			})
 			Context("define internal-port in args", func() {
 				internalPort := "6572"
 				BeforeEach(func() {
