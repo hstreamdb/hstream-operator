@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -70,10 +71,35 @@ var _ = Describe("AddHserver", func() {
 					Expect(requeue).To(BeNil())
 				})
 
-				It("should get new container name", func() {
+				It("should get the correct number of replicas", func() {
 					sts, err := getHServerStatefulSet(hdb)
 					Expect(err).To(BeNil())
 					Expect(*sts.Spec.Replicas).Should(Equal(replicas))
+				})
+
+				It("should generate the correct default container command", func() {
+					sts, err := getHServerStatefulSet(hdb)
+
+					Expect(err).To(BeNil())
+
+					defaultContainerCommand := []string{"bash", "-c"}
+					defaultContainerArgs := []string{
+						strings.Join([]string{"/usr/local/bin/hstream-server",
+							"--config-path", "/etc/hstream/config.yaml",
+							"--bind-address", "0.0.0.0",
+							"--advertised-address $(POD_IP)",
+							"--store-config", "/etc/logdevice/config.json",
+							"--store-admin-host", "hstreamdb-sample-admin-server.default",
+							"--metastore-uri", "rq://hstreamdb-sample-internal-hmeta.default:4001",
+							"--server-id", "$(hostname | grep -o '[0-9]*$')",
+							"--port", "6570",
+							"--internal-port", "6571",
+							"--seed-nodes", "hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571,hstreamdb-sample-hserver-1.hstreamdb-sample-internal-hserver.default:6571,hstreamdb-sample-hserver-2.hstreamdb-sample-internal-hserver.default:6571",
+						}, " "),
+					}
+
+					Expect(sts.Spec.Template.Spec.Containers[0].Command).Should(Equal(defaultContainerCommand))
+					Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(defaultContainerArgs))
 				})
 			})
 			Context("update container name", func() {
@@ -110,6 +136,30 @@ var _ = Describe("AddHserver", func() {
 					Expect(err).To(BeNil())
 					Expect(sts.Spec.Template.Spec.Containers).NotTo(BeEmpty())
 					Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(command))
+				})
+			})
+			Context("if port is defined in args", func() {
+				port := "6571"
+
+				BeforeEach(func() {
+					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+						"--port", port)
+					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
+				})
+
+				It("should not requeue", func() {
+					Expect(requeue).To(BeNil())
+				})
+
+				It("should use the specified port", func() {
+					sts, err := getHServerStatefulSet(hdb)
+
+					Expect(err).To(BeNil())
+
+					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--port %s", port))
+					Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
+						WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(port)),
+					))
 				})
 			})
 			Context("define internal-port in args", func() {
