@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
@@ -70,10 +71,35 @@ var _ = Describe("AddHserver", func() {
 					Expect(requeue).To(BeNil())
 				})
 
-				It("should get new container name", func() {
+				It("should get the correct number of replicas", func() {
 					sts, err := getHServerStatefulSet(hdb)
 					Expect(err).To(BeNil())
 					Expect(*sts.Spec.Replicas).Should(Equal(replicas))
+				})
+
+				It("should generate the correct default container command", func() {
+					sts, err := getHServerStatefulSet(hdb)
+
+					Expect(err).To(BeNil())
+
+					defaultContainerCommand := []string{"bash", "-c"}
+					defaultContainerArgs := []string{
+						strings.Join([]string{"/usr/local/bin/hstream-server",
+							"--config-path", "/etc/hstream/config.yaml",
+							"--bind-address", "0.0.0.0",
+							"--advertised-address $(POD_IP)",
+							"--store-config", "/etc/logdevice/config.json",
+							"--store-admin-host", "hstreamdb-sample-admin-server.default",
+							"--metastore-uri", "rq://hstreamdb-sample-internal-hmeta.default:4001",
+							"--server-id", "$(hostname | grep -o '[0-9]*$')",
+							"--port", "6570",
+							"--internal-port", "6571",
+							"--seed-nodes", "hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571,hstreamdb-sample-hserver-1.hstreamdb-sample-internal-hserver.default:6571,hstreamdb-sample-hserver-2.hstreamdb-sample-internal-hserver.default:6571",
+						}, " "),
+					}
+
+					Expect(sts.Spec.Template.Spec.Containers[0].Command).Should(Equal(defaultContainerCommand))
+					Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(defaultContainerArgs))
 				})
 			})
 			Context("update container name", func() {
