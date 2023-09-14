@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-HStream Operator 0.0.5 is released.
+HStream Operator 0.0.6 has been released.
 
 ### Supported version
 
@@ -12,11 +12,7 @@ HStream Operator 0.0.5 is released.
 
 - `apps.hstream.io/v1alpha2`
 
-    - More better parse HServer args
-
-### Enhancements 🌟
-
-- Faster to deploy HStreamDB
+  Append `--seed-nodes` when it's necessary to automatically generate the container command.
 
 ### Warning 🚨
 
