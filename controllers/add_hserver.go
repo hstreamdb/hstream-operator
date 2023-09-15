@@ -18,10 +18,10 @@ import (
 
 var hServerEnvVar = []corev1.EnvVar{
 	{
-		Name: "POD_IP",
+		Name: "POD_NAME",
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "status.podIP",
+				FieldPath: "metadata.name",
 			},
 		},
 	},
@@ -170,7 +170,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		args = append(args, "--bind-address", "0.0.0.0")
 	}
 	if _, ok := flags.Flags()["--advertised-address"]; !ok {
-		args = append(args, "--advertised-address", "$(POD_IP)")
+		args = append(args, "--advertised-address", "$(POD_NAME)."+internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name+"."+hdb.GetNamespace())
 	}
 	if _, ok := flags.Flags()["--store-config"]; !ok {
 		args = append(args, "--store-config", "/etc/logdevice/config.json")

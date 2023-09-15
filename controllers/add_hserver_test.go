@@ -87,7 +87,7 @@ var _ = Describe("AddHserver", func() {
 						strings.Join([]string{"/usr/local/bin/hstream-server",
 							"--config-path", "/etc/hstream/config.yaml",
 							"--bind-address", "0.0.0.0",
-							"--advertised-address $(POD_IP)",
+							"--advertised-address $(POD_NAME).hstreamdb-sample-internal-hserver.default",
 							"--store-config", "/etc/logdevice/config.json",
 							"--store-admin-host", "hstreamdb-sample-admin-server.default",
 							"--metastore-uri", "rq://hstreamdb-sample-internal-hmeta.default:4001",
