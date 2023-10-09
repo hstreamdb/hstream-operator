@@ -116,8 +116,9 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 					Port: intstr.FromString("port"),
 				},
 			},
-			FailureThreshold: 30,
-			PeriodSeconds:    1,
+			InitialDelaySeconds: 10,
+			FailureThreshold:    15,
+			PeriodSeconds:       5,
 		},
 	}
 
