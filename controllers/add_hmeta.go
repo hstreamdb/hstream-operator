@@ -16,17 +16,16 @@ import (
 )
 
 var hmetaPort = corev1.ContainerPort{
-	Name:          "port",
+	Name:          "rqlite",
 	ContainerPort: 4001,
 	Protocol:      corev1.ProtocolTCP,
 }
 
+// Check https://github.com/rqlite/kubernetes-configuration/blob/master/statefulset-3-node.yaml as an example.
 var hmetaArgs = []string{
 	"--disco-mode", "dns",
 	"--join-interval", "1s",
 	"--join-attempts", "120",
-	//"--disco-config", "{\"name\":\"rqlite-svc-internal\"}",
-	//"--bootstrap-expect", 1,
 }
 
 type addHMeta struct{}
@@ -115,21 +114,24 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz",
-					Port:   intstr.FromString("port"),
+					Port:   intstr.FromString("rqlite"), // See `hmetaPort`.
 					Scheme: "HTTP",
 				},
 			},
-			FailureThreshold: 30,
-			PeriodSeconds:    1,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       5,
+			TimeoutSeconds:      2,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz?noleader",
-					Port:   intstr.FromString("port"),
+					Port:   intstr.FromString("rqlite"), // See `hmetaPort`.
 					Scheme: "HTTP",
 				},
 			},
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      2,
 		},
 	}
 
