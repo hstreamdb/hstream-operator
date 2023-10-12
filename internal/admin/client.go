@@ -125,7 +125,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 	} else {
 		namespace = ac.hdb.Namespace
 		svc := internal.GetHeadlessService(ac.hdb, hapi.ComponentTypeHMeta)
-		hmetaAddr = fmt.Sprintf("%s:port", svc.Name)
+		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, svc.Spec.Ports[0].Port) // Use the first port as rqlite svc usually only has one port.
 	}
 
 	resp, statusCode, err := ac.remoteExec.GetAPIByService(namespace, hmetaAddr, "nodes")
