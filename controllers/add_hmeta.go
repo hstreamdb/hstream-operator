@@ -15,12 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var hmetaPort = corev1.ContainerPort{
-	Name:          "rqlite",
-	ContainerPort: 4001,
-	Protocol:      corev1.ProtocolTCP,
-}
-
 // Check https://github.com/rqlite/kubernetes-configuration/blob/master/statefulset-3-node.yaml as an example.
 var hmetaArgs = []string{
 	"--disco-mode", "dns",

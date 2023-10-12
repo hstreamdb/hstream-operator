@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -195,7 +196,7 @@ func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 func parseHMetaPort(args []string) (corev1.ContainerPort, error) {
 	flags := internal.FlagSet{}
 	if err := flags.Parse(args); err != nil {
-		return hmetaPort, err
+		return constants.HMetaDefaultPort, err
 	}
 	if addr, ok := flags.Flags()["--http-addr"]; ok {
 		if slice := strings.Split(addr, ":"); len(slice) == 2 {
@@ -207,5 +208,5 @@ func parseHMetaPort(args []string) (corev1.ContainerPort, error) {
 		}
 	}
 
-	return hmetaPort, nil
+	return constants.HMetaDefaultPort, nil
 }
