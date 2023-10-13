@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -108,7 +109,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz",
-					Port:   intstr.FromString("rqlite"), // See `hmetaPort`.
+					Port:   intstr.FromInt(int(constants.HMetaDefaultPort.ContainerPort)),
 					Scheme: "HTTP",
 				},
 			},
@@ -120,7 +121,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz?noleader",
-					Port:   intstr.FromString("rqlite"), // See `hmetaPort`.
+					Port:   intstr.FromInt(int(constants.HMetaDefaultPort.ContainerPort)),
 					Scheme: "HTTP",
 				},
 			},
