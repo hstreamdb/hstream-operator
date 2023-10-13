@@ -32,10 +32,12 @@ func (rs *HMetaStatus) IsAllReady() bool {
 	if len(rs.Nodes) == 0 {
 		return false
 	}
+
 	for _, node := range rs.Nodes {
 		if !node.Reachable {
 			return false
 		}
 	}
+
 	return true
 }

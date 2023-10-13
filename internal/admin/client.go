@@ -35,14 +35,14 @@ func (p *realAdminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) AdminClien
 // NewAdminClientProvider generates a client provider for talking to real hStream.
 func NewAdminClientProvider(restConfig *rest.Config, log logr.Logger) AdminClientProvider {
 	return &realAdminClientProvider{
-		log:        log.WithName("adminClient"),
+		log:        log.WithName("Admin Client"),
 		restConfig: restConfig,
 	}
 }
 
 type adminClient struct {
 	hdb        *hapi.HStreamDB
-	remoteExec *Executor
+	remoteExec FactoryExecutor
 	log        logr.Logger
 }
 
@@ -54,12 +54,6 @@ func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logge
 		log: log.WithValues("namespace", hdb.Namespace).
 			WithValues("instance", hdb.Name),
 	}
-}
-
-type cmdOrder struct {
-	args        []string
-	resultCheck func(output string) (skipSubCmd bool, err error)
-	subCmd      *cmdOrder
 }
 
 // BootstrapHStore init hStore cluster
@@ -140,7 +134,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 
 	err = json.Unmarshal(resp, &status.Nodes)
 	if err != nil {
-		err = fmt.Errorf("unmarshal HMeta staus failed. %w", err)
+		err = fmt.Errorf("unmarshal HMeta status failed: %w", err)
 		return
 	}
 	return

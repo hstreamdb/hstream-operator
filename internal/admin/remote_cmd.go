@@ -5,6 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -13,9 +16,13 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	"net/http"
-	"time"
 )
+
+type FactoryExecutor interface {
+	getPodNameByLabel(namespace string, label map[string]string) (name string, err error)
+	ExecToPodByLabel(namespace string, label map[string]string, containerName, command string, timeout time.Duration) (output string, err error)
+	GetAPIByService(namespace, serviceName, path string) (output []byte, statusCode int, err error)
+}
 
 type Executor struct {
 	clientSet  *kubernetes.Clientset
