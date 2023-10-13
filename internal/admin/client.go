@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	jsoniter "github.com/json-iterator/go"
 	"k8s.io/client-go/rest"
 )
@@ -125,7 +126,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 	} else {
 		namespace = ac.hdb.Namespace
 		svc := internal.GetHeadlessService(ac.hdb, hapi.ComponentTypeHMeta)
-		hmetaAddr = fmt.Sprintf("%s:port", svc.Name)
+		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, constants.HMetaDefaultPort.ContainerPort)
 	}
 
 	resp, statusCode, err := ac.remoteExec.GetAPIByService(namespace, hmetaAddr, "nodes")

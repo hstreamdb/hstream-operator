@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,18 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var hmetaPort = corev1.ContainerPort{
-	Name:          "port",
-	ContainerPort: 4001,
-	Protocol:      corev1.ProtocolTCP,
-}
-
+// Check https://github.com/rqlite/kubernetes-configuration/blob/master/statefulset-3-node.yaml as an example.
 var hmetaArgs = []string{
 	"--disco-mode", "dns",
 	"--join-interval", "1s",
 	"--join-attempts", "120",
-	//"--disco-config", "{\"name\":\"rqlite-svc-internal\"}",
-	//"--bootstrap-expect", 1,
 }
 
 type addHMeta struct{}
@@ -115,21 +109,24 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz",
-					Port:   intstr.FromString("port"),
+					Port:   intstr.FromInt(int(constants.HMetaDefaultPort.ContainerPort)),
 					Scheme: "HTTP",
 				},
 			},
-			FailureThreshold: 30,
-			PeriodSeconds:    1,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       5,
+			TimeoutSeconds:      2,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz?noleader",
-					Port:   intstr.FromString("port"),
+					Port:   intstr.FromInt(int(constants.HMetaDefaultPort.ContainerPort)),
 					Scheme: "HTTP",
 				},
 			},
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      2,
 		},
 	}
 
