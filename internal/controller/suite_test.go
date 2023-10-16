@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2023.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"testing"
 
-	"go.uber.org/zap/zapcore"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/hstreamdb/hstream-operator/internal/admin"
@@ -31,14 +32,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -50,27 +50,27 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var clusterReconciler *HStreamDBReconciler
 
-func TestAPIs(t *testing.T) {
+func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "HStreamDB Controller")
 }
 
 var _ = BeforeSuite(func() {
-	opts := zap.Options{
-		TimeEncoder: zapcore.RFC3339TimeEncoder,
-	}
-	logger := zap.New(
-		zap.UseDevMode(true),
-		zap.UseFlagOptions(&opts),
-		zap.WriteTo(GinkgoWriter))
-
-	logf.SetLogger(logger)
+	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+
+		// The BinaryAssetsDirectory is only required if you want to run the tests directly
+		// without call the makefile target test. If not informed it will look for the
+		// default path defined in controller-runtime which is /usr/local/kubebuilder/.
+		// Note that you must have the required binaries setup under the bin directory to perform
+		// the tests directly. When we run make test it will be setup and used automatically.
+		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
+			fmt.Sprintf("1.28.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
 	var err error

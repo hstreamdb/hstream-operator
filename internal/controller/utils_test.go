@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"

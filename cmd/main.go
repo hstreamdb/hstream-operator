@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	"github.com/hstreamdb/hstream-operator/controllers"
+	controller "github.com/hstreamdb/hstream-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -117,7 +117,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.HStreamDBReconciler{
+	if err = (&controller.HStreamDBReconciler{
 		Client:              mgr.GetClient(),
 		Scheme:              mgr.GetScheme(),
 		Recorder:            mgr.GetEventRecorderFor("hstreamdb-controller"),
