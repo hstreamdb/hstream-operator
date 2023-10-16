@@ -70,14 +70,6 @@ jobs:
         if: matrix.testMode == 'unit-test'
         run: make test
 
-      - name: Report code coverage
-        if: matrix.testMode == 'unit-test'
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./cover.out # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-
       - name: Setup minikube
         if: matrix.testMode == 'e2e-test'
         uses: medyagh/setup-minikube@latest
@@ -95,7 +87,14 @@ jobs:
         env:
           USE_EXISTING_CLUSTER: true
         # Set label filter 'k8s' to ignore the test cases that don't deponed on a real k8s cluster
-        run: ginkgo run --label-filter 'k8s' internal/controller/
+        run: ginkgo run --cover --covermode=atomic -coverpkg=./... --coverprofile ./cover.out --label-filter 'k8s' internal/controller/
+
+      - name: Report code coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cover.out # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
 
   deployment:
     runs-on: ubuntu-latest
