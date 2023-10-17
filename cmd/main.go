@@ -20,8 +20,9 @@ import (
 	"flag"
 	"os"
 
-	"github.com/hstreamdb/hstream-operator/internal/admin"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/hstreamdb/hstream-operator/internal/admin"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -35,7 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	controller "github.com/hstreamdb/hstream-operator/internal/controller"
+	appsv1beta1 "github.com/hstreamdb/hstream-operator/api/v1beta1"
+	"github.com/hstreamdb/hstream-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -48,6 +50,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(hapi.AddToScheme(scheme))
+	utilruntime.Must(appsv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -124,6 +127,20 @@ func main() {
 		AdminClientProvider: admin.NewAdminClientProvider(mgr.GetConfig(), logger),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HStreamDB")
+		os.Exit(1)
+	}
+	if err = (&controller.ConnectorReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Connector")
+		os.Exit(1)
+	}
+	if err = (&controller.ConnectorTemplateReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ConnectorTemplate")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

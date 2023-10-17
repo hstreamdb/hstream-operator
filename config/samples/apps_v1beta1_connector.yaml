@@ -1,0 +1,12 @@
+apiVersion: apps.hstream.io/v1beta1
+kind: Connector
+metadata:
+  labels:
+    app.kubernetes.io/name: connector
+    app.kubernetes.io/instance: connector-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: connector-sample
+spec:
+  # TODO(user): Add fields here

@@ -1,0 +1,12 @@
+apiVersion: apps.hstream.io/v1beta1
+kind: ConnectorTemplate
+metadata:
+  labels:
+    app.kubernetes.io/name: connectortemplate
+    app.kubernetes.io/instance: connectortemplate-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: connectortemplate-sample
+spec:
+  # TODO(user): Add fields here

@@ -1,0 +1,31 @@
+# permissions for end users to edit connectortemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: connectortemplate-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: hstream-operator
+    app.kubernetes.io/part-of: hstream-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: connectortemplate-editor-role
+rules:
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectortemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectortemplates/status
+  verbs:
+  - get
