@@ -1,7 +1,8 @@
-package controllers
+package controller
 
 import (
 	"context"
+
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/mock"
 	. "github.com/onsi/ginkgo/v2"

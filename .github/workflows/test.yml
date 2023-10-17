@@ -1,7 +1,7 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Run hstreamdb operator test case
+name: Run hstream operator test cases
 
 concurrency:
   group: test-${{ github.event_name }}-${{ github.ref }}
@@ -12,40 +12,45 @@ on:
     ## For update codecov.io
     branches:
       - main
+    paths-ignore:
+      - "**.md"
   pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
   workflow_dispatch:
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19.3
-    - uses: golangci/golangci-lint-action@v3
-      with:
-        ## TODO: https://github.com/golangci/golangci-lint-action/issues/759
-        version: v1.52.2
-        args: --timeout=5m
-    - name: Check manifests
-      run: |
-        make manifests
-        if ! git diff --quiet; then
-          echo "Need run make manifests"
-          exit 1
-        fi
-    - name: Check generate
-      run: |
-        make generate
-        if ! git diff --quiet; then
-          echo "Need run make generate"
-          exit 1
-        fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
 
-  UnitTest:
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          ## TODO: https://github.com/golangci/golangci-lint-action/issues/759
+          version: v1.52.2
+          args: --timeout=5m
+      - name: Check manifests
+        run: |
+          make manifests
+          if ! git diff --quiet; then
+            echo "Need to run: make manifests"
+            exit 1
+          fi
+      - name: Check generate
+        run: |
+          make generate
+          if ! git diff --quiet; then
+            echo "Need to run: make generate"
+            exit 1
+          fi
+
+  test:
     runs-on: ubuntu-latest
 
     strategy:
@@ -56,60 +61,41 @@ jobs:
           - unit-test
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19.3
+      - name: Run unit tests that don't depend on a real k8s cluster
+        if: matrix.testMode == 'unit-test'
+        run: make test
 
-    - name: Go Build Cache
-      uses: actions/cache@v3
-      with:
-        path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Setup minikube
+        if: matrix.testMode == 'e2e-test'
+        uses: medyagh/setup-minikube@latest
 
-    - name: Install kubebuilder
-      run: |
-        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-        ARCH=$(uname -m | sed 's/x86_64/amd64/')
-        curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
-        tar -zxvf kubebuilder-tools
-        sudo mv kubebuilder/ /usr/local/kubebuilder
+      - name: Install hmeta cluster
+        if: matrix.testMode == 'e2e-test'
+        uses: ./.github/actions/deploy-hmeta
 
-    - name: Install ginkgo
-      run: go install github.com/onsi/ginkgo/v2/ginkgo
+      # FIXME: use make command to run e2e tests
+      - name: Install ginkgo
+        if: matrix.testMode == 'e2e-test'
+        run: go install github.com/onsi/ginkgo/v2/ginkgo
 
-    - name: Run unit tests that don't depend on really k8s cluster
-      if: matrix.testMode == 'unit-test'
-      run: ginkgo run --cover --covermode=atomic -coverpkg=./... --coverprofile ./cover.out ./...
+      - name: Run e2e tests that depend on an existing k8s cluster
+        if: matrix.testMode == 'e2e-test'
+        env:
+          USE_EXISTING_CLUSTER: true
+        # Set label filter 'k8s' to ignore the test cases that don't deponed on a real k8s cluster
+        run: ginkgo run --cover --covermode=atomic -coverpkg=./... --coverprofile ./cover.out --label-filter 'k8s' internal/controller/
 
-    - name: Setup minikube
-      if: matrix.testMode == 'e2e-test'
-      uses: medyagh/setup-minikube@latest
-
-    - name: Install hmeta cluster
-      if: matrix.testMode == 'e2e-test'
-      uses: ./.github/actions/deploy-hmeta
-
-    - name: Run e2e tests that depend on existing k8s cluster
-      if: matrix.testMode == 'e2e-test'
-      env:
-        USE_EXISTING_CLUSTER: true
-      # set label filter 'k8s' to ignore the test cases that don't deponed on really k8s cluster
-      run: ginkgo run --cover --covermode=atomic -coverpkg=./... --coverprofile ./cover.out  --label-filter 'k8s' controllers/
-
-    - name: Report code coverage
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./cover.out # optional
-        fail_ci_if_error: true # optional (default = false)
-        verbose: true # optional (default = false)
+      - name: Report code coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cover.out # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
 
   deployment:
     runs-on: ubuntu-latest
@@ -123,7 +109,7 @@ jobs:
     steps:
       - run: minikube start
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: ./.github/actions/deploy-hmeta
         if: matrix.install == 'yaml_with_external_hmeta'
@@ -163,7 +149,7 @@ jobs:
       - name: Deploy hstreamdb with external hmeta cluster
         if: matrix.install == 'yaml_with_external_hmeta'
         run: |
-            kubectl apply -f config/samples/hstreamdb_with_external_hmeta.yaml
+          kubectl apply -f config/samples/hstreamdb_with_external_hmeta.yaml
 
       - name: Check hstream custom resource status
         timeout-minutes: 5
