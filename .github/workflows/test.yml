@@ -78,6 +78,7 @@ jobs:
         if: matrix.testMode == 'e2e-test'
         uses: ./.github/actions/deploy-hmeta
 
+      # FIXME: use make command to run e2e tests
       - name: Install ginkgo
         if: matrix.testMode == 'e2e-test'
         run: go install github.com/onsi/ginkgo/v2/ginkgo
