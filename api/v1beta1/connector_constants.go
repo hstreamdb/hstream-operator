@@ -22,3 +22,11 @@ type ConnectorType string
 const (
 	SinkElaticsearch ConnectorType = "sink-elasticsearch"
 )
+
+var ConnectorImageMap = map[ConnectorType]string{
+	SinkElaticsearch: "hstreamdb/sink-elasticsearch:standalone",
+}
+
+var ConnectorContainerPortMap = map[ConnectorType]int32{
+	SinkElaticsearch: 9200,
+}

@@ -94,34 +94,8 @@ func (in *ConnectorSpec) DeepCopyInto(out *ConnectorSpec) {
 	}
 	if in.Patches != nil {
 		in, out := &in.Patches, &out.Patches
-		*out = new(map[string]map[string]json.RawMessage)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make(map[string]map[string]json.RawMessage, len(*in))
-			for key, val := range *in {
-				var outVal map[string]json.RawMessage
-				if val == nil {
-					(*out)[key] = nil
-				} else {
-					inVal := (*in)[key]
-					in, out := &inVal, &outVal
-					*out = make(map[string]json.RawMessage, len(*in))
-					for key, val := range *in {
-						var outVal []byte
-						if val == nil {
-							(*out)[key] = nil
-						} else {
-							inVal := (*in)[key]
-							in, out := &inVal, &outVal
-							*out = make(json.RawMessage, len(*in))
-							copy(*out, *in)
-						}
-						(*out)[key] = outVal
-					}
-				}
-				(*out)[key] = outVal
-			}
-		}
+		*out = make(json.RawMessage, len(*in))
+		copy(*out, *in)
 	}
 }
 

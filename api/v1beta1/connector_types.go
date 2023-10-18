@@ -44,8 +44,16 @@ type ConnectorSpec struct {
 	Streams []string `json:"streams"`
 
 	// Patches is used to specify the patches that will be applied to the connector configuration.
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
-	Patches *map[string]map[string]json.RawMessage `json:"patches,omitempty"`
+	Patches json.RawMessage `json:"patches,omitempty"`
+
+	// HServerEndpoint is the endpoint of the HStreamDB server.
+	// For example: "hstreamdb-hserver:6570"
+	// +kube:validation:Required
+	HServerEndpoint string `json:"hserverEndpoint,omitempty"`
 }
 
 // ConnectorStatus defines the observed state of Connector

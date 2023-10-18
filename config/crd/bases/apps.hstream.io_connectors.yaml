@@ -26,13 +26,11 @@ spec:
             type: object
           spec:
             properties:
+              hserverEndpoint:
+                type: string
               patches:
-                additionalProperties:
-                  additionalProperties:
-                    format: byte
-                    type: string
-                  type: object
                 type: object
+                x-kubernetes-preserve-unknown-fields: true
               streams:
                 items:
                   type: string
