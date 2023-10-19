@@ -218,7 +218,7 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, conne
 		if connector.Spec.Patches != nil {
 			if val, ok := patches[stream]; ok {
 				for k, v := range val {
-					templateConfig[k] = v
+					config[k] = v
 				}
 			}
 		}
