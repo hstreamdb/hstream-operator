@@ -25,7 +25,7 @@ import (
 )
 
 func GenConnectorConfigMapName(connectorName string, isConnectorTemplate bool) (suffix string) {
-	suffix += connectorName + "-hstream-io"
+	suffix += connectorName + "-hstreamio"
 
 	if isConnectorTemplate {
 		suffix += "-connector-template-config"
@@ -47,5 +47,5 @@ func DeleteAssociatedConfigMap(ctx context.Context, c client.Client, namespacedN
 }
 
 func GenConnectorDeploymentName(connectorName, stream string) string {
-	return connectorName + "-" + stream + "-hstream-io-connector-depolyment"
+	return connectorName + "-" + stream + "-hstreamio-connector"
 }
