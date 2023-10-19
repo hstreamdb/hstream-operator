@@ -20,7 +20,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,7 +61,7 @@ func (r *ConnectorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	var connectorTemplate appsv1beta1.ConnectorTemplate
 	if err := r.Get(ctx, req.NamespacedName, &connectorTemplate); err != nil {
-		if !apierrors.IsNotFound(err) {
+		if !k8sErrors.IsNotFound(err) {
 			log.Error(err, "fail to fetch ConnectorTemplate")
 		}
 
@@ -76,7 +76,7 @@ func (r *ConnectorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	var configMap corev1.ConfigMap
 	if err := r.Get(ctx, configMapNamespacedName, &configMap); err != nil {
-		if apierrors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			// Create ConfigMap to store connector config.
 			err = r.Create(ctx, &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
