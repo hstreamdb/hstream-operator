@@ -33,6 +33,9 @@ type ConnectorTemplateSpec struct {
 	Type ConnectorType `json:"type"`
 
 	// Config is the configuration for the connector template.
+	// For details, see https://docs.hstream.io/ingest-and-distribute/connectors.html.
+	//
+	// Note: currently, only the `sink-elasticsearch` connector is supported.
 	// +kubebuilder:validation:Required
 	Config string `json:"config"`
 }
