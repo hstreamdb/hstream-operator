@@ -19,6 +19,15 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
