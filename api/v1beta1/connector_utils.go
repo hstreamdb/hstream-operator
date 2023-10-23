@@ -17,17 +17,17 @@ limitations under the License.
 package v1beta1
 
 func GenConnectorConfigMapName(connectorName string, isConnectorTemplate bool) (suffix string) {
-	suffix += connectorName + "-hstreamio"
+	suffix += connectorName + "-h" // Short for hstreamio.
 
 	if isConnectorTemplate {
-		suffix += "-connector-template-config"
+		suffix += "-ct" // Short for connector template.
 	} else {
-		suffix += "-connector-config"
+		suffix += "-c" // Short for connector.
 	}
 
 	return
 }
 
 func GenConnectorDeploymentName(connectorName, stream string) string {
-	return connectorName + "-" + stream + "-hstreamio-connector"
+	return connectorName + "-" + stream + "-hc"
 }
