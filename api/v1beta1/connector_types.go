@@ -31,6 +31,9 @@ type ConnectorSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Type is the type of the connector, typically used to verify that the type matches the configuration.
+	//
+	// Each connector type is associated with a connector image, which is used to create the connector container.
+	// View `ConnectorImageMap` for more details.
 	// +kubebuilder:validation:Required
 	Type ConnectorType `json:"type"`
 
