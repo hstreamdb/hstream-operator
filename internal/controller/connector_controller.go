@@ -266,6 +266,25 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 									Name:      configMapName,
 									MountPath: "/data/config",
 								},
+								{
+									Name:      "data",
+									MountPath: "/data",
+								},
+							},
+						},
+						{
+							Name:  "log",
+							Image: "busybox:1.36",
+							Args: []string{
+								"/bin/sh",
+								"-c",
+								"sleep 5 && tail -F /data/app.log",
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "data",
+									MountPath: "/data",
+								},
 							},
 						},
 					},
@@ -278,6 +297,12 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 										Name: configMapName,
 									},
 								},
+							},
+						},
+						{
+							Name: "data",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},
