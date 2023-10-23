@@ -198,7 +198,12 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, conne
 
 		var patches map[string]map[string]interface{}
 		if connector.Spec.Patches != nil {
-			json.Unmarshal(connector.Spec.Patches, &patches)
+			err = json.Unmarshal(connector.Spec.Patches, &patches)
+			if err != nil {
+				log.Error(err, "fail to unmarshal Connector patches")
+
+				return nil, err
+			}
 		}
 
 		if connector.Spec.Patches != nil {

@@ -13,10 +13,10 @@ var _ = Describe("v1beta1/connector_utils", func() {
 		connectorName := "test-connector"
 
 		configMap1 := v1beta1.GenConnectorConfigMapName(connectorTplName, true)
-		Expect(configMap1).To(Equal("test-connector-tpl-hstreamio-connector-template-config"))
+		Expect(configMap1).To(Equal("test-connector-tpl-hct"))
 
 		configMap2 := v1beta1.GenConnectorConfigMapName(connectorName, false)
-		Expect(configMap2).To(Equal("test-connector-hstreamio-connector-config"))
+		Expect(configMap2).To(Equal("test-connector-hc"))
 	})
 
 	It("should generate correct deployment name", func() {
@@ -24,6 +24,6 @@ var _ = Describe("v1beta1/connector_utils", func() {
 		stream := "test-stream"
 
 		deploymentName := v1beta1.GenConnectorDeploymentName(connectorName, stream)
-		Expect(deploymentName).To(Equal("test-connector-test-stream-hstreamio-connector"))
+		Expect(deploymentName).To(Equal("test-connector-test-stream-hc"))
 	})
 })

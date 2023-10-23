@@ -20,9 +20,9 @@ func GenConnectorConfigMapName(connectorName string, isConnectorTemplate bool) (
 	suffix += connectorName + "-h" // Short for hstreamio.
 
 	if isConnectorTemplate {
-		suffix += "-ct" // Short for connector template.
+		suffix += "ct" // Short for connector template.
 	} else {
-		suffix += "-c" // Short for connector.
+		suffix += "c" // Short for connector.
 	}
 
 	return
