@@ -16,6 +16,8 @@ limitations under the License.
 
 package v1beta1
 
+const ComponentTypeConnector = "connector"
+
 type ConnectorType string
 
 // +kubebuilder:validation:Enum=sink-elasticsearch

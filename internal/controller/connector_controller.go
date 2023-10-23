@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -220,21 +221,25 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: connector.Namespace,
 			Name:      name,
+			Labels: map[string]string{
+				hapi.ComponentKey: appsv1beta1.ComponentTypeConnector,
+				hapi.InstanceKey:  connector.Name,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app":       "hstream-io-connector",
-					"connector": connector.Name,
-					"stream":    stream,
+					hapi.ComponentKey: appsv1beta1.ComponentTypeConnector,
+					hapi.InstanceKey:  connector.Name,
+					"stream":          stream,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":       "hstream-io-connector",
-						"connector": connector.Name,
-						"stream":    stream,
+						hapi.ComponentKey: appsv1beta1.ComponentTypeConnector,
+						hapi.InstanceKey:  connector.Name,
+						"stream":          stream,
 					},
 				},
 				Spec: corev1.PodSpec{
