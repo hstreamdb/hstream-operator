@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	appsv1beta1 "github.com/hstreamdb/hstream-operator/api/v1beta1"
+	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 )
 
 // ConnectorTemplateReconciler reconciles a ConnectorTemplate object
@@ -55,7 +55,7 @@ type ConnectorTemplateReconciler struct {
 func (r *ConnectorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log = logf.FromContext(ctx)
 
-	var connectorTemplate appsv1beta1.ConnectorTemplate
+	var connectorTemplate v1beta1.ConnectorTemplate
 	if err := r.Get(ctx, req.NamespacedName, &connectorTemplate); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -64,7 +64,7 @@ func (r *ConnectorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	configMapName := appsv1beta1.GenConnectorConfigMapName(req.Name, true)
+	configMapName := v1beta1.GenConnectorConfigMapName(req.Name, true)
 	configMapNamespacedName := types.NamespacedName{
 		Namespace: req.Namespace,
 		Name:      configMapName,
@@ -116,7 +116,7 @@ func (r *ConnectorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConnectorTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1beta1.ConnectorTemplate{}).
+		For(&v1beta1.ConnectorTemplate{}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }

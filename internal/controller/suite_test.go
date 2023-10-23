@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	appsv1beta1 "github.com/hstreamdb/hstream-operator/api/v1beta1"
+	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	err = hapi.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = appsv1beta1.AddToScheme(scheme.Scheme)
+	err = v1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

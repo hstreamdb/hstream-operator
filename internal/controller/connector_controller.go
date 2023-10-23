@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	appsv1beta1 "github.com/hstreamdb/hstream-operator/api/v1beta1"
+	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 )
 
 // ConnectorReconciler reconciles a Connector object
@@ -59,7 +59,7 @@ type ConnectorReconciler struct {
 func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log = logf.FromContext(ctx)
 
-	var connector appsv1beta1.Connector
+	var connector v1beta1.Connector
 	if err := r.Get(ctx, req.NamespacedName, &connector); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -70,7 +70,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	configMapNames := []string{}
 	for _, stream := range connector.Spec.Streams {
-		configMapNames = append(configMapNames, appsv1beta1.GenConnectorConfigMapName(connector.Spec.TemplateName, false)+"-for-"+stream)
+		configMapNames = append(configMapNames, v1beta1.GenConnectorConfigMapName(connector.Spec.TemplateName, false)+"-for-"+stream)
 	}
 	var configs []map[string]interface{}
 	cfgs, err := r.mergePatchesIntoConfigs(ctx, connector)
@@ -133,7 +133,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if err != nil {
 				log.Error(err, "fail to create Deployment for Connector",
 					"Connector", connector.Name,
-					"Deployment", appsv1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[index]),
+					"Deployment", v1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[index]),
 				)
 
 				return ctrl.Result{}, err
@@ -149,13 +149,13 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConnectorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1beta1.Connector{}).
+		For(&v1beta1.Connector{}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
 
-func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, connector appsv1beta1.Connector) ([]map[string]interface{}, error) {
-	templateConfigMapName := appsv1beta1.GenConnectorConfigMapName(connector.Spec.TemplateName, true)
+func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, connector v1beta1.Connector) ([]map[string]interface{}, error) {
+	templateConfigMapName := v1beta1.GenConnectorConfigMapName(connector.Spec.TemplateName, true)
 	templateConfigMapNamespacedName := types.NamespacedName{
 		Namespace: connector.Namespace,
 		Name:      templateConfigMapName,
@@ -210,21 +210,21 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, conne
 	return configs, nil
 }
 
-func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector appsv1beta1.Connector, stream, configMapName string) error {
-	name := appsv1beta1.GenConnectorDeploymentName(connector.Name, stream)
+func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector v1beta1.Connector, stream, configMapName string) error {
+	name := v1beta1.GenConnectorDeploymentName(connector.Name, stream)
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: connector.Namespace,
 			Name:      name,
 			Labels: map[string]string{
-				hapi.ComponentKey: appsv1beta1.ComponentTypeConnector,
+				hapi.ComponentKey: v1beta1.ComponentTypeConnector,
 				hapi.InstanceKey:  connector.Name,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					hapi.ComponentKey: appsv1beta1.ComponentTypeConnector,
+					hapi.ComponentKey: v1beta1.ComponentTypeConnector,
 					hapi.InstanceKey:  connector.Name,
 					"stream":          stream,
 				},
@@ -232,7 +232,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						hapi.ComponentKey: appsv1beta1.ComponentTypeConnector,
+						hapi.ComponentKey: v1beta1.ComponentTypeConnector,
 						hapi.InstanceKey:  connector.Name,
 						"stream":          stream,
 					},
@@ -241,14 +241,14 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 					Containers: []corev1.Container{
 						{
 							Name:  connector.Name,
-							Image: appsv1beta1.ConnectorImageMap[connector.Spec.Type],
+							Image: v1beta1.ConnectorImageMap[connector.Spec.Type],
 							Args: []string{
 								"run",
 								"--config /data/config/config.json",
 							},
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: appsv1beta1.ConnectorContainerPortMap[connector.Spec.Type],
+									ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{

@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	appsv1beta1 "github.com/hstreamdb/hstream-operator/api/v1beta1"
+	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 	"github.com/hstreamdb/hstream-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
@@ -50,7 +50,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(hapi.AddToScheme(scheme))
-	utilruntime.Must(appsv1beta1.AddToScheme(scheme))
+	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
