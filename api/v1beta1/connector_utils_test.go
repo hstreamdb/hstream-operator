@@ -24,22 +24,25 @@ import (
 )
 
 var _ = Describe("v1beta1/connector_utils", func() {
-	It("should generate correct configmap name", func() {
-		connectorTplName := "test-connector-tpl"
-		connectorName := "test-connector"
+	connectorTpl := "test-connector-tpl"
+	connector := "test-connector"
+	stream := "test-stream"
 
-		configMap1 := v1beta1.GenConnectorConfigMapName(connectorTplName, true)
+	It("should generate correct configmap name", func() {
+		configMap1 := v1beta1.GenConnectorConfigMapName(connectorTpl, true)
 		Expect(configMap1).To(Equal("test-connector-tpl-hct"))
 
-		configMap2 := v1beta1.GenConnectorConfigMapName(connectorName, false)
+		configMap2 := v1beta1.GenConnectorConfigMapName(connector, false)
 		Expect(configMap2).To(Equal("test-connector-hc"))
 	})
 
-	It("should generate correct deployment name", func() {
-		connectorName := "test-connector"
-		stream := "test-stream"
+	It("should generate correct configmap name for stream", func() {
+		configMap := v1beta1.GenConnectorConfigMapNameForStream(connectorTpl, stream)
+		Expect(configMap).To(Equal("test-connector-tpl-hc-for-test-stream"))
+	})
 
-		deploymentName := v1beta1.GenConnectorDeploymentName(connectorName, stream)
+	It("should generate correct deployment name", func() {
+		deploymentName := v1beta1.GenConnectorDeploymentName(connector, stream)
 		Expect(deploymentName).To(Equal("test-connector-test-stream-hc"))
 	})
 })

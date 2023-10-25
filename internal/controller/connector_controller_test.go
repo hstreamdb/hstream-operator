@@ -105,17 +105,51 @@ var _ = Describe("controller/connector", func() {
 				Scheme: scheme.Scheme,
 			}
 
-			tplReconciler.Reconcile(context.TODO(), ctrl.Request{
+			_, err := tplReconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      connectorTpl.Name,
 					Namespace: connectorTpl.Namespace,
 				}},
 			)
+			Expect(err).ShouldNot(HaveOccurred())
 
-			_, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
+			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      connector.Name,
 					Namespace: connector.Namespace,
+				}},
+			)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("check if the connector's configmap is generated")
+			var configMap corev1.ConfigMap
+			err = fakeClient.Get(context.TODO(), types.NamespacedName{
+				Name:      v1beta1.GenConnectorConfigMapNameForStream(connector.Spec.TemplateName, connector.Spec.Streams[0]),
+				Namespace: connector.Namespace,
+			}, &configMap)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("check if the connector's deployment is generated")
+			var connectorDeployment appsv1.Deployment
+			err = fakeClient.Get(context.TODO(), types.NamespacedName{
+				Name:      v1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[0]),
+				Namespace: connector.Namespace,
+			}, &connectorDeployment)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("delete the connector")
+
+			err = fakeClient.Delete(context.TODO(), &connector)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = tplReconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      connectorTpl.Name,
+					Namespace: connectorTpl.Namespace,
 				}},
 			)
 
