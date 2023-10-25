@@ -278,7 +278,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceLimitsCPU: resource.MustParse("300m"),
+									corev1.ResourceCPU: resource.MustParse("300m"),
 								},
 							},
 						},
