@@ -25,6 +25,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 )
@@ -70,6 +73,53 @@ var _ = Describe("controller/connector", func() {
 			}
 
 			return true
+		})
+	})
+
+	Context("reconcile", func() {
+		It("shouldn't create a connector if the connector template doesn't exist", func() {
+			fakeClient := fake.NewClientBuilder().WithRuntimeObjects(&connector).Build()
+			reconciler := ConnectorReconciler{
+				Client: fakeClient,
+				Scheme: scheme.Scheme,
+			}
+
+			_, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      connector.Name,
+					Namespace: connector.Namespace,
+				}},
+			)
+
+			Expect(err).Should(HaveOccurred())
+		})
+
+		It("should create a connector if the connector template exists", func() {
+			fakeClient := fake.NewClientBuilder().WithRuntimeObjects(&connectorTpl, &connector).Build()
+			tplReconciler := ConnectorTemplateReconciler{
+				Client: fakeClient,
+				Scheme: scheme.Scheme,
+			}
+			reconciler := ConnectorReconciler{
+				Client: fakeClient,
+				Scheme: scheme.Scheme,
+			}
+
+			tplReconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      connectorTpl.Name,
+					Namespace: connectorTpl.Namespace,
+				}},
+			)
+
+			_, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      connector.Name,
+					Namespace: connector.Namespace,
+				}},
+			)
+
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 })

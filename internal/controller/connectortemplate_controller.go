@@ -41,7 +41,7 @@ type ConnectorTemplateReconciler struct {
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=connectortemplates,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=connectortemplates/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=connectortemplates/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

@@ -44,7 +44,7 @@ type ConnectorReconciler struct {
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=connectors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=connectors/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=connectors/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=deployments,verbs=create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -81,11 +81,11 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	configs = cfgs
 
-	for index, configMapName := range configMapNames {
+	for index, name := range configMapNames {
 		var connectorConfigMap corev1.ConfigMap
 		if err := r.Get(ctx, types.NamespacedName{
 			Namespace: connector.Namespace,
-			Name:      configMapName,
+			Name:      name,
 		}, &connectorConfigMap); err != nil {
 			if !k8sErrors.IsNotFound(err) {
 				return ctrl.Result{}, err
@@ -103,7 +103,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			connectorConfigMap := corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: connector.Namespace,
-					Name:      configMapName,
+					Name:      name,
 				},
 				Data: map[string]string{
 					"config.json": string(configJson),
@@ -113,7 +113,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if err := controllerutil.SetControllerReference(&connector, &connectorConfigMap, r.Scheme); err != nil {
 				log.Error(err, "fail to set owner reference for ConfigMap",
 					"Connector", connector.Name,
-					"ConfigMap", configMapName,
+					"ConfigMap", name,
 				)
 
 				return ctrl.Result{}, err
@@ -123,13 +123,13 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if err != nil {
 				log.Error(err, "fail to create ConfigMap for Connector",
 					"Connector", connector.Name,
-					"ConfigMap", configMapName,
+					"ConfigMap", name,
 				)
 
 				return ctrl.Result{}, err
 			}
 
-			err = r.createConnectorDeployment(ctx, connector, connector.Spec.Streams[index], configMapName)
+			err = r.createConnectorDeployment(ctx, connector, connector.Spec.Streams[index], name)
 			if err != nil {
 				log.Error(err, "fail to create Deployment for Connector",
 					"Connector", connector.Name,
