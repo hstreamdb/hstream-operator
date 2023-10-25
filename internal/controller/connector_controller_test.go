@@ -141,7 +141,6 @@ var _ = Describe("controller/connector", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			By("delete the connector")
-
 			err = fakeClient.Delete(context.TODO(), &connector)
 
 			Expect(err).ShouldNot(HaveOccurred())
