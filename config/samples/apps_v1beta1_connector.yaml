@@ -9,4 +9,16 @@ metadata:
     app.kubernetes.io/created-by: hstream-operator
   name: connector-sample
 spec:
-  # TODO(user): Add fields here
+  type: sink-elasticsearch
+  templateName: connectortemplate-sample
+  streams:
+    - stream01
+    # - stream02
+  patches:
+    stream01:
+      offsetStream: stream01-offset
+      index: index01
+    # stream02:
+    #   offsetStream: stream02-offset
+    #   index: index02
+  hserverEndpoint: hstreamdb-sample-internal-hserver.hstreamdb:6570

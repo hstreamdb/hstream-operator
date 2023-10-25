@@ -9,4 +9,19 @@ metadata:
     app.kubernetes.io/created-by: hstream-operator
   name: connectortemplate-sample
 spec:
-  # TODO(user): Add fields here
+  type: sink-elasticsearch
+  config: |
+    {
+      "auth": "basic",
+      "username": "elastic",
+      "password": "password",
+      "enableLogReport": true,
+      "buffer.enableBackgroundFlush": false,
+      "buffer.batch.maxAge": 0,
+      "buffer.batch.maxBytesSize": 0,
+      "scheme": "http",
+      "hosts": "localhost:9200",
+      "task.error.maxRetries": 3,
+      "task.error.skipStrategy": "SkipAll",
+      "task.reader.fromOffset": "EARLIEST"
+    }
