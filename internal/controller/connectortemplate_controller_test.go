@@ -63,6 +63,15 @@ var _ = Describe("controller/connectortemplate", func() {
 			err = fakeClient.Delete(context.TODO(), &connectorTpl)
 
 			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      connectorTpl.Name,
+					Namespace: connectorTpl.Namespace,
+				}},
+			)
+
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 })

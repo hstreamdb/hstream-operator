@@ -145,10 +145,10 @@ var _ = Describe("controller/connector", func() {
 
 			Expect(err).ShouldNot(HaveOccurred())
 
-			_, err = tplReconciler.Reconcile(context.TODO(), ctrl.Request{
+			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      connectorTpl.Name,
-					Namespace: connectorTpl.Namespace,
+					Name:      connector.Name,
+					Namespace: connector.Namespace,
 				}},
 			)
 
