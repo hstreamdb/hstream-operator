@@ -20,7 +20,6 @@ const ComponentTypeConnector = "connector"
 
 type ConnectorType string
 
-// +kubebuilder:validation:Enum=sink-elasticsearch
 const (
 	SinkElaticsearch ConnectorType = "sink-elasticsearch"
 )

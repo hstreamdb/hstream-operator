@@ -29,6 +29,7 @@ type ConnectorTemplateSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Type is the type of the connector template, typically used to verify that the type matches the configuration.
+	// +kubebuilder:validation:Enum=sink-elasticsearch
 	// +kubebuilder:validation:Required
 	Type ConnectorType `json:"type"`
 

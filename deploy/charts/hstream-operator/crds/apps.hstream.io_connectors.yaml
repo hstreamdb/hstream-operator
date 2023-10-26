@@ -39,6 +39,8 @@ spec:
               templateName:
                 type: string
               type:
+                enum:
+                - sink-elasticsearch
                 type: string
             required:
             - streams
