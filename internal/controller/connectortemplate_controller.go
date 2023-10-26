@@ -87,11 +87,6 @@ func (r *ConnectorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		if err := controllerutil.SetControllerReference(&connectorTemplate, &configMap, r.Scheme); err != nil {
-			log.Error(err, "fail to set owner reference for ConfigMap",
-				"ConnectorTemplate", connectorTemplate.Name,
-				"ConfigMap", configMapName,
-			)
-
 			return ctrl.Result{}, err
 		}
 

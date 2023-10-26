@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -73,9 +74,9 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		configMapNames = append(configMapNames, v1beta1.GenConnectorConfigMapNameForStream(connector.Spec.TemplateName, stream))
 	}
 	var configs []map[string]interface{}
-	cfgs, err := r.mergePatchesIntoConfigs(ctx, connector)
+	cfgs, err := r.mergePatchesIntoConfigs(ctx, log, connector)
 	if err != nil {
-		log.Error(err, "fail to merge patches into config")
+		log.Error(err, "fail to merge connector config patches into config template")
 
 		return ctrl.Result{}, err
 	}
@@ -111,11 +112,6 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 
 			if err := controllerutil.SetControllerReference(&connector, &connectorConfigMap, r.Scheme); err != nil {
-				log.Error(err, "fail to set owner reference for ConfigMap",
-					"Connector", connector.Name,
-					"ConfigMap", name,
-				)
-
 				return ctrl.Result{}, err
 			}
 
@@ -154,7 +150,7 @@ func (r *ConnectorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, connector v1beta1.Connector) ([]map[string]interface{}, error) {
+func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logger logr.Logger, connector v1beta1.Connector) ([]map[string]interface{}, error) {
 	templateConfigMapName := v1beta1.GenConnectorConfigMapName(connector.Spec.TemplateName, true)
 	templateConfigMapNamespacedName := types.NamespacedName{
 		Namespace: connector.Namespace,
@@ -163,7 +159,7 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, conne
 
 	var templateConfigMap corev1.ConfigMap
 	if err := r.Get(ctx, templateConfigMapNamespacedName, &templateConfigMap); err != nil {
-		log.Error(err, "fail to fetch ConfigMap which stores ConnectorTemplate config")
+		logger.Error(err, "fail to fetch ConfigMap which stores ConnectorTemplate config")
 
 		return nil, err
 	}
@@ -171,7 +167,7 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, conne
 	var templateConfig map[string]interface{}
 	err := json.Unmarshal([]byte(templateConfigMap.Data["config"]), &templateConfig)
 	if err != nil {
-		log.Error(err, "fail to unmarshal ConnectorTemplate config")
+		logger.Error(err, "fail to unmarshal ConnectorTemplate config")
 
 		return nil, err
 	}
@@ -190,7 +186,7 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, conne
 		if connector.Spec.Patches != nil {
 			err = json.Unmarshal(connector.Spec.Patches, &patches)
 			if err != nil {
-				log.Error(err, "fail to unmarshal Connector patches")
+				logger.Error(err, "fail to unmarshal Connector patches")
 
 				return nil, err
 			}
@@ -307,11 +303,6 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	}
 
 	if err := controllerutil.SetControllerReference(&connector, &deployment, r.Scheme); err != nil {
-		log.Error(err, "fail to set owner reference for Deployment",
-			"Connector", connector.Name,
-			"Deployment", name,
-		)
-
 		return err
 	}
 
