@@ -38,41 +38,66 @@ var _ = Describe("controller/connector", func() {
 
 	It("should create a connector successfully", func() {
 		By("creating a connector template")
-		ctx := context.Background()
-
-		Expect(k8sClient.Create(ctx, &connectorTpl)).Should(Succeed())
+		Expect(k8sClient.Create(context.TODO(), &connectorTpl)).Should(Succeed())
 
 		By("creating a connector")
-		ctx = context.Background()
-
-		Expect(k8sClient.Create(ctx, &connector)).Should(Succeed())
+		Expect(k8sClient.Create(context.TODO(), &connector)).Should(Succeed())
 
 		By("check if the connector's configmap is generated")
 		var connectorConfigMap corev1.ConfigMap
+		configMapName := v1beta1.GenConnectorConfigMapNameForStream(connector.Name, connector.Spec.Streams[0])
 
 		Eventually(func() bool {
-			if err := k8sClient.Get(ctx, types.NamespacedName{
-				Name:      v1beta1.GenConnectorConfigMapName(connector.Name, false) + "-for-" + connector.Spec.Streams[0],
+			if err := k8sClient.Get(context.TODO(), types.NamespacedName{
+				Name:      configMapName,
 				Namespace: connector.Namespace,
 			}, &connectorConfigMap); err != nil {
-				return false
+				return true
 			}
 
-			return true
+			return false
 		})
 
 		By("check if the connector's deployment is generated")
 		var connectorDeployment appsv1.Deployment
+		deploymentName := v1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[0])
 
 		Eventually(func() bool {
-			if err := k8sClient.Get(ctx, types.NamespacedName{
-				Name:      v1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[0]),
+			if err := k8sClient.Get(context.TODO(), types.NamespacedName{
+				Name:      deploymentName,
 				Namespace: connector.Namespace,
 			}, &connectorDeployment); err != nil {
 				return false
 			}
 
 			return true
+		})
+
+		By("delete the connector")
+		Expect(k8sClient.Delete(context.TODO(), &connector)).Should(Succeed())
+
+		By("check if the connector's configmap is deleted")
+		Eventually(func() bool {
+			if err := k8sClient.Get(context.TODO(), types.NamespacedName{
+				Name:      configMapName,
+				Namespace: connector.Namespace,
+			}, &connectorConfigMap); err != nil {
+				return true
+			}
+
+			return false
+		})
+
+		By("check if the connector's deployment is deleted")
+		Eventually(func() bool {
+			if err := k8sClient.Get(context.TODO(), types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: connector.Namespace,
+			}, &connectorDeployment); err != nil {
+				return true
+			}
+
+			return false
 		})
 	})
 
