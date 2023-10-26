@@ -36,7 +36,7 @@ var _ = Describe("controller/connector", func() {
 	connectorTpl := mock.CreateDefaultConnectorTemplate()
 	connector := mock.CreateDefaultConnector()
 
-	It("should create a connector successfully", func() {
+	It("should create/delete a connector successfully", func() {
 		By("creating a connector template")
 		Expect(k8sClient.Create(context.TODO(), &connectorTpl)).Should(Succeed())
 
