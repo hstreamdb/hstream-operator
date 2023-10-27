@@ -22,6 +22,7 @@ package v1beta1
 
 import (
 	"encoding/json"
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -95,6 +96,11 @@ func (in *ConnectorSpec) DeepCopyInto(out *ConnectorSpec) {
 	if in.Patches != nil {
 		in, out := &in.Patches, &out.Patches
 		*out = make(json.RawMessage, len(*in))
+		copy(*out, *in)
+	}
+	if in.ContainerPorts != nil {
+		in, out := &in.ContainerPorts, &out.ContainerPorts
+		*out = make([]v1.ContainerPort, len(*in))
 		copy(*out, *in)
 	}
 }

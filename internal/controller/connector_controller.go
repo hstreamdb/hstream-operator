@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -208,6 +209,14 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logge
 
 func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector v1beta1.Connector, stream, configMapName string) error {
 	name := v1beta1.GenConnectorDeploymentName(connector.Name, stream)
+	containerPorts := append(
+		[]corev1.ContainerPort{
+			{
+				ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
+			},
+		},
+		connector.Spec.ContainerPorts...,
+	)
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: connector.Namespace,
@@ -232,6 +241,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 						hapi.InstanceKey:  connector.Name,
 						"stream":          stream,
 					},
+					Annotations: r.getPromAnnotations(connector),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -242,11 +252,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 								"run",
 								"--config /data/config/config.json",
 							},
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
-								},
-							},
+							Ports: containerPorts,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      configMapName,
@@ -307,4 +313,16 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	}
 
 	return r.Create(ctx, &deployment)
+}
+
+func (r *ConnectorReconciler) getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
+	annotaions = make(map[string]string)
+
+	for k, v := range connector.Annotations {
+		if strings.HasPrefix(k, "prometheus.io") {
+			annotaions[k] = v
+		}
+	}
+
+	return
 }

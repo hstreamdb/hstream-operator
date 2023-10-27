@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"encoding/json"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -58,6 +59,10 @@ type ConnectorSpec struct {
 	// For example: "hstreamdb-hserver:6570"
 	// +kube:validation:Required
 	HServerEndpoint string `json:"hserverEndpoint,omitempty"`
+
+	// ContainerPorts is used to specify the ports that will be exposed by the connector container.
+	// +optional
+	ContainerPorts []corev1.ContainerPort `json:"containerPorts,omitempty"`
 }
 
 // ConnectorStatus defines the observed state of Connector
