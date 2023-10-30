@@ -1,0 +1,27 @@
+apiVersion: apps.hstream.io/v1beta1
+kind: ConnectorTemplate
+metadata:
+  labels:
+    app.kubernetes.io/name: connectortemplate
+    app.kubernetes.io/instance: connectortemplate-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: connectortemplate-sample
+spec:
+  type: sink-elasticsearch
+  config: |
+    {
+      "auth": "basic",
+      "username": "elastic",
+      "password": "password",
+      "enableLogReport": true,
+      "buffer.enableBackgroundFlush": false,
+      "buffer.batch.maxAge": 0,
+      "buffer.batch.maxBytesSize": 0,
+      "scheme": "http",
+      "hosts": "localhost:9200",
+      "task.error.maxRetries": 3,
+      "task.error.skipStrategy": "SkipAll",
+      "task.reader.fromOffset": "EARLIEST"
+    }

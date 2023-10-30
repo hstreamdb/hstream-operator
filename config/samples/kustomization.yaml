@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- apps_v1beta1_connector.yaml
+- apps_v1beta1_connectortemplate.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

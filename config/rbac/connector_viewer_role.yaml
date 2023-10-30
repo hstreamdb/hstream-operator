@@ -1,0 +1,27 @@
+# permissions for end users to view connectors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: connector-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: hstream-operator
+    app.kubernetes.io/part-of: hstream-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: connector-viewer-role
+rules:
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectors/status
+  verbs:
+  - get

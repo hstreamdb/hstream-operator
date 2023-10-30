@@ -10,11 +10,21 @@ rules:
   - configmaps
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
   - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - patch
+  - update
 - apiGroups:
   - ""
   resources:
@@ -102,6 +112,58 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectors/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectortemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectortemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.hstream.io
+  resources:
+  - connectortemplates/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - apps.hstream.io
   resources:

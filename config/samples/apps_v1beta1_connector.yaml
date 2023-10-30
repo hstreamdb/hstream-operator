@@ -1,0 +1,24 @@
+apiVersion: apps.hstream.io/v1beta1
+kind: Connector
+metadata:
+  labels:
+    app.kubernetes.io/name: connector
+    app.kubernetes.io/instance: connector-sample
+    app.kubernetes.io/part-of: hstream-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: hstream-operator
+  name: connector-sample
+spec:
+  type: sink-elasticsearch
+  templateName: connectortemplate-sample
+  streams:
+    - stream01
+    # - stream02
+  patches:
+    stream01:
+      offsetStream: stream01-offset
+      index: index01
+    # stream02:
+    #   offsetStream: stream02-offset
+    #   index: index02
+  hserverEndpoint: hstreamdb-sample-internal-hserver.hstreamdb:6570

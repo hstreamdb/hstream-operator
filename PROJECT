@@ -17,4 +17,22 @@ resources:
   kind: HStreamDB
   path: github.com/hstreamdb/hstream-operator/api/v1alpha2
   version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: hstream.io
+  group: apps
+  kind: Connector
+  path: github.com/hstreamdb/hstream-operator/api/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: hstream.io
+  group: apps
+  kind: ConnectorTemplate
+  path: github.com/hstreamdb/hstream-operator/api/v1beta1
+  version: v1beta1
 version: "3"
