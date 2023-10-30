@@ -266,7 +266,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 						},
 						{
 							Name:  "log",
-							Image: "busybox:1.36",
+							Image: "busybox:1.36", // TODO: Allow user to specify the registry.
 							Args: []string{
 								"/bin/sh",
 								"-c",
