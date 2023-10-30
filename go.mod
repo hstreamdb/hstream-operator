@@ -13,7 +13,6 @@ require (
 )
 
 require (
-	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

@@ -18,8 +18,8 @@ package v1beta1
 
 import "strings"
 
-func GenConnectorConfigMapName(connectorName string, isTemplate bool) (suffix string) {
-	suffix += connectorName + "-h" // Short for hstreamio.
+func GenConnectorConfigMapName(name string, isTemplate bool) (suffix string) {
+	suffix += name + "-h" // Short for hstreamio.
 
 	if isTemplate {
 		suffix += "ct" // Short for connector template.
@@ -31,9 +31,9 @@ func GenConnectorConfigMapName(connectorName string, isTemplate bool) (suffix st
 }
 
 func GenConnectorConfigMapNameForStream(connectorName, stream string) string {
-	return GenConnectorConfigMapName(connectorName, false) + "-for-" + strings.Replace(stream, "_", "-", -1)
+	return GenConnectorConfigMapName(connectorName, false) + "-" + strings.Replace(stream, "_", "-", -1)
 }
 
 func GenConnectorDeploymentName(connectorName, stream string) string {
-	return connectorName + "-" + strings.Replace(stream, "_", "-", -1) + "-hc"
+	return connectorName + "-hc-" + strings.Replace(stream, "_", "-", -1)
 }

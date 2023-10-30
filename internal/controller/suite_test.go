@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,10 +48,14 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var k8sClient client.Client
-var testEnv *envtest.Environment
-var clusterReconciler *HStreamDBReconciler
+var (
+	cfg               *rest.Config
+	k8sClient         client.Client
+	testEnv           *envtest.Environment
+	ctx               context.Context
+	cancel            context.CancelFunc
+	clusterReconciler *HStreamDBReconciler
+)
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -60,6 +65,8 @@ func TestControllers(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+
+	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -95,25 +102,36 @@ var _ = BeforeSuite(func() {
 
 	clusterReconciler = createTestClusterReconciler()
 
-	if isUsingExistingCluster() {
-		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme.Scheme,
-			MetricsBindAddress: "0",
-		})
-		Expect(err).NotTo(HaveOccurred())
+	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).NotTo(HaveOccurred())
 
+	if isUsingExistingCluster() {
 		err = clusterReconciler.SetupWithManager(k8sManager)
 		Expect(err).NotTo(HaveOccurred())
-
-		go func() {
-			defer GinkgoRecover()
-			err = k8sManager.Start(ctrl.SetupSignalHandler())
-			Expect(err).ToNot(HaveOccurred(), "failed to run manager")
-		}()
 	}
+
+	err = (&ConnectorTemplateReconciler{
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+	err = (&ConnectorReconciler{
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		defer GinkgoRecover()
+		err = k8sManager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
 })
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
@@ -123,7 +141,7 @@ func createTestClusterReconciler() *HStreamDBReconciler {
 	return &HStreamDBReconciler{
 		Client:              k8sClient,
 		Scheme:              k8sClient.Scheme(),
-		Recorder:            mock.GetEventRecorderFor("HStreamDB-controller"),
+		Recorder:            mock.GetEventRecorderFor("HStreamDB Controller"),
 		AdminClientProvider: admin.NewAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
 	}
 }

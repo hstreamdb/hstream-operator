@@ -37,12 +37,12 @@ var _ = Describe("v1beta1/connector_utils", func() {
 	})
 
 	It("should generate correct configmap name for stream", func() {
-		configMap := v1beta1.GenConnectorConfigMapNameForStream(connectorTpl, stream)
-		Expect(configMap).To(Equal("test-connector-tpl-hc-for-test-stream"))
+		configMap := v1beta1.GenConnectorConfigMapNameForStream(connector, stream)
+		Expect(configMap).To(Equal("test-connector-hc-test-stream"))
 	})
 
 	It("should generate correct deployment name", func() {
 		deploymentName := v1beta1.GenConnectorDeploymentName(connector, stream)
-		Expect(deploymentName).To(Equal("test-connector-test-stream-hc"))
+		Expect(deploymentName).To(Equal("test-connector-hc-test-stream"))
 	})
 })

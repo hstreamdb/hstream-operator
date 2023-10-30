@@ -24,7 +24,7 @@ import (
 func CreateDefaultConnectorTemplate() v1beta1.ConnectorTemplate {
 	return v1beta1.ConnectorTemplate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "connector-template-sample",
+			Name:      "test-connector-template",
 			Namespace: "default",
 		},
 		Spec: v1beta1.ConnectorTemplateSpec{

@@ -24,54 +24,45 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("controller/connectortemplate", func() {
 	connectorTpl := mock.CreateDefaultConnectorTemplate()
+	connectorTpl.Namespace = "connector-template-test"
 
-	Context("reconcile", func() {
-		It("should create a connector template successfully", func() {
-			fakeClient := fake.NewClientBuilder().WithRuntimeObjects(&connectorTpl).Build()
-			reconciler := ConnectorTemplateReconciler{
-				Client: fakeClient,
-				Scheme: scheme.Scheme,
-			}
+	It("should create a connector template successfully", func() {
+		Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: connectorTpl.Namespace,
+			},
+		})).Should(Succeed())
 
-			_, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      connectorTpl.Name,
-					Namespace: connectorTpl.Namespace,
-				}},
-			)
+		By("creating a connector template")
+		Expect(k8sClient.Create(context.TODO(), &connectorTpl)).Should(Succeed())
 
-			Expect(err).ShouldNot(HaveOccurred())
+		var configMap corev1.ConfigMap
+		configMapName := v1beta1.GenConnectorConfigMapName(connectorTpl.Name, true)
 
-			By("check if the connector template's configmap is generated")
-			var configMap corev1.ConfigMap
-			err = fakeClient.Get(context.TODO(), types.NamespacedName{
-				Name:      v1beta1.GenConnectorConfigMapName(connectorTpl.Name, true),
+		By("check if the connector template's configmap is generated")
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), types.NamespacedName{
+				Name:      configMapName,
 				Namespace: connectorTpl.Namespace,
 			}, &configMap)
+		}).Should(BeNil())
 
-			Expect(err).ShouldNot(HaveOccurred())
+		expectedOwnerReference := metav1.OwnerReference{
+			APIVersion:         "apps.hstream.io/v1beta1",
+			Kind:               "ConnectorTemplate",
+			Name:               "test-connector-template",
+			UID:                connectorTpl.UID,
+			Controller:         &[]bool{true}[0],
+			BlockOwnerDeletion: &[]bool{true}[0],
+		}
 
-			By("delete the connector template")
-			err = fakeClient.Delete(context.TODO(), &connectorTpl)
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      connectorTpl.Name,
-					Namespace: connectorTpl.Namespace,
-				}},
-			)
-
-			Expect(err).ShouldNot(HaveOccurred())
-		})
+		By("check if the owner reference of the configmap is set")
+		Expect(configMap.OwnerReferences).To(ContainElement(expectedOwnerReference))
 	})
 })

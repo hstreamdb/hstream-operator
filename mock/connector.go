@@ -24,12 +24,12 @@ import (
 func CreateDefaultConnector() v1beta1.Connector {
 	return v1beta1.Connector{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "connector-sample",
+			Name:      "test-connector",
 			Namespace: "default",
 		},
 		Spec: v1beta1.ConnectorSpec{
 			Type:         "sink-elasticsearch", // We only support this type for now.
-			TemplateName: "connector-template-sample",
+			TemplateName: "test-connector-template",
 			Streams: []string{
 				"stream01",
 			},

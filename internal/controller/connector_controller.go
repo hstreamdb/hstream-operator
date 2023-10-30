@@ -72,7 +72,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	configMapNames := []string{}
 	for _, stream := range connector.Spec.Streams {
-		configMapNames = append(configMapNames, v1beta1.GenConnectorConfigMapNameForStream(connector.Spec.TemplateName, stream))
+		configMapNames = append(configMapNames, v1beta1.GenConnectorConfigMapNameForStream(connector.Name, stream))
 	}
 	var configs []map[string]interface{}
 	cfgs, err := r.mergePatchesIntoConfigs(ctx, log, connector)
