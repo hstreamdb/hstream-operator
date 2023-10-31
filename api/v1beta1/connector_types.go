@@ -60,6 +60,10 @@ type ConnectorSpec struct {
 	// +kube:validation:Required
 	HServerEndpoint string `json:"hserverEndpoint"`
 
+	// ImageRegistry is used to specify the registry of the connector container image.
+	// +optional
+	ImageRegistry *string `json:"imageRegistry,omitempty"`
+
 	// Deprecated: use `Container.Ports` instead.
 	// ContainerPorts is used to specify the ports that will be exposed by the connector container.
 	// +optional

@@ -123,6 +123,11 @@ func (in *ConnectorSpec) DeepCopyInto(out *ConnectorSpec) {
 		*out = make(json.RawMessage, len(*in))
 		copy(*out, *in)
 	}
+	if in.ImageRegistry != nil {
+		in, out := &in.ImageRegistry, &out.ImageRegistry
+		*out = new(string)
+		**out = **in
+	}
 	if in.ContainerPorts != nil {
 		in, out := &in.ContainerPorts, &out.ContainerPorts
 		*out = make([]v1.ContainerPort, len(*in))
