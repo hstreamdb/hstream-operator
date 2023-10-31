@@ -21,11 +21,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateDefaultConnector() v1beta1.Connector {
+func CreateDefaultConnector(ns string) v1beta1.Connector {
 	return v1beta1.Connector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-connector",
-			Namespace: "default",
+			Namespace: ns,
 		},
 		Spec: v1beta1.ConnectorSpec{
 			Type:         "sink-elasticsearch", // We only support this type for now.

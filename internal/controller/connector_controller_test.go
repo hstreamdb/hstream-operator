@@ -24,33 +24,37 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 )
 
-var _ = Describe("controller/connector", func() {
+var _ = Describe("controller/connector", Ordered, func() {
 	connectorTpl := mock.CreateDefaultConnectorTemplate()
 	connectorTpl.Namespace = "connector-test"
-	connector := mock.CreateDefaultConnector()
-	connector.Namespace = "connector-test"
 
-	It("should create/delete a connector successfully", func() {
+	BeforeAll(func() {
 		Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: connector.Namespace,
+				Name: connectorTpl.Namespace,
 			},
 		})).Should(Succeed())
 
 		By("creating a connector template")
 		Expect(k8sClient.Create(context.TODO(), &connectorTpl)).Should(Succeed())
+	})
+
+	It("should create/delete a connector successfully", func() {
+		connector := mock.CreateDefaultConnector("connector-test")
+		connector.Name = connector.Name + "-1"
+		var configMap corev1.ConfigMap
+		var deployment appsv1.Deployment
+		configMapName, deploymentName := getConnectorSubResourceName(&connector)
 
 		By("creating a connector")
 		Expect(k8sClient.Create(context.TODO(), &connector)).Should(Succeed())
-
-		var configMap corev1.ConfigMap
-		configMapName := v1beta1.GenConnectorConfigMapNameForStream(connector.Name, connector.Spec.Streams[0])
 
 		By("check if the connector's configmap is generated")
 		Eventually(func() error {
@@ -59,9 +63,6 @@ var _ = Describe("controller/connector", func() {
 				Namespace: connector.Namespace,
 			}, &configMap)
 		}).Should(BeNil())
-
-		var deployment appsv1.Deployment
-		deploymentName := v1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[0])
 
 		By("check if the connector's deployment is generated")
 		Eventually(func() error {
@@ -74,7 +75,7 @@ var _ = Describe("controller/connector", func() {
 		expectedOwnerReference := metav1.OwnerReference{
 			APIVersion:         "apps.hstream.io/v1beta1",
 			Kind:               "Connector",
-			Name:               "test-connector",
+			Name:               "test-connector-1",
 			UID:                connector.UID,
 			Controller:         &[]bool{true}[0],
 			BlockOwnerDeletion: &[]bool{true}[0],
@@ -87,14 +88,50 @@ var _ = Describe("controller/connector", func() {
 		Expect(deployment.OwnerReferences).To(ContainElement(expectedOwnerReference))
 	})
 
-	It("should get prom annotations", func() {
-		connector.Annotations = map[string]string{
-			"prometheus.io/scrape": "true",
-		}
-		annotations := getPromAnnotations(connector)
+	It("should set connector container ports and resources", func() {
+		connector := mock.CreateDefaultConnector("connector-test")
+		connector.Name = connector.Name + "-2"
+		var deployment appsv1.Deployment
+		_, deploymentName := getConnectorSubResourceName(&connector)
 
-		Expect(annotations).To(Equal(map[string]string{
-			"prometheus.io/scrape": "true",
-		}))
+		connector.Spec.Container = &v1beta1.ConnectorContainer{
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "prom",
+					ContainerPort: 9400,
+				},
+			},
+			Resources: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("300m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+			},
+		}
+
+		By("creating a connector")
+		Expect(k8sClient.Create(context.TODO(), &connector)).Should(Succeed())
+
+		By("check if the connector's deployment is generated")
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: connector.Namespace,
+			}, &deployment)
+		}).Should(BeNil())
+
+		Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ContainElement(connector.Spec.Container.Ports[0]))
+		Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(*connector.Spec.Container.Resources))
+
+		connector.Spec.Container = nil
 	})
 })
+
+func getConnectorSubResourceName(connector *v1beta1.Connector) (string, string) {
+	return v1beta1.GenConnectorConfigMapNameForStream(connector.Name, connector.Spec.Streams[0]),
+		v1beta1.GenConnectorDeploymentName(connector.Name, connector.Spec.Streams[0])
+}
