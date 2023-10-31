@@ -247,7 +247,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 					Containers: []corev1.Container{
 						{
 							Name:  connector.Name,
-							Image: v1beta1.ConnectorImageMap[connector.Spec.Type],
+							Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
 							Args: []string{
 								"run",
 								"--config /data/config/config.json",
@@ -266,7 +266,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 						},
 						{
 							Name:  "log",
-							Image: "busybox:1.36", // TODO: Allow user to specify the registry.
+							Image: addImageRegistry("busybox:1.36", connector.Spec.ImageRegistry),
 							Args: []string{
 								"/bin/sh",
 								"-c",
@@ -313,6 +313,14 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	}
 
 	return r.Create(ctx, &deployment)
+}
+
+func addImageRegistry(image string, registry *string) string {
+	if registry == nil {
+		return image
+	}
+
+	return *registry + "/" + image
 }
 
 func (r *ConnectorReconciler) getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
