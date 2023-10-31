@@ -216,7 +216,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	}
 	var containerResources corev1.ResourceRequirements
 
-	// Do not remove this block, it is used to keep backward compatibility.
+	//nolint:staticcheck,SA1019 // this block is used to keep backward compatibility.
 	if connector.Spec.ContainerPorts != nil {
 		containerPorts = append(containerPorts, connector.Spec.ContainerPorts...)
 	}
