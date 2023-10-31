@@ -86,4 +86,12 @@ var _ = Describe("controller/connector", func() {
 		By("check if the owner reference of the deployment is set")
 		Expect(deployment.OwnerReferences).To(ContainElement(expectedOwnerReference))
 	})
+
+	It("should add image registry", func() {
+		registry := "hstream.io"
+		image := "busybox"
+
+		Expect(addImageRegistry(image, &registry)).To(Equal("hstream.io/busybox"))
+		Expect(addImageRegistry(image, nil)).To(Equal("busybox"))
+	})
 })

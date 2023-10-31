@@ -48,6 +48,8 @@ spec:
                 type: array
               hserverEndpoint:
                 type: string
+              imageRegistry:
+                type: string
               patches:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
