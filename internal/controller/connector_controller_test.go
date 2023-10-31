@@ -86,4 +86,15 @@ var _ = Describe("controller/connector", func() {
 		By("check if the owner reference of the deployment is set")
 		Expect(deployment.OwnerReferences).To(ContainElement(expectedOwnerReference))
 	})
+
+	It("should get prom annotations", func() {
+		connector.Annotations = map[string]string{
+			"prometheus.io/scrape": "true",
+		}
+		annotations := getPromAnnotations(connector)
+
+		Expect(annotations).To(Equal(map[string]string{
+			"prometheus.io/scrape": "true",
+		}))
+	})
 })

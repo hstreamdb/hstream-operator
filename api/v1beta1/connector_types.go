@@ -58,11 +58,27 @@ type ConnectorSpec struct {
 	// HServerEndpoint is the endpoint of the HStreamDB server.
 	// For example: "hstreamdb-hserver:6570"
 	// +kube:validation:Required
-	HServerEndpoint string `json:"hserverEndpoint,omitempty"`
+	HServerEndpoint string `json:"hserverEndpoint"`
 
+	// Deprecated: use `Container.Ports` instead.
 	// ContainerPorts is used to specify the ports that will be exposed by the connector container.
 	// +optional
 	ContainerPorts []corev1.ContainerPort `json:"containerPorts,omitempty"`
+
+	// Container is used to specify the connector container configuration.
+	// +optional
+	Container *ConnectorContainer `json:"container,omitempty"`
+}
+
+// ConnectorContainer defines the connector container configuration.
+type ConnectorContainer struct {
+	// Ports is used to specify the ports that will be exposed by the connector container.
+	// +optional
+	Ports []corev1.ContainerPort `json:"ports,omitempty"`
+
+	// Resources is used to specify the resource requirements of the connector container.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // ConnectorStatus defines the observed state of Connector

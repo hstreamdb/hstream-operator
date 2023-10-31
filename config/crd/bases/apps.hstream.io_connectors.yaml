@@ -26,6 +26,48 @@ spec:
             type: object
           spec:
             properties:
+              container:
+                properties:
+                  ports:
+                    items:
+                      properties:
+                        containerPort:
+                          format: int32
+                          type: integer
+                        hostIP:
+                          type: string
+                        hostPort:
+                          format: int32
+                          type: integer
+                        name:
+                          type: string
+                        protocol:
+                          default: TCP
+                          type: string
+                      required:
+                      - containerPort
+                      type: object
+                    type: array
+                  resources:
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                type: object
               containerPorts:
                 items:
                   properties:
@@ -63,6 +105,7 @@ spec:
                 - sink-elasticsearch
                 type: string
             required:
+            - hserverEndpoint
             - streams
             - templateName
             - type

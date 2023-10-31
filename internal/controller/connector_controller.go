@@ -209,14 +209,27 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logge
 
 func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector v1beta1.Connector, stream, configMapName string) error {
 	name := v1beta1.GenConnectorDeploymentName(connector.Name, stream)
-	containerPorts := append(
-		[]corev1.ContainerPort{
-			{
-				ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
-			},
+	containerPorts := []corev1.ContainerPort{
+		{
+			ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
 		},
-		connector.Spec.ContainerPorts...,
-	)
+	}
+	var containerResources corev1.ResourceRequirements
+
+	// Do not remove this block, it is used to keep backward compatibility.
+	if connector.Spec.ContainerPorts != nil {
+		containerPorts = append(containerPorts, connector.Spec.ContainerPorts...)
+	}
+	if connector.Spec.Container != nil {
+		if connector.Spec.Container.Ports != nil {
+			containerPorts = append(containerPorts, connector.Spec.Container.Ports...)
+		}
+
+		if connector.Spec.Container.Resources != nil {
+			containerResources = *connector.Spec.Container.Resources
+		}
+	}
+
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: connector.Namespace,
@@ -241,7 +254,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 						hapi.InstanceKey:  connector.Name,
 						"stream":          stream,
 					},
-					Annotations: r.getPromAnnotations(connector),
+					Annotations: getPromAnnotations(connector),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -263,6 +276,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 									MountPath: "/data",
 								},
 							},
+							Resources: containerResources,
 						},
 						{
 							Name:  "log",
@@ -281,6 +295,9 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU: resource.MustParse("300m"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU: resource.MustParse("100m"),
 								},
 							},
 						},
@@ -315,7 +332,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	return r.Create(ctx, &deployment)
 }
 
-func (r *ConnectorReconciler) getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
+func getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
 	annotaions = make(map[string]string)
 
 	for k, v := range connector.Annotations {
