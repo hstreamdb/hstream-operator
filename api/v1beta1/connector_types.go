@@ -69,20 +69,10 @@ type ConnectorSpec struct {
 	// +optional
 	ContainerPorts []corev1.ContainerPort `json:"containerPorts,omitempty"`
 
-	// Container is used to specify the connector container configuration.
+	// Container is used to override the default connector container fields.
+	// Note that not all fields are supported.
 	// +optional
-	Container *ConnectorContainer `json:"container,omitempty"`
-}
-
-// ConnectorContainer defines the connector container configuration.
-type ConnectorContainer struct {
-	// Ports is used to specify the ports that will be exposed by the connector container.
-	// +optional
-	Ports []corev1.ContainerPort `json:"ports,omitempty"`
-
-	// Resources is used to specify the resource requirements of the connector container.
-	// +optional
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Container corev1.Container `json:"container,omitempty"`
 }
 
 // ConnectorStatus defines the observed state of Connector

@@ -94,14 +94,14 @@ var _ = Describe("controller/connector", Ordered, func() {
 		var deployment appsv1.Deployment
 		_, deploymentName := getConnectorSubResourceName(&connector)
 
-		connector.Spec.Container = &v1beta1.ConnectorContainer{
+		connector.Spec.Container = corev1.Container{
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          "prom",
 					ContainerPort: 9400,
 				},
 			},
-			Resources: &corev1.ResourceRequirements{
+			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("500m"),
 					corev1.ResourceMemory: resource.MustParse("256Mi"),
@@ -125,9 +125,7 @@ var _ = Describe("controller/connector", Ordered, func() {
 		}).Should(BeNil())
 
 		Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ContainElement(connector.Spec.Container.Ports[0]))
-		Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(*connector.Spec.Container.Resources))
-
-		connector.Spec.Container = nil
+		Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(connector.Spec.Container.Resources))
 	})
 })
 

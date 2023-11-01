@@ -13,25 +13,28 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// structAssign copy the value of struct from src to dist
-func structAssign(dist interface{}, src interface{}) {
-	dVal := reflect.ValueOf(dist).Elem()
-	sVal := reflect.ValueOf(src).Elem()
-	sType := sVal.Type()
-	for i := 0; i < sVal.NumField(); i++ {
-		if sVal.Field(i).IsZero() {
+// structAssign copy the value of struct from src to dist.
+func structAssign(dist, src interface{}) error {
+	distVal := reflect.ValueOf(dist).Elem()
+	srcVal := reflect.ValueOf(src).Elem()
+	srcType := srcVal.Type()
+
+	for i := 0; i < srcVal.NumField(); i++ {
+		if srcVal.Field(i).IsZero() {
 			continue
 		}
 
-		// we need to check if the dist struct has the same field
-		name := sType.Field(i).Name
-		dvField := dVal.FieldByName(name)
-		if ok := dvField.IsValid(); !ok {
+		// Check if the dist has the same field.
+		name := srcType.Field(i).Name
+		distValField := distVal.FieldByName(name)
+		if ok := distValField.IsValid(); !ok {
 			continue
 		}
 
-		dvField.Set(reflect.ValueOf(sVal.Field(i).Interface()))
+		distValField.Set(srcVal.Field(i))
 	}
+
+	return nil
 }
 
 // mergeLabels merges the labels specified by the operator into

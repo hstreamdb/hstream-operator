@@ -214,21 +214,35 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 			ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
 		},
 	}
-	var containerResources corev1.ResourceRequirements
 
+	if connector.Spec.Container.Ports != nil {
+		containerPorts = append(containerPorts, connector.Spec.Container.Ports...)
+	}
 	//nolint:staticcheck,SA1019 // this block is used to keep backward compatibility.
 	if connector.Spec.ContainerPorts != nil {
 		containerPorts = append(containerPorts, connector.Spec.ContainerPorts...)
 	}
-	if connector.Spec.Container != nil {
-		if connector.Spec.Container.Ports != nil {
-			containerPorts = append(containerPorts, connector.Spec.Container.Ports...)
-		}
 
-		if connector.Spec.Container.Resources != nil {
-			containerResources = *connector.Spec.Container.Resources
-		}
+	connector.Spec.Container.Ports = containerPorts
+	preconfiguredContainer := corev1.Container{
+		Name:  connector.Name,
+		Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
+		Args: []string{
+			"run",
+			"--config /data/config/config.json",
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      configMapName,
+				MountPath: "/data/config",
+			},
+			{
+				Name:      "data",
+				MountPath: "/data",
+			},
+		},
 	}
+	structAssign(&preconfiguredContainer, &connector.Spec.Container)
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -258,26 +272,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{
-							Name:  connector.Name,
-							Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
-							Args: []string{
-								"run",
-								"--config /data/config/config.json",
-							},
-							Ports: containerPorts,
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      configMapName,
-									MountPath: "/data/config",
-								},
-								{
-									Name:      "data",
-									MountPath: "/data",
-								},
-							},
-							Resources: containerResources,
-						},
+						preconfiguredContainer,
 						{
 							Name:  "log",
 							Image: addImageRegistry("busybox:1.36", connector.Spec.ImageRegistry),
