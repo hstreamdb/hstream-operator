@@ -58,15 +58,21 @@ type ConnectorSpec struct {
 	// HServerEndpoint is the endpoint of the HStreamDB server.
 	// For example: "hstreamdb-hserver:6570"
 	// +kube:validation:Required
-	HServerEndpoint string `json:"hserverEndpoint,omitempty"`
+	HServerEndpoint string `json:"hserverEndpoint"`
 
 	// ImageRegistry is used to specify the registry of the connector container image.
 	// +optional
 	ImageRegistry *string `json:"imageRegistry,omitempty"`
 
+	// Deprecated: use `Container.Ports` instead.
 	// ContainerPorts is used to specify the ports that will be exposed by the connector container.
 	// +optional
 	ContainerPorts []corev1.ContainerPort `json:"containerPorts,omitempty"`
+
+	// Container is used to override the default connector container fields.
+	// Note that not all fields are supported.
+	// +optional
+	Container corev1.Container `json:"container,omitempty"`
 }
 
 // ConnectorStatus defines the observed state of Connector

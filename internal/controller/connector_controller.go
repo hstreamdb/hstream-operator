@@ -209,14 +209,41 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logge
 
 func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector v1beta1.Connector, stream, configMapName string) error {
 	name := v1beta1.GenConnectorDeploymentName(connector.Name, stream)
-	containerPorts := append(
-		[]corev1.ContainerPort{
+	containerPorts := []corev1.ContainerPort{
+		{
+			ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
+		},
+	}
+
+	if connector.Spec.Container.Ports != nil {
+		containerPorts = append(containerPorts, connector.Spec.Container.Ports...)
+	}
+	//nolint:staticcheck,SA1019 // this block is used to keep backward compatibility.
+	if connector.Spec.ContainerPorts != nil {
+		containerPorts = append(containerPorts, connector.Spec.ContainerPorts...)
+	}
+
+	connector.Spec.Container.Ports = containerPorts
+	preconfiguredContainer := corev1.Container{
+		Name:  connector.Name,
+		Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
+		Args: []string{
+			"run",
+			"--config /data/config/config.json",
+		},
+		VolumeMounts: []corev1.VolumeMount{
 			{
-				ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
+				Name:      configMapName,
+				MountPath: "/data/config",
+			},
+			{
+				Name:      "data",
+				MountPath: "/data",
 			},
 		},
-		connector.Spec.ContainerPorts...,
-	)
+	}
+	structAssign(&preconfiguredContainer, &connector.Spec.Container)
+
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: connector.Namespace,
@@ -241,29 +268,11 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 						hapi.InstanceKey:  connector.Name,
 						"stream":          stream,
 					},
-					Annotations: r.getPromAnnotations(connector),
+					Annotations: getPromAnnotations(connector),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{
-							Name:  connector.Name,
-							Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
-							Args: []string{
-								"run",
-								"--config /data/config/config.json",
-							},
-							Ports: containerPorts,
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      configMapName,
-									MountPath: "/data/config",
-								},
-								{
-									Name:      "data",
-									MountPath: "/data",
-								},
-							},
-						},
+						preconfiguredContainer,
 						{
 							Name:  "log",
 							Image: addImageRegistry("busybox:1.36", connector.Spec.ImageRegistry),
@@ -281,6 +290,9 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU: resource.MustParse("300m"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU: resource.MustParse("100m"),
 								},
 							},
 						},
@@ -323,7 +335,7 @@ func addImageRegistry(image string, registry *string) string {
 	return *registry + "/" + image
 }
 
-func (r *ConnectorReconciler) getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
+func getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
 	annotaions = make(map[string]string)
 
 	for k, v := range connector.Annotations {
