@@ -14,7 +14,7 @@ import (
 )
 
 // structAssign copy the value of struct from src to dist.
-func structAssign(dist, src interface{}) error {
+func structAssign(dist, src interface{}) {
 	distVal := reflect.ValueOf(dist).Elem()
 	srcVal := reflect.ValueOf(src).Elem()
 	srcType := srcVal.Type()
@@ -33,8 +33,6 @@ func structAssign(dist, src interface{}) error {
 
 		distValField.Set(srcVal.Field(i))
 	}
-
-	return nil
 }
 
 // mergeLabels merges the labels specified by the operator into
