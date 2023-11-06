@@ -7,6 +7,7 @@ import (
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/mock"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -72,7 +73,7 @@ var _ = Describe("AddConsole", func() {
 			Context("should contain default config", func() {
 				It("should get default env", func() {
 					hServerContainer := &hdb.Spec.HServer.Container
-					ports := coverPortsFromArgs(hServerContainer.Args, extendPorts(hServerContainer.Ports, hServerPort))
+					ports := coverPortsFromArgs(hServerContainer.Args, extendPorts(hServerContainer.Ports, constants.DefaultHServerPort))
 					port := int32(0)
 					for i := range ports {
 						if ports[i].Name == "port" {

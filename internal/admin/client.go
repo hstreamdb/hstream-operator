@@ -126,7 +126,7 @@ func (ac *adminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 	} else {
 		namespace = ac.hdb.Namespace
 		svc := internal.GetHeadlessService(ac.hdb, hapi.ComponentTypeHMeta)
-		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, constants.HMetaDefaultPort.ContainerPort)
+		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, constants.DefaultHMetaPort.ContainerPort)
 	}
 
 	resp, statusCode, err := ac.remoteExec.GetAPIByService(namespace, hmetaAddr, "nodes")

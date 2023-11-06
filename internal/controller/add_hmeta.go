@@ -109,7 +109,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz",
-					Port:   intstr.FromInt(int(constants.HMetaDefaultPort.ContainerPort)),
+					Port:   intstr.FromInt(int(constants.DefaultHMetaPort.ContainerPort)),
 					Scheme: "HTTP",
 				},
 			},
@@ -121,7 +121,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/readyz?noleader",
-					Port:   intstr.FromInt(int(constants.HMetaDefaultPort.ContainerPort)),
+					Port:   intstr.FromInt(int(constants.DefaultHMetaPort.ContainerPort)),
 					Scheme: "HTTP",
 				},
 			},
