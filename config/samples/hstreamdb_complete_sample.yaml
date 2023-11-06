@@ -27,6 +27,33 @@ spec:
       targetPort: server-port
       nodePort: 31777
 ---
+# # Ref: https://github.com/hstreamdb/hstream/blob/main/conf/hstream.yaml
+# #
+# # This configmap is used to overwrite the default config of hstreamdb.
+# # Please note that not all the config items can be overwritten by this configmap.
+# # For example, the config item `hserver.id` is configured internally by hstream-operator
+# # because it is related to the number of hserver replicas.
+#
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: hstreamdb-sample-config
+# data:
+#   config: |
+#     hserver:
+#       # The identifier of a single HServer node,
+#       # the value must be given and can be overwritten by cli option `--server-id`
+#       id: 1
+
+#       # Server port value, the value must be given and can be overwritten by cli
+#       # option `--port`
+#       port: 6580
+
+#       # Server port value for internal communications between server nodes,
+#       # the value must be given
+#       # and can be overwritten by cli option `--internal-port`
+#       internal-port: 6581
+# ---
 apiVersion: apps.hstream.io/v1alpha2
 kind: HStreamDB
 metadata:
@@ -38,62 +65,62 @@ metadata:
     app.kubernetes.io/created-by: hstream-operator
   name: hstreamdb-sample
 spec:
-#  externalHmeta:
-#    host: rqlite-svc
-#    port: 4001
-#    namespace: default
+  #  externalHmeta:
+  #    host: rqlite-svc
+  #    port: 4001
+  #    namespace: default
 
-#  config:
-#    nshards: 1
-#    metadata-replicate-across: 1
-#    logDeviceConfig:
-#      {
-#        "server_settings": {
-#          "enable-nodes-configuration-manager": "true",
-#          "use-nodes-configuration-manager-nodes-configuration": "true",
-#          "enable-node-self-registration": "true",
-#          "enable-cluster-maintenance-state-machine": "true"
-#        },
-#        "client_settings": {
-#          "enable-nodes-configuration-manager": "true",
-#          "use-nodes-configuration-manager-nodes-configuration": "true",
-#          "admin-client-capabilities": "true"
-#        },
-#        "cluster": "hstore",
-#        "internal_logs": {
-#          "config_log_deltas": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "config_log_snapshots": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "event_log_deltas": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "event_log_snapshots": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "maintenance_log_deltas": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "maintenance_log_snapshots": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          }
-#        },
-#        "version": 1
-#      }
+  #  config:
+  #    nshards: 1
+  #    metadata-replicate-across: 1
+  #    logDeviceConfig:
+  #      {
+  #        "server_settings": {
+  #          "enable-nodes-configuration-manager": "true",
+  #          "use-nodes-configuration-manager-nodes-configuration": "true",
+  #          "enable-node-self-registration": "true",
+  #          "enable-cluster-maintenance-state-machine": "true"
+  #        },
+  #        "client_settings": {
+  #          "enable-nodes-configuration-manager": "true",
+  #          "use-nodes-configuration-manager-nodes-configuration": "true",
+  #          "admin-client-capabilities": "true"
+  #        },
+  #        "cluster": "hstore",
+  #        "internal_logs": {
+  #          "config_log_deltas": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "config_log_snapshots": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "event_log_deltas": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "event_log_snapshots": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "maintenance_log_deltas": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "maintenance_log_snapshots": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          }
+  #        },
+  #        "version": 1
+  #      }
   gateway:
     endpoint: "hstreamdb-sample.default"
     image: hstreamdb/hstream-gateway
@@ -137,10 +164,20 @@ spec:
     container:
       name: hserver
       args:
-      - --log-level
-      - debug
-      - --store-admin-host
-      - hstreamdb-sample-admin-server
+        - --log-level
+        - debug
+        - --store-admin-host
+        - hstreamdb-sample-admin-server
+    #     # For custom hserver config.
+    #     - --config-path
+    #     - /etc/custom/hstream/config
+    #   volumeMounts:
+    #     - name: hstreamdb-config-vol
+    #       mountPath: /etc/custom/hstream
+    # volume:
+    #   - name: hstreamdb-config-vol
+    #     configMap:
+    #       name: hstreamdb-sample-config
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
@@ -155,12 +192,12 @@ spec:
           containerPort: 4441
         - name: admin-port
           containerPort: 6440
-#    volumeClaimTemplate:
-#      spec:
-#        storageClassName: 'standard'
-#        resources:
-#          requests:
-#            storage: 1Gi
+  #    volumeClaimTemplate:
+  #      spec:
+  #        storageClassName: 'standard'
+  #        resources:
+  #          requests:
+  #            storage: 1Gi
   hmeta:
     image: rqlite/rqlite:latest
     imagePullPolicy: IfNotPresent
