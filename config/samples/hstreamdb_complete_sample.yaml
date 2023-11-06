@@ -168,7 +168,7 @@ spec:
         - debug
         - --store-admin-host
         - hstreamdb-sample-admin-server
-    #     # For custom hserver config.
+    #     # Overriding the default config of hserver.
     #     - --config-path
     #     - /etc/custom/hstream/config
     #   volumeMounts:
