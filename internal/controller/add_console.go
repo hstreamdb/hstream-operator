@@ -8,6 +8,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -162,7 +163,7 @@ func (a addConsole) getContainer(hdb *hapi.HStreamDB) ([]corev1.Container, error
 
 	if _, ok := args["-Dplain.hstream.privateAddress"]; !ok {
 		hServerContainer := &hdb.Spec.HServer.Container
-		ports := coverPortsFromArgs(hServerContainer.Args, extendPorts(hServerContainer.Ports, hServerPort))
+		ports := coverPortsFromArgs(hServerContainer.Args, extendPorts(hServerContainer.Ports, constants.DefaultHServerPort))
 		port := int32(0)
 		for i := range ports {
 			if ports[i].Name == "port" {

@@ -134,7 +134,7 @@ func extendPorts(ports []corev1.ContainerPort, externalPorts ...corev1.Container
 	return ports
 }
 
-// coverPorts use the port in user-defined args to cover the default port
+// coverPortsFromArgs use the port in user-defined args to cover the default port
 func coverPortsFromArgs(args []string, ports []corev1.ContainerPort) []corev1.ContainerPort {
 	newPorts := make([]corev1.ContainerPort, len(ports))
 	copy(newPorts, ports)
@@ -144,11 +144,13 @@ func coverPortsFromArgs(args []string, ports []corev1.ContainerPort) []corev1.Co
 	parsedArgs := flags.Flags()
 
 	for i := range ports {
-		name := (&ports[i]).Name
+		name := ports[i].Name
+
 		if port, ok := parsedArgs["--"+name]; ok {
 			newPorts[i].ContainerPort = intstr.Parse(port).IntVal
 		}
 	}
+
 	return newPorts
 }
 
@@ -197,7 +199,7 @@ func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 func parseHMetaPort(args []string) (corev1.ContainerPort, error) {
 	flags := internal.FlagSet{}
 	if err := flags.Parse(args); err != nil {
-		return constants.HMetaDefaultPort, err
+		return constants.DefaultHMetaPort, err
 	}
 	if addr, ok := flags.Flags()["--http-addr"]; ok {
 		if slice := strings.Split(addr, ":"); len(slice) == 2 {
@@ -209,5 +211,5 @@ func parseHMetaPort(args []string) (corev1.ContainerPort, error) {
 		}
 	}
 
-	return constants.HMetaDefaultPort, nil
+	return constants.DefaultHMetaPort, nil
 }

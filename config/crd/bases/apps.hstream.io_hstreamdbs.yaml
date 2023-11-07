@@ -9264,7 +9264,6 @@ spec:
                 - container
                 - endpoint
                 - image
-                - port
                 - replicas
                 type: object
               hmeta:
