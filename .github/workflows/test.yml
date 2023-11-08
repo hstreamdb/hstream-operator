@@ -169,6 +169,7 @@ jobs:
             sleep 5
           done
       - uses: ./.github/actions/deploy-client
+        if: matrix.install != 'yaml'
         timeout-minutes: 5
       - if: failure()
         run: kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
