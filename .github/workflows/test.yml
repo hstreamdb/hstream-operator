@@ -141,6 +141,10 @@ jobs:
             sleep 1
           done
 
+      - name: Create hstreamdb namespace
+        run: |
+          kubectl create namespace hstreamdb
+
       - name: Deploy hstreamdb
         if: matrix.install != 'yaml_with_external_hmeta'
         run: |
