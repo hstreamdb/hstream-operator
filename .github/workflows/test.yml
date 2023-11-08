@@ -115,11 +115,9 @@ jobs:
         if: matrix.install == 'yaml_with_external_hmeta'
 
       - name: Build image
-        env:
-          IMG: "hstreamdb/hstream-operator-controller:latest"
         run: |
           eval $(minikube docker-env)
-          docker build -t $IMG .
+          make docker-build
           echo "Verify images:"
           docker images
 
@@ -177,10 +175,10 @@ jobs:
         if: matrix.install != 'yaml'
         timeout-minutes: 5
       - if: failure()
-        run: kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
+        run: kubectl describe po hstream-operator-controller-manager -n hstream-operator-system
+      - if: failure()
+        run: kubectl logs hstream-operator-controller-manager -n hstream-operator-system --tail=1000
       - if: failure()
         run: kubectl describe hstreamdb -n hstreamdb hstreamdb-sample
-      - if: failure()
-        run: kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json
       - if: failure()
         run: kubectl get pods -A
