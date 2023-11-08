@@ -121,14 +121,12 @@ jobs:
 
       - name: Deploy controller by yaml
         if: matrix.install != 'helm'
-        env:
-          IMG: "hstreamdb/hstream-operator-controller:latest"
         run: make deploy
       - name: Deploy controller by helm
         if: matrix.install == 'helm'
         run: |
           helm install hstream-operator deploy/charts/hstream-operator \
-            --set image.tag=latest,image.repository=hstreamdb/hstream-operator-controller \
+            --set image.tag=latest \
             --namespace hstream-operator-system \
             --create-namespace
 
@@ -138,7 +136,7 @@ jobs:
           set -euo pipefail
           while [ "$(kubectl get pods -l "control-plane=hstream-operator-manager" -n hstream-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
             echo "waiting operator controller pod running"
-            sleep 1
+            sleep 5
           done
 
       - name: Create hstreamdb namespace
@@ -163,8 +161,8 @@ jobs:
             condition="$(kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] | select( .type == "Ready" and .status == "True")')";
             [[ "$condition" == "null" ]] || [[ "$condition" == "" ]]
           do
-            echo "waiting"
-            sleep 1
+            echo "waiting hstreamdb ready"
+            sleep 5
           done
       - uses: ./.github/actions/deploy-client
         timeout-minutes: 5

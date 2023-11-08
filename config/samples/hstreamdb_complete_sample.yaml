@@ -39,62 +39,62 @@ metadata:
   name: hstreamdb-sample
   namespace: hstreamdb
 spec:
-#  externalHmeta:
-#    host: rqlite-svc
-#    port: 4001
-#    namespace: default
+  #  externalHmeta:
+  #    host: rqlite-svc
+  #    port: 4001
+  #    namespace: default
 
-#  config:
-#    nshards: 1
-#    metadata-replicate-across: 1
-#    logDeviceConfig:
-#      {
-#        "server_settings": {
-#          "enable-nodes-configuration-manager": "true",
-#          "use-nodes-configuration-manager-nodes-configuration": "true",
-#          "enable-node-self-registration": "true",
-#          "enable-cluster-maintenance-state-machine": "true"
-#        },
-#        "client_settings": {
-#          "enable-nodes-configuration-manager": "true",
-#          "use-nodes-configuration-manager-nodes-configuration": "true",
-#          "admin-client-capabilities": "true"
-#        },
-#        "cluster": "hstore",
-#        "internal_logs": {
-#          "config_log_deltas": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "config_log_snapshots": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "event_log_deltas": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "event_log_snapshots": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "maintenance_log_deltas": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          },
-#          "maintenance_log_snapshots": {
-#            "replicate_across": {
-#              "node": 3
-#            }
-#          }
-#        },
-#        "version": 1
-#      }
+  #  config:
+  #    nshards: 1
+  #    metadata-replicate-across: 1
+  #    logDeviceConfig:
+  #      {
+  #        "server_settings": {
+  #          "enable-nodes-configuration-manager": "true",
+  #          "use-nodes-configuration-manager-nodes-configuration": "true",
+  #          "enable-node-self-registration": "true",
+  #          "enable-cluster-maintenance-state-machine": "true"
+  #        },
+  #        "client_settings": {
+  #          "enable-nodes-configuration-manager": "true",
+  #          "use-nodes-configuration-manager-nodes-configuration": "true",
+  #          "admin-client-capabilities": "true"
+  #        },
+  #        "cluster": "hstore",
+  #        "internal_logs": {
+  #          "config_log_deltas": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "config_log_snapshots": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "event_log_deltas": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "event_log_snapshots": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "maintenance_log_deltas": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          },
+  #          "maintenance_log_snapshots": {
+  #            "replicate_across": {
+  #              "node": 3
+  #            }
+  #          }
+  #        },
+  #        "version": 1
+  #      }
   gateway:
     endpoint: "hstreamdb-sample.default"
     image: hstreamdb/hstream-gateway
@@ -117,6 +117,16 @@ spec:
     replicas: 1
     container:
       name: console
+      env:
+        - name: HSTREAM_PUBLIC_ADDRESS
+          # The HSTREAM_PUBLIC_ADDRESS will be shown on the overview of console dashboard
+          # to tell users how to connect HStream cluster through hserver or gateway component.
+          # If you deploy gateway, you should deploy a svc or LB for the gateway as the same time, and
+          # then set the svc name or LB addr of gateway to the HSTREAM_PUBLIC_ADDRESS
+          value: hstreamdb-sample.hstreamdb:6570
+          # The PROMETHEUS_URL will be used to show the metrics of HStream cluster on the console dashboard.
+        - name: PROMETHEUS_URL
+          value: http://localhost:9090
   hserver:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
@@ -124,10 +134,10 @@ spec:
     container:
       name: hserver
       args:
-      - --log-level
-      - debug
-      - --store-admin-host
-      - hstreamdb-sample-admin-server
+        - --log-level
+        - debug
+        - --store-admin-host
+        - hstreamdb-sample-admin-server
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
@@ -142,12 +152,12 @@ spec:
           containerPort: 4441
         - name: admin-port
           containerPort: 6440
-#    volumeClaimTemplate:
-#      spec:
-#        storageClassName: 'standard'
-#        resources:
-#          requests:
-#            storage: 1Gi
+      # volumeClaimTemplate:
+      #   spec:
+      #     storageClassName: "standard"
+      #     resources:
+      #       requests:
+      #         storage: 1Gi
   hmeta:
     image: rqlite/rqlite:latest
     imagePullPolicy: IfNotPresent
@@ -158,9 +168,9 @@ spec:
       ports:
         - name: port
           containerPort: 4001
-#    volumeClaimTemplate:
-#      spec:
-#        storageClassName: 'standard'
-#        resources:
-#          requests:
-#            storage: 1Gi
+    volumeClaimTemplate:
+      spec:
+        storageClassName: "standard"
+        resources:
+          requests:
+            storage: 1Gi
