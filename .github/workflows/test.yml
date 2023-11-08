@@ -160,7 +160,7 @@ jobs:
         shell: bash
         run: |
           while
-            condition="$(kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] |select( .type == "Ready" and .status == "True")')";
+            condition="$(kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] | select( .type == "Ready" and .status == "True")')";
             [[ "$condition" == "null" ]] || [[ "$condition" == "" ]]
           do
             echo "waiting"
