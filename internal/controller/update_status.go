@@ -14,8 +14,6 @@ import (
 type updateStatus struct{}
 
 func (u updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "update status")
-
 	if err := u.checkComponentsReady(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
@@ -24,7 +22,6 @@ func (u updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb
 		return &requeue{curError: err}
 	}
 
-	logger.Info("Update status")
 	if err := r.Status().Update(ctx, hdb); err != nil {
 		return &requeue{curError: err}
 	}

@@ -134,7 +134,7 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          while [ "$(kubectl get pods -l "control-plane=hstream-operator-manager" -n hstream-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
+          while [ "$(kubectl get pods -l 'control-plane=hstream-operator-manager' -n hstream-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
             echo "waiting operator controller pod running"
             sleep 5
           done
@@ -158,7 +158,7 @@ jobs:
         shell: bash
         run: |
           while
-            condition="$(kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] | select( .type == "Ready" and .status == "True")')";
+            condition="$(kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] | select(.type == "Ready" and .status == "True")')";
             [[ "$condition" == "null" ]] || [[ "$condition" == "" ]]
           do
             echo "waiting hstreamdb ready"
