@@ -37,6 +37,7 @@ metadata:
     app.kuberentes.io/managed-by: kustomize
     app.kubernetes.io/created-by: hstream-operator
   name: hstreamdb-sample
+  namespace: hstreamdb
 spec:
 #  externalHmeta:
 #    host: rqlite-svc
