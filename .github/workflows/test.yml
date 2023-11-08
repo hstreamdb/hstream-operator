@@ -119,8 +119,6 @@ jobs:
         run: |
           eval $(minikube docker-env)
           make docker-build
-          echo "Verify images:"
-          docker images
 
       - name: Deploy controller by yaml
         if: matrix.install == 'yaml'
@@ -146,17 +144,17 @@ jobs:
         run: |
           kubectl create namespace hstreamdb
 
-      - name: Deploy hstreamdb
+      - name: Deploy a minimal hstreamdb cluster
         if: matrix.install == 'yaml'
         run: |
           kubectl apply -f config/samples/hstreamdb.yaml
 
-      - name: Deploy hstreamdb with complete sample
+      - name: Deploy a complete hstreamdb cluster
         if: matrix.install == 'helm'
         run: |
           kubectl apply -f config/samples/hstreamdb_complete_sample.yaml
 
-      - name: Deploy hstreamdb with external hmeta cluster
+      - name: Deploy a hstreamdb cluster with an external hmeta cluster
         if: matrix.install == 'yaml_with_external_hmeta'
         run: |
           kubectl apply -f config/samples/hstreamdb_with_external_hmeta.yaml
