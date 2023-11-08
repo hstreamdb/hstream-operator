@@ -41,10 +41,6 @@ spec:
 # data:
 #   config: |
 #     hserver:
-#       # The identifier of a single HServer node,
-#       # the value must be given and can be overwritten by cli option `--server-id`
-#       id: 1
-
 #       # Server port value, the value must be given and can be overwritten by cli
 #       # option `--port`
 #       port: 6580
@@ -174,7 +170,7 @@ spec:
     #   volumeMounts:
     #     - name: hstreamdb-config-vol
     #       mountPath: /etc/custom/hstream
-    # volume:
+    # volumes:
     #   - name: hstreamdb-config-vol
     #     configMap:
     #       name: hstreamdb-sample-config

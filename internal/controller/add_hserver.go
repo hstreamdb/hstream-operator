@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"strconv"
 	"strings"
@@ -75,6 +76,8 @@ func (a addHServer) getSts(hdb *hapi.HStreamDB) appsv1.StatefulSet {
 
 func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 	hServer := &hdb.Spec.HServer
+	initContainers := a.getDefaultInitContainers(hdb)
+	container := a.getServerContainer(hdb)
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer),
@@ -84,8 +87,8 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 			NodeName:        hServer.NodeName,
 			NodeSelector:    hServer.NodeSelector,
 			SecurityContext: hServer.PodSecurityContext,
-			InitContainers:  hServer.InitContainers,
-			Containers:      a.getContainer(hdb),
+			InitContainers:  append(initContainers, hServer.InitContainers...),
+			Containers:      append([]corev1.Container{container}, hServer.SidecarContainers...),
 			Volumes:         append(hServer.Volumes, a.getVolumes(hdb)...),
 		},
 	}
@@ -94,7 +97,62 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 	return podTemplate
 }
 
-func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
+func (a addHServer) getDefaultInitContainers(hdb *hapi.HStreamDB) (containers []corev1.Container) {
+	var customConfigPath string
+
+	flag := flag.NewFlagSet("args", flag.ContinueOnError)
+	flag.StringVar(&customConfigPath, "config-path", "", "")
+
+	flag.Parse(hdb.Spec.HServer.Container.Args)
+
+	if customConfigPath != "" {
+		volumeName := "data-custom-hstream"
+		volumeMountPath := "/data/custom/hstream"
+		hdb.Spec.HServer.Volumes = append(hdb.Spec.HServer.Volumes, corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+		volumeMount := corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: volumeMountPath,
+		}
+		hdb.Spec.HServer.Container.VolumeMounts = append(hdb.Spec.HServer.Container.VolumeMounts, volumeMount)
+
+		containers = append(containers, []corev1.Container{
+			{
+				Name:    "mount-hserver-config",
+				Image:   hdb.Spec.HServer.Image,
+				Command: []string{"bash", "-c"},
+				Args: []string{
+					fmt.Sprintf("cp /etc/hstream/config.yaml %s/config.yaml", volumeMountPath),
+				},
+				VolumeMounts: []corev1.VolumeMount{volumeMount},
+			},
+			{
+				Name:    "override-hserver-config",
+				Image:   "mikefarah/yq:4.35.2",
+				Command: []string{"sh", "-c"},
+				Args: []string{
+					fmt.Sprintf("yq ea '. as $item ireduce ({}; . * $item)' %s/config.yaml %s > %s/config-override.yaml", volumeMountPath, customConfigPath, volumeMountPath),
+				},
+				VolumeMounts: hdb.Spec.HServer.Container.VolumeMounts,
+			},
+		}...)
+
+		for i, arg := range hdb.Spec.HServer.Container.Args {
+			if arg == "--config-path" {
+				hdb.Spec.HServer.Container.Args[i+1] = volumeMountPath + "/config-override.yaml"
+				break
+			}
+		}
+	}
+
+	return
+}
+
+func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 	hServer := &hdb.Spec.HServer
 	container := corev1.Container{
 		Image:           hdb.Spec.HServer.Image,
@@ -124,7 +182,8 @@ func (a addHServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	container.VolumeMounts = append(container.VolumeMounts,
 		corev1.VolumeMount{Name: m.MountName, MountPath: m.MountPath},
 	)
-	return append([]corev1.Container{container}, hServer.SidecarContainers...)
+
+	return container
 }
 
 func (a addHServer) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
