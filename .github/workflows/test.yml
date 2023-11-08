@@ -72,7 +72,7 @@ jobs:
 
       - name: Setup minikube
         if: matrix.testMode == 'e2e-test'
-        uses: medyagh/setup-minikube@latest
+        uses: medyagh/setup-minikube@v0.0.14
 
       - name: Install hmeta cluster
         if: matrix.testMode == 'e2e-test'
@@ -109,7 +109,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: minikube start
+      - name: Setup minikube
+        uses: medyagh/setup-minikube@v0.0.14
 
       - uses: ./.github/actions/deploy-hmeta
         if: matrix.install == 'yaml_with_external_hmeta'
@@ -122,12 +123,10 @@ jobs:
           docker images
 
       - name: Deploy controller by yaml
-        if: matrix.install != 'helm'
-        run: |
-          eval $(minikube docker-env)
-          make deploy
+        if: matrix.install == 'yaml'
+        run: make deploy
       - name: Deploy controller by helm
-        if: matrix.install == 'helm'
+        if: matrix.install != 'yaml'
         run: |
           helm install hstream-operator deploy/charts/hstream-operator \
             --set image.tag=latest \
