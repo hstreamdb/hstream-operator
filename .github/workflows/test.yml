@@ -177,7 +177,7 @@ jobs:
       - if: failure()
         run: kubectl describe po hstream-operator-controller-manager -n hstream-operator-system
       - if: failure()
-        run: kubectl logs hstream-operator-controller-manager -n hstream-operator-system --tail=1000
+        run: kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
       - if: failure()
         run: kubectl describe hstreamdb -n hstreamdb hstreamdb-sample
       - if: failure()
