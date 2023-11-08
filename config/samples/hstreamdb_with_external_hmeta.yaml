@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hstreamdb-sample
+  namespace: hstreamdb
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
@@ -16,6 +17,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hstreamdb-sample-console
+  namespace: hstreamdb
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
@@ -40,7 +42,7 @@ metadata:
   namespace: hstreamdb
 spec:
   gateway:
-    endpoint: "hstreamdb-sample.default"
+    endpoint: "hstreamdb-sample.hstreamdb"
     image: hstreamdb/hstream-gateway
     replicas: 1
     container:

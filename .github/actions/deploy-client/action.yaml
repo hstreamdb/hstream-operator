@@ -3,16 +3,16 @@ description: "Deployment HStream client"
 inputs:
   image:
     description: "HStream client image"
-    required: false 
+    required: false
     default: "hstreamdb/hstream:rqlite"
   host:
     description: "HStream server host"
     required: false
-    default: "hstreamdb-sample.default"
+    default: "hstreamdb-sample.hstreamdb"
   port:
     description: "HStream server endpoint"
     required: false
-    default: "14789" 
+    default: "14789"
 runs:
   using: "composite"
   steps:
@@ -33,7 +33,7 @@ runs:
                 - name: client
                   image: ${{ inputs.image }}
                   command:
-                  - bash 
+                  - bash
                   - -c
                   - |
                     hstream --host ${{ inputs.host }} --port ${{ inputs.port }} sql --execute "CREATE STREAM demo;"

@@ -111,7 +111,7 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/deploy-hmeta
+      - uses: .github/actions/deploy-hmeta
         if: matrix.install == 'yaml_with_external_hmeta'
 
       - name: Build image
@@ -168,7 +168,7 @@ jobs:
             echo "waiting hstreamdb ready"
             sleep 5
           done
-      - uses: ./.github/actions/deploy-client
+      - uses: .github/actions/deploy-client
         timeout-minutes: 5
       - if: failure()
         run: kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
