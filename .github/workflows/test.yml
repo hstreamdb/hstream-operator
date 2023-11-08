@@ -117,7 +117,11 @@ jobs:
       - name: Build image
         env:
           IMG: "hstreamdb/hstream-operator-controller:latest"
-        run: eval $(minikube docker-env) && docker build -t $IMG .
+        run: |
+          eval $(minikube docker-env)
+          docker build -t $IMG .
+          echo "Verify images:"
+          docker images
 
       - name: Deploy controller by yaml
         if: matrix.install != 'helm'
