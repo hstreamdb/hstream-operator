@@ -123,7 +123,9 @@ jobs:
 
       - name: Deploy controller by yaml
         if: matrix.install != 'helm'
-        run: make deploy
+        run: |
+          eval $(minikube docker-env)
+          make deploy
       - name: Deploy controller by helm
         if: matrix.install == 'helm'
         run: |
