@@ -11,7 +11,6 @@ spec:
   ports:
     - name: port
       port: 14789
-      targetPort: 14789
 ---
 apiVersion: v1
 kind: Service
@@ -164,10 +163,6 @@ spec:
     replicas: 1
     container:
       name: hmeta
-      # the name of port can't be changed
-      ports:
-        - name: port
-          containerPort: 4001
     # volumeClaimTemplate:
     #   spec:
     #     storageClassName: "standard"
