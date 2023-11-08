@@ -37,7 +37,7 @@ spec:
   hmeta:
     image: rqlite/rqlite:latest
     imagePullPolicy: IfNotPresent
-    replicas: 3
+    replicas: 1
     container:
       name: hmeta
     # volumeClaimTemplate:

@@ -138,8 +138,6 @@ spec:
       args:
         - --log-level
         - debug
-        - --store-admin-host
-        - hstreamdb-sample-admin-server
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
@@ -170,9 +168,9 @@ spec:
       ports:
         - name: port
           containerPort: 4001
-    volumeClaimTemplate:
-      spec:
-        storageClassName: "standard"
-        resources:
-          requests:
-            storage: 1Gi
+    # volumeClaimTemplate:
+    #   spec:
+    #     storageClassName: "standard"
+    #     resources:
+    #       requests:
+    #         storage: 1Gi

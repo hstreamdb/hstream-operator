@@ -53,5 +53,6 @@ runs:
           [[ "$(kubectl get job client -o json | jq .status.succeeded)" != "1" ]]
         do
           [[ "$(kubectl get job client -o json | jq .status.failed)" == "1" ]] && exit 1
-          echo "waiting job succeeded" && sleep 1
+          echo "waiting job succeeded"
+          sleep 5
         done

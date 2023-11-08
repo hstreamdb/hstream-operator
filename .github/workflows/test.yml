@@ -107,9 +107,9 @@ jobs:
           - yaml_with_external_hmeta
           - helm
     steps:
-      - run: minikube start
-
       - uses: actions/checkout@v4
+
+      - run: minikube start
 
       - uses: ./.github/actions/deploy-hmeta
         if: matrix.install == 'yaml_with_external_hmeta'
@@ -148,9 +148,14 @@ jobs:
           kubectl create namespace hstreamdb
 
       - name: Deploy hstreamdb
-        if: matrix.install != 'yaml_with_external_hmeta'
+        if: matrix.install == 'yaml'
         run: |
           kubectl apply -f config/samples/hstreamdb.yaml
+
+      - name: Deploy hstreamdb with complete sample
+        if: matrix.install == 'helm'
+        run: |
+          kubectl apply -f config/samples/hstreamdb_complete_sample.yaml
 
       - name: Deploy hstreamdb with external hmeta cluster
         if: matrix.install == 'yaml_with_external_hmeta'
