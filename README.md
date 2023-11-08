@@ -20,7 +20,7 @@ We recommend using the [Helm](https://helm.sh/) package manager to install the H
 
 ```sh
 git clone https://github.com/hstreamdb/hstream-operator.git && cd hstream-operator
-helm install hstream-operator deploy/charts/hstream-operator --create-namespace
+helm install hstream-operator deploy/charts/hstream-operator -n hstream-operator-system --create-namespace
 ```
 
 Every releases will be published to [GitHub Releases](https://github.com/hstreamdb/hstream-operator/releases), you

@@ -156,7 +156,7 @@ jobs:
         shell: bash
         run: |
           while
-            condition="$(kubectl get hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] |select( .type == "Ready" and .status == "True")')";
+            condition="$(kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json | jq '.status.conditions[] |select( .type == "Ready" and .status == "True")')";
             [[ "$condition" == "null" ]] || [[ "$condition" == "" ]]
           do
             echo "waiting"
@@ -167,8 +167,8 @@ jobs:
       - if: failure()
         run: kubectl logs -l "control-plane=hstream-operator-manager" -n hstream-operator-system --tail=1000
       - if: failure()
-        run: kubectl describe hstreamdb hstreamdb-sample
+        run: kubectl describe hstreamdb -n hstreamdb hstreamdb-sample
       - if: failure()
-        run: kubectl get hstreamdb hstreamdb-sample -o json
+        run: kubectl get hstreamdb -n hstreamdb hstreamdb-sample -o json
       - if: failure()
         run: kubectl get pods -A
