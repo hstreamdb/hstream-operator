@@ -27,8 +27,11 @@ Every releases will be published to [GitHub Releases](https://github.com/hstream
 can also install the operator with the following command:
 
 ```sh
-kubectl apply -f https://github.com/hstreamdb/hstream-operator/releases/download/0.0.8/hstream-operator.yaml
+kubectl create -f https://github.com/hstreamdb/hstream-operator/releases/download/0.0.8/hstream-operator.yaml
 ```
+
+> You can also use server-side apply to install the operator by running `kubectl apply --server-side`, please refer to
+> [comparison-with-client-side-apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/#comparison-with-client-side-apply) for more details.
 
 Replace `0.0.8` with the version you want to install.
 
