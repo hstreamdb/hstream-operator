@@ -14,8 +14,6 @@ import (
 type updateStatus struct{}
 
 func (u updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
-	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "update status")
-
 	if err := u.checkComponentsReady(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
@@ -24,7 +22,6 @@ func (u updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb
 		return &requeue{curError: err}
 	}
 
-	logger.Info("Update status")
 	if err := r.Status().Update(ctx, hdb); err != nil {
 		return &requeue{curError: err}
 	}
@@ -64,31 +61,40 @@ func (u updateStatus) checkComponentsReady(ctx context.Context, r *HStreamDBReco
 }
 
 func (u updateStatus) checkAllReady(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) error {
-	var notReady = 0
-	var condition = metav1.Condition{
+	condition := metav1.Condition{
 		Type:   hapi.Ready,
 		Status: metav1.ConditionFalse,
-		Reason: "ComponentsNotReady",
+		Reason: "AllComponentsNotReady",
 	}
 
 	conditionList := []string{
 		hapi.HMetaReady,
 		hapi.HStoreReady,
 		hapi.HServerReady,
-		hapi.GatewayReady,
-		hapi.ConsoleReady,
 	}
+
+	if hdb.Spec.Console != nil {
+		conditionList = append(conditionList, hapi.ConsoleReady)
+	}
+
+	if hdb.Spec.Gateway != nil {
+		conditionList = append(conditionList, hapi.GatewayReady)
+	}
+
 	for _, t := range conditionList {
 		if !hdb.IsConditionTrue(t) {
-			notReady++
+			hdb.SetCondition(condition)
+
+			return nil
 		}
 	}
 
-	if notReady == 0 {
-		condition.Status = metav1.ConditionTrue
-		condition.Reason = "AllComponentsReady"
-		condition.Message = "All components are ready"
-	}
+	// Mark all components are ready in condition.
+	condition.Status = metav1.ConditionTrue
+	condition.Reason = "AllComponentsReady"
+	condition.Message = "All components are ready"
+
 	hdb.SetCondition(condition)
+
 	return nil
 }
