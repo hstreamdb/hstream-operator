@@ -14,10 +14,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("AddHserver", func() {
-	var hdb *hapi.HStreamDB
-	var requeue *requeue
-	hServer := addHServer{}
+var (
+	hdb     *hapi.HStreamDB
+	hserver addHServer
+)
+
+func reconcile() *requeue {
+	return hserver.reconcile(ctx, clusterReconciler, hdb)
+}
+
+var _ = Describe("controller/add_server", func() {
+	hserver = addHServer{}
 	ctx := context.TODO()
 
 	BeforeEach(func() {
@@ -25,63 +32,49 @@ var _ = Describe("AddHserver", func() {
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
 
-		requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
+		Expect(reconcile()).To(BeNil())
 	})
 
 	AfterEach(func() {
 		_ = k8sClient.Delete(ctx, hdb)
 	})
 
-	Context("with a reconciled cluster", func() {
-		It("should not requeue", func() {
-			Expect(requeue).To(BeNil())
-		})
-
+	Context("after reconcile", func() {
 		var sts *appsv1.StatefulSet
-		It("should successfully get statefulset", func() {
+
+		It("should get hserver statefulset successfully", func() {
 			var err error
 			sts, err = getHServerStatefulSet(hdb)
+
 			Expect(err).To(BeNil())
 		})
 
-		When("hserver has been deployed", func() {
-			Context("reconcile though nothing change", func() {
-				BeforeEach(func() {
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-				})
+		When("hserver nodes have been deployed", func() {
+			It("reconcile with nothing changed", func() {
+				Expect(reconcile()).To(BeNil())
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
+				newSts, err := getHServerStatefulSet(hdb)
 
-				It("should get same uid", func() {
-					newSts, err := getHServerStatefulSet(hdb)
-					Expect(err).To(BeNil())
-					Expect(sts.UID).To(Equal(newSts.UID))
-				})
+				Expect(err).To(BeNil())
+				Expect(sts.UID).To(Equal(newSts.UID))
 			})
-			Context("scale up HServer replicas", func() {
-				replicas := int32(3)
-				BeforeEach(func() {
-					hdb.Spec.HServer.Replicas = replicas
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-				})
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
+			Context("should scale up HServer replicas successfully", Ordered, func() {
+				replicas := int32(3)
+				var sts *appsv1.StatefulSet
+
+				BeforeAll(func() {
+					hdb.Spec.HServer.Replicas = replicas
+					reconcile()
+
+					sts, _ = getHServerStatefulSet(hdb)
 				})
 
 				It("should get the correct number of replicas", func() {
-					sts, err := getHServerStatefulSet(hdb)
-					Expect(err).To(BeNil())
-					Expect(*sts.Spec.Replicas).Should(Equal(replicas))
+					Expect(*sts.Spec.Replicas).To(Equal(replicas))
 				})
 
 				It("should generate the correct default container command", func() {
-					sts, err := getHServerStatefulSet(hdb)
-
-					Expect(err).To(BeNil())
-
 					defaultContainerCommand := []string{"bash", "-c"}
 					defaultContainerArgs := []string{
 						strings.Join([]string{"/usr/local/bin/hstream-server",
@@ -98,120 +91,87 @@ var _ = Describe("AddHserver", func() {
 						}, " "),
 					}
 
-					Expect(sts.Spec.Template.Spec.Containers[0].Command).Should(Equal(defaultContainerCommand))
-					Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(defaultContainerArgs))
+					Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(defaultContainerCommand))
+					Expect(sts.Spec.Template.Spec.Containers[0].Args).To(Equal(defaultContainerArgs))
 				})
 			})
-			Context("update container name", func() {
-				name := "hdb-hserver"
-				BeforeEach(func() {
-					hdb.Spec.HServer.Container.Name = name
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-				})
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
+			It("should get the updated container name", func() {
+				name := "my-hserver"
 
-				It("should get new container name", func() {
-					sts, err := getHServerStatefulSet(hdb)
-					Expect(err).To(BeNil())
-					Expect(sts.Spec.Template.Spec.Containers).NotTo(BeEmpty())
-					Expect(sts.Spec.Template.Spec.Containers[0].Name).To(Equal(name))
-				})
+				hdb.Spec.HServer.Container.Name = name
+				Expect(reconcile()).To(BeNil())
+
+				sts, err := getHServerStatefulSet(hdb)
+
+				Expect(err).To(BeNil())
+				Expect(sts.Spec.Template.Spec.Containers[0].Name).To(Equal(name))
 			})
-			Context("update container command", func() {
-				command := []string{"bash", "-c", "|", "echo 'hello world'"}
-				BeforeEach(func() {
-					hdb.Spec.HServer.Container.Command = command
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-				})
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
+			It("should get the updated container command", func() {
+				command := []string{"bash", "-c", "echo 'hello world'"}
 
-				It("should get new container command", func() {
-					sts, err := getHServerStatefulSet(hdb)
-					Expect(err).To(BeNil())
-					Expect(sts.Spec.Template.Spec.Containers).NotTo(BeEmpty())
-					Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(command))
-				})
+				hdb.Spec.HServer.Container.Command = command
+				Expect(reconcile()).To(BeNil())
+
+				sts, err := getHServerStatefulSet(hdb)
+
+				Expect(err).To(BeNil())
+				Expect(sts.Spec.Template.Spec.Containers[0].Command).To(Equal(command))
 			})
-			Context("if port is defined in args", func() {
+
+			It("should use the specified port", func() {
 				port := "6571"
 
-				BeforeEach(func() {
-					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
-						"--port", port)
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-				})
+				hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+					"--port", port)
+				Expect(reconcile()).To(BeNil())
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
+				sts, err := getHServerStatefulSet(hdb)
 
-				It("should use the specified port", func() {
-					sts, err := getHServerStatefulSet(hdb)
-
-					Expect(err).To(BeNil())
-
-					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--port %s", port))
-					Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
-						WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(port)),
-					))
-				})
+				Expect(err).To(BeNil())
+				Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--port %s", port))
+				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
+					WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(port)),
+				))
 			})
-			Context("define internal-port in args", func() {
+
+			It("should use the specified internal-port", func() {
 				internalPort := "6572"
-				BeforeEach(func() {
-					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
-						"--internal-port", internalPort)
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-					Expect(requeue).To(BeNil())
-				})
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
+				hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+					"--internal-port", internalPort)
+				Expect(reconcile()).To(BeNil())
 
-				It("should get internal-port", func() {
-					sts, err := getHServerStatefulSet(hdb)
-					Expect(err).To(BeNil())
-					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--internal-port %s", internalPort))
-					Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
-						WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(internalPort)),
-					))
-				})
+				sts, err := getHServerStatefulSet(hdb)
+
+				Expect(err).To(BeNil())
+				Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--internal-port %s", internalPort))
+				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ContainElements(
+					WithTransform(func(p corev1.ContainerPort) string { return strconv.Itoa(int(p.ContainerPort)) }, Equal(internalPort)),
+				))
 			})
-			Context("define log level in args", func() {
-				BeforeEach(func() {
-					hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
-						"--log-level", "debug")
-					requeue = hServer.reconcile(ctx, clusterReconciler, hdb)
-					Expect(requeue).To(BeNil())
-				})
 
-				It("should not requeue", func() {
-					Expect(requeue).To(BeNil())
-				})
+			It("should use defined log level", func() {
+				hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
+					"--log-level", "debug")
+				Expect(reconcile()).To(BeNil())
 
-				It("should get internal-port and seeds-node from args", func() {
-					sts, err := getHServerStatefulSet(hdb)
-					Expect(err).To(BeNil())
-					Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--log-level debug"))
-				})
+				sts, err := getHServerStatefulSet(hdb)
+
+				Expect(err).To(BeNil())
+				Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--log-level debug"))
 			})
 		})
 	})
 })
 
 func getHServerStatefulSet(hdb *hapi.HStreamDB) (sts *appsv1.StatefulSet, err error) {
-	keyObj := types.NamespacedName{
+	sts = &appsv1.StatefulSet{}
+	err = k8sClient.Get(context.TODO(), types.NamespacedName{
 		Namespace: hdb.Namespace,
 		Name:      hapi.ComponentTypeHServer.GetResName(hdb.Name),
-	}
-	sts = &appsv1.StatefulSet{}
-	err = k8sClient.Get(context.TODO(), keyObj, sts)
+	}, sts)
+
 	return
 }
