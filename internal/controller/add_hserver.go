@@ -103,7 +103,7 @@ func (a addHServer) getDefaultInitContainers(hdb *hapi.HStreamDB) (containers []
 	flag := flag.NewFlagSet("args", flag.ContinueOnError)
 	flag.StringVar(&customConfigPath, "config-path", "", "")
 
-	flag.Parse(hdb.Spec.HServer.Container.Args)
+	_ = flag.Parse(hdb.Spec.HServer.Container.Args) // FIXME: encapsulate parse login.
 
 	if customConfigPath != "" {
 		volumeName := "data-custom-hstream"
