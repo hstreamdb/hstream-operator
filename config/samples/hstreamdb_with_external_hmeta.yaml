@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hstreamdb-sample
+  namespace: hstreamdb
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
@@ -10,12 +11,12 @@ spec:
   ports:
     - name: port
       port: 14789
-      targetPort: 14789
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: hstreamdb-sample-console
+  namespace: hstreamdb
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
@@ -37,9 +38,10 @@ metadata:
     app.kuberentes.io/managed-by: kustomize
     app.kubernetes.io/created-by: hstream-operator
   name: hstreamdb-sample
+  namespace: hstreamdb
 spec:
   gateway:
-    endpoint: "hstreamdb-sample.default"
+    endpoint: "hstreamdb-sample.hstreamdb"
     image: hstreamdb/hstream-gateway
     replicas: 1
     container:
@@ -57,14 +59,13 @@ spec:
     container:
       name: console
       env:
-        # This env config will be deprecated in the future.
         - name: HSTREAM_PUBLIC_ADDRESS
           # The HSTREAM_PUBLIC_ADDRESS will be shown on the overview of console dashboard
           # to tell users how to connect HStream cluster through hserver or gateway component.
           # If you deploy gateway, you should deploy a svc or LB for the gateway as the same time, and
           # then set the svc name or LB addr of gateway to the HSTREAM_PUBLIC_ADDRESS
-          value: hstreamdb-sample.default:6570
-        # This env config will be deprecated in the future.
+          value: hstreamdb-sample.hstreamdb:6570
+          # The PROMETHEUS_URL will be used to show the metrics of HStream cluster on the console dashboard.
         - name: PROMETHEUS_URL
           value: http://localhost:9090
   hserver:
@@ -74,18 +75,18 @@ spec:
     container:
       name: hserver
   externalHmeta:
-      host: rqlite-svc
-      port: 4001
-      namespace: default
+    host: rqlite-svc
+    port: 4001
+    namespace: default
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
     replicas: 3
     container:
       name: hstore
-#    volumeClaimTemplate:
-#      spec:
-#        storageClassName: 'standard'
-#        resources:
-#          requests:
-#            storage: 1Gi
+    # volumeClaimTemplate:
+    #   spec:
+    #     storageClassName: "standard"
+    #     resources:
+    #       requests:
+    #         storage: 1Gi

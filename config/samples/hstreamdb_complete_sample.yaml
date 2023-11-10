@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hstreamdb-sample
+  namespace: hstreamdb
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
@@ -10,12 +11,12 @@ spec:
   ports:
     - name: port
       port: 14789
-      targetPort: 14789
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: hstreamdb-sample-console
+  namespace: hstreamdb
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
@@ -60,6 +61,7 @@ metadata:
     app.kuberentes.io/managed-by: kustomize
     app.kubernetes.io/created-by: hstream-operator
   name: hstreamdb-sample
+  namespace: hstreamdb
 spec:
   #  externalHmeta:
   #    host: rqlite-svc
@@ -118,7 +120,7 @@ spec:
   #        "version": 1
   #      }
   gateway:
-    endpoint: "hstreamdb-sample.default"
+    endpoint: "hstreamdb-sample.hstreamdb"
     image: hstreamdb/hstream-gateway
     replicas: 1
     container:
@@ -139,18 +141,14 @@ spec:
     replicas: 1
     container:
       name: console
-      ports:
-        - name: server-port
-          containerPort: 5177
       env:
-        # This env config will be deprecated in the future.
         - name: HSTREAM_PUBLIC_ADDRESS
           # The HSTREAM_PUBLIC_ADDRESS will be shown on the overview of console dashboard
           # to tell users how to connect HStream cluster through hserver or gateway component.
           # If you deploy gateway, you should deploy a svc or LB for the gateway as the same time, and
           # then set the svc name or LB addr of gateway to the HSTREAM_PUBLIC_ADDRESS
-          value: hstreamdb-sample.default:6570
-        # This env config will be deprecated in the future.
+          value: hstreamdb-sample.hstreamdb:6570
+          # The PROMETHEUS_URL will be used to show the metrics of HStream cluster on the console dashboard.
         - name: PROMETHEUS_URL
           value: http://localhost:9090
   hserver:
@@ -162,8 +160,6 @@ spec:
       args:
         - --log-level
         - debug
-        - --store-admin-host
-        - hstreamdb-sample-admin-server
     #     # Overriding the default config of hserver.
     #     - --config-path
     #     - /etc/custom/hstream/config
@@ -188,25 +184,21 @@ spec:
           containerPort: 4441
         - name: admin-port
           containerPort: 6440
-  #    volumeClaimTemplate:
-  #      spec:
-  #        storageClassName: 'standard'
-  #        resources:
-  #          requests:
-  #            storage: 1Gi
+      # volumeClaimTemplate:
+      #   spec:
+      #     storageClassName: "standard"
+      #     resources:
+      #       requests:
+      #         storage: 1Gi
   hmeta:
     image: rqlite/rqlite:latest
     imagePullPolicy: IfNotPresent
     replicas: 1
     container:
       name: hmeta
-      # the name of port can't be changed
-      ports:
-        - name: port
-          containerPort: 4001
-#    volumeClaimTemplate:
-#      spec:
-#        storageClassName: 'standard'
-#        resources:
-#          requests:
-#            storage: 1Gi
+    # volumeClaimTemplate:
+    #   spec:
+    #     storageClassName: "standard"
+    #     resources:
+    #       requests:
+    #         storage: 1Gi
