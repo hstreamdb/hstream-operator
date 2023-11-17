@@ -140,10 +140,6 @@ jobs:
             sleep 5
           done
 
-      - name: Create hstreamdb namespace
-        run: |
-          kubectl create namespace hstreamdb
-
       - name: Deploy a minimal hstreamdb cluster
         if: matrix.install == 'yaml'
         run: |
