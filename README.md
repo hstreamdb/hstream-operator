@@ -55,7 +55,6 @@ hstream-operator-controller-manager-f989476d4-qllfs   1/1     Running   1 (16h a
 After installing the operator, you can bootstrap a HStreamDB cluster by applying `config/samples/hstreamdb.yaml`:
 
 ```sh
-kubectl create ns hstreamdb
 kubectl apply -f config/samples/hstreamdb.yaml
 ```
 
