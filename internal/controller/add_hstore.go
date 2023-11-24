@@ -7,57 +7,21 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var hStoreEnvVar = []corev1.EnvVar{
-	{
-		Name: "POD_NAME",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.name",
-			},
-		},
-	},
-	{
-		Name: "POD_IP",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "status.podIP",
-			},
-		},
-	},
-}
-
-var hStorePorts = []corev1.ContainerPort{
-	{
-		Name:          "port",
-		ContainerPort: 4440,
-		Protocol:      corev1.ProtocolTCP,
-	},
-	{
-		Name:          "gossip-port",
-		ContainerPort: 4441,
-		Protocol:      corev1.ProtocolTCP,
-	},
-	{
-		Name:          "admin-port",
-		ContainerPort: 6440,
-		Protocol:      corev1.ProtocolTCP,
-	},
-}
 
 var hStoreArgs = []string{
 	"--config-path", internal.HStoreConfigPath + "/config.json",
 	"--address", "$(POD_IP)",
 	"--name", "$(POD_NAME)",
 	"--local-log-store-path", internal.HStoreDataPath,
-	//"--num-shards", "1",
 }
 
 type addHStore struct{}
@@ -70,6 +34,7 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *h
 	nShard := a.getNShardFromExistingConfigMap(ctx, r, hdb)
 
 	sts := a.getSts(hdb, nShard)
+
 	existingSts := &appsv1.StatefulSet{}
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(&sts), existingSts)
 	if err != nil {
@@ -86,22 +51,53 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *h
 		}
 		return nil
 	}
+
 	if !isHashChanged(&existingSts.ObjectMeta, &sts.ObjectMeta) {
 		return nil
 	}
 
-	logger.Info("Update HStore")
-	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHStore", "")
+	oldReplicas := existingSts.Spec.Replicas
+	newReplicas := sts.Spec.Replicas
 
-	existingSts.Annotations = sts.Annotations
+	if getRecommendedLogReplicaAcross(*newReplicas) > *newReplicas {
+		logger.Error(fmt.Errorf("--metadata-replicate-across should be less than or equal to %d", *newReplicas), "invalid replicas", "replicas", *newReplicas)
+
+		return nil
+	}
+
+	sts.Annotations["oldReplicas"] = strconv.Itoa(int(*oldReplicas))
+
+	logger.Info("Updating HStore StatefulSet", "StatefulSet", sts.Name)
+	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHStore", fmt.Sprintf("Updating HStore StatefulSet %s", sts.Name))
+
 	existingSts.Labels = sts.Labels
+	existingSts.Annotations = sts.Annotations
 	existingSts.Spec.Replicas = sts.Spec.Replicas
 	existingSts.Spec.Template = sts.Spec.Template
 	existingSts.Spec.UpdateStrategy = sts.Spec.UpdateStrategy
 	existingSts.Spec.MinReadySeconds = sts.Spec.MinReadySeconds
+
 	if err = r.Update(ctx, existingSts); err != nil {
 		return &requeue{curError: err}
+	} else {
+		// If HStore is being scaled up/down, set the HStoreUpdating condition to true.
+		if *oldReplicas < *newReplicas {
+			hdb.SetCondition(metav1.Condition{
+				Type:    hapi.HStoreUpdating,
+				Status:  metav1.ConditionTrue,
+				Reason:  hapi.HStoreScalingUp,
+				Message: fmt.Sprintf("HStore is scaling up, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
+			})
+		} else {
+			hdb.SetCondition(metav1.Condition{
+				Type:    hapi.HStoreUpdating,
+				Status:  metav1.ConditionTrue,
+				Reason:  hapi.HStoreScalingDown,
+				Message: fmt.Sprintf("HStore is scaling down, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
+			})
+		}
 	}
+
 	return nil
 }
 
@@ -152,7 +148,7 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 
 	structAssign(&container, &hStore.Container)
 
-	container.Env = extendEnvs(container.Env, hStoreEnvVar...)
+	container.Env = extendEnvs(container.Env, constants.DefaultHStoreEnv...)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHStore)
@@ -166,7 +162,7 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 	args = append(args, "--num-shards", strconv.Itoa(int(nShard)))
 
 	container.Args, _ = extendArgs(container.Args, args...)
-	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, hStorePorts...))
+	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, constants.DefaultHStorePorts...))
 
 	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{

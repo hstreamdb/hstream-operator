@@ -26,7 +26,7 @@ func (u updateStatus) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb
 		return &requeue{curError: err}
 	}
 
-	if !hdb.IsConditionTrue(hapi.Ready) {
+	if !hdb.IsConditionTrue(hapi.AllComponentsReady) {
 		return &requeue{message: "HStreamDB is not ready", delayedRequeue: true}
 	}
 
@@ -62,9 +62,9 @@ func (u updateStatus) checkComponentsReady(ctx context.Context, r *HStreamDBReco
 
 func (u updateStatus) checkAllReady(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) error {
 	condition := metav1.Condition{
-		Type:   hapi.Ready,
+		Type:   hapi.AllComponentsReady,
 		Status: metav1.ConditionFalse,
-		Reason: "AllComponentsNotReady",
+		Reason: hapi.AllComponentsReady,
 	}
 
 	conditionList := []string{
@@ -91,8 +91,6 @@ func (u updateStatus) checkAllReady(ctx context.Context, r *HStreamDBReconciler,
 
 	// Mark all components are ready in condition.
 	condition.Status = metav1.ConditionTrue
-	condition.Reason = "AllComponentsReady"
-	condition.Message = "All components are ready"
 
 	hdb.SetCondition(condition)
 

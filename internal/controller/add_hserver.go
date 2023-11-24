@@ -18,17 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var hServerEnvVar = []corev1.EnvVar{
-	{
-		Name: "POD_NAME",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.name",
-			},
-		},
-	},
-}
-
 type addHServer struct{}
 
 func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
@@ -42,29 +31,35 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 		if !k8sErrors.IsNotFound(err) {
 			return &requeue{curError: err}
 		}
+
 		if err = ctrl.SetControllerReference(hdb, &sts, r.Scheme); err != nil {
 			return &requeue{curError: err}
 		}
 
-		logger.Info("Create hServer")
+		logger.Info("Creating HServer StatefulSet", "StatefulSet", sts.Name)
+
 		if err = r.Client.Create(ctx, &sts); err != nil {
 			return &requeue{curError: err}
 		}
+
 		return nil
 	}
+
 	if !isHashChanged(&existingSts.ObjectMeta, &sts.ObjectMeta) {
 		return nil
 	}
 
-	logger.Info("Update hServer")
-	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHServer", "")
+	logger.Info("Updating HServer StatefulSet", "StatefulSet", sts.Name)
+	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHServer", fmt.Sprintf("Updating HServer StatefulSet %s", sts.Name))
 
-	existingSts.Annotations = sts.Annotations
 	existingSts.Labels = sts.Labels
+	existingSts.Annotations = sts.Annotations
 	existingSts.Spec = sts.Spec
+
 	if err = r.Update(ctx, existingSts); err != nil {
 		return &requeue{curError: err}
 	}
+
 	return nil
 }
 
@@ -170,7 +165,7 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 	}
 
 	structAssign(&container, &hServer.Container)
-	container.Env = extendEnvs(container.Env, hServerEnvVar...)
+	container.Env = extendEnvs(container.Env, constants.DefaultHServerEnv...)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHServer)

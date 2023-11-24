@@ -41,7 +41,7 @@ var _ = Describe("UpdateStatus", func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
 		Expect(storeHdb.Status.Conditions).To(ContainElement(
 			And(
-				HaveField("Type", Equal(hapi.Ready)),
+				HaveField("Type", Equal(hapi.AllComponentsReady)),
 				HaveField("Status", Equal(metav1.ConditionFalse)),
 			),
 		))
@@ -88,7 +88,7 @@ var _ = Describe("UpdateStatus", func() {
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
 			Expect(storeHdb.Status.Conditions).To(ContainElement(
 				And(
-					HaveField("Type", Equal(hapi.Ready)),
+					HaveField("Type", Equal(hapi.AllComponentsReady)),
 					HaveField("Status", Equal(metav1.ConditionTrue)),
 				),
 			))

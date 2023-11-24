@@ -16,8 +16,13 @@ var DefaultHServerInternalPort = corev1.ContainerPort{
 	Protocol:      corev1.ProtocolTCP,
 }
 
-var DefaultHMetaPort = corev1.ContainerPort{
-	Name:          "rqlite",
-	ContainerPort: 4001,
-	Protocol:      corev1.ProtocolTCP,
+var DefaultHServerEnv = []corev1.EnvVar{
+	{
+		Name: "POD_NAME",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.name",
+			},
+		},
+	},
 }

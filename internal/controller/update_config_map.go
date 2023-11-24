@@ -227,6 +227,7 @@ func getRecommendedLogReplicaAcross(podReplicas int32) int32 {
 	if podReplicas <= maxRecommendedLogReplication {
 		return podReplicas
 	}
+
 	return maxRecommendedLogReplication
 }
 
@@ -234,5 +235,6 @@ func getMinNShards(hdb *hapi.HStreamDB) int32 {
 	if hdb.Spec.Config.NShards == 0 {
 		return 1
 	}
+
 	return hdb.Spec.Config.NShards
 }

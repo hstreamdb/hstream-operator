@@ -45,7 +45,7 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 }
 
 func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	ports, err := getPorts(&hdb.Spec.HStore.Container, hStorePorts...)
+	ports, err := getPorts(&hdb.Spec.HStore.Container, constants.DefaultHStorePorts...)
 	if err != nil {
 		return fmt.Errorf("parse hStore args failed. %w", err)
 	}

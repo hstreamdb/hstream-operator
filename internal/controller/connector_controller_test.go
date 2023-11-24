@@ -95,6 +95,7 @@ var _ = Describe("controller/connector", Ordered, func() {
 		_, deploymentName := getConnectorSubResourceName(&connector)
 
 		connector.Spec.Container = corev1.Container{
+			Image: "hstreamdb/sink-elasticsearch:standalone_v0.3.0",
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          "prom",
@@ -124,6 +125,7 @@ var _ = Describe("controller/connector", Ordered, func() {
 			}, &deployment)
 		}).Should(BeNil())
 
+		Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(connector.Spec.Container.Image))
 		Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ContainElement(connector.Spec.Container.Ports[0]))
 		Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(connector.Spec.Container.Resources))
 	})

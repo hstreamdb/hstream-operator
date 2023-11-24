@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 HStream Operator Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal/admin"
 	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,12 +47,12 @@ type hdbSubReconciler interface {
 	/**
 	reconcile runs the reconciler's work.
 
-	If reconciliation can continue, this should return nil.
+	If reconciliation can continue, it should return nil.
 
-	If reconciliation encounters an error, this should return a	requeue object
+	If reconciliation encounters an error, it should return a	requeue object
 	with an `Error` field.
 
-	If reconciliation cannot proceed, this should return a requeue object with
+	If reconciliation cannot proceed, it should return a requeue object with
 	a `Message` field.
 	*/
 	reconcile(ctx context.Context, r *HStreamDBReconciler, cluster *hapi.HStreamDB) *requeue
@@ -72,16 +71,10 @@ type hdbSubReconciler interface {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	//_ = log.FromContext(ctx)
-
+func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	hdb := &hapi.HStreamDB{}
-	if err = r.Get(ctx, req.NamespacedName, hdb); err != nil {
-		if k8sErrors.IsNotFound(err) {
-			err = nil
-		}
-		// Error reading the object - requeue the request.
-		return
+	if err := r.Get(ctx, req.NamespacedName, hdb); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	subReconcilers := []hdbSubReconciler{
@@ -92,18 +85,18 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		addAdminServer{},
 		addHStore{},
 		bootstrapHStore{},
+		HStoreMaintenanceReconciler{},
 		addHServer{},
 		bootstrapHServer{},
 		addGateway{},
 		addConsole{},
 		updateStatus{},
 	}
+
 	return r.subReconcile(ctx, hdb, subReconcilers)
 }
 
-func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *hapi.HStreamDB, subReconcilers []hdbSubReconciler) (
-	ctrl.Result, error) {
-
+func (r *HStreamDBReconciler) subReconcile(ctx context.Context, hdb *hapi.HStreamDB, subReconcilers []hdbSubReconciler) (ctrl.Result, error) {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name)
 
 	delayedRequeue := false

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+
 	"github.com/go-logr/logr"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"k8s.io/client-go/rest"
@@ -11,13 +12,17 @@ type mockAdminClient struct {
 	hdb *hapi.HStreamDB
 }
 
-func (ac *mockAdminClient) BootstrapHStore(int32) error {
-
+func (ac *mockAdminClient) BootstrapHServer() error {
 	return nil
 }
 
-func (ac *mockAdminClient) BootstrapHServer() error {
+func (ac *mockAdminClient) BootstrapHStore(int32) error {
 	return nil
+}
+
+// MaintenanceHStore implements HAdminClient.
+func (*mockAdminClient) MaintenanceHStore(action MaintenanceAction, args []string) error {
+	panic("unimplemented")
 }
 
 func (ac *mockAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
@@ -35,7 +40,7 @@ type mockAdminClientProvider struct {
 	client *mockAdminClient
 }
 
-func (m *mockAdminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) AdminClient {
+func (m *mockAdminClientProvider) GetHAdminClient(hdb *hapi.HStreamDB) HAdminClient {
 	m.client.hdb = hdb
 	return m.client
 }
