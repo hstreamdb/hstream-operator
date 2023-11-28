@@ -83,24 +83,26 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *h
 	}
 
 	// If HStore is being scaled up/down, set the HStoreUpdating condition to true.
-	if *oldReplicas < *newReplicas {
-		hdb.SetCondition(metav1.Condition{
-			Type:    hapi.HStoreUpdating,
-			Status:  metav1.ConditionTrue,
-			Reason:  hapi.HStoreScalingUp,
-			Message: fmt.Sprintf("HStore is scaling up, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
-		})
-	} else {
-		hdb.SetCondition(metav1.Condition{
-			Type:    hapi.HStoreUpdating,
-			Status:  metav1.ConditionTrue,
-			Reason:  hapi.HStoreScalingDown,
-			Message: fmt.Sprintf("HStore is scaling down, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
-		})
-	}
+	if *oldReplicas != *newReplicas {
+		if *oldReplicas < *newReplicas {
+			hdb.SetCondition(metav1.Condition{
+				Type:    hapi.HStoreUpdating,
+				Status:  metav1.ConditionTrue,
+				Reason:  hapi.HStoreScalingUp,
+				Message: fmt.Sprintf("HStore is scaling up, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
+			})
+		} else {
+			hdb.SetCondition(metav1.Condition{
+				Type:    hapi.HStoreUpdating,
+				Status:  metav1.ConditionTrue,
+				Reason:  hapi.HStoreScalingDown,
+				Message: fmt.Sprintf("HStore is scaling down, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
+			})
+		}
 
-	if err = r.Status().Update(ctx, hdb); err != nil {
-		return &requeue{curError: fmt.Errorf("failed to update HStore status: %w", err)}
+		if err = r.Status().Update(ctx, hdb); err != nil {
+			return &requeue{curError: fmt.Errorf("failed to update HStore status: %w", err)}
+		}
 	}
 
 	return nil
