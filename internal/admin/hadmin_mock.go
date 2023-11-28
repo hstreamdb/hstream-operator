@@ -12,16 +12,16 @@ type mockAdminClient struct {
 	hdb *hapi.HStreamDB
 }
 
-func (ac *mockAdminClient) BootstrapHServer() error {
-	return nil
+func (ac *mockAdminClient) BootstrapHServer(*hapi.HStreamDB) error {
+	panic("unimplemented")
 }
 
-func (ac *mockAdminClient) BootstrapHStore(int32) error {
-	return nil
+func (ac *mockAdminClient) CallStore(args ...string) (string, error) {
+	panic("unimplemented")
 }
 
 // MaintenanceHStore implements HAdminClient.
-func (*mockAdminClient) MaintenanceHStore(action MaintenanceAction, args []string) error {
+func (*mockAdminClient) MaintenanceStore(action MaintenanceAction, args []string) error {
 	panic("unimplemented")
 }
 

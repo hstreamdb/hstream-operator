@@ -42,37 +42,42 @@ func NewHAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logg
 }
 
 // BootstrapHServer init HServer nodes in HStreamDB cluster.
-func (ac *hAdminClient) BootstrapHServer() error {
+func (ac *hAdminClient) BootstrapHServer(hdb *hapi.HStreamDB) error {
 	command := executor.Command{
 		Command: "hadmin",
-		Args:    []string{"server", "init"},
+		Args: []string{"server", "init",
+			"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
+		},
 	}
 
 	pods, err := ac.selector.GetPods(ac.hdb.Namespace,
 		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)}, nil)
+	if err != nil {
+		return err
+	}
 
 	_, err = ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
 
 	return err
 }
 
-// BootstrapHStore init hStore cluster
-func (ac *hAdminClient) BootstrapHStore(metadataReplication int32) error {
+// CallStore call hadmin store command with args.
+func (ac *hAdminClient) CallStore(args ...string) (string, error) {
 	command := executor.Command{
 		Command: "hadmin",
-		Args: []string{"store", "nodes-config", "bootstrap",
-			"--metadata-replicate-across", fmt.Sprintf("'node:%d'", metadataReplication)},
+		Args:    append([]string{"store"}, args...),
 	}
 
 	pods, err := ac.selector.GetPods(ac.hdb.Namespace,
 		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)}, nil)
+	if err != nil {
+		return "", err
+	}
 
-	_, err = ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
-
-	return err
+	return ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
 }
 
-func (ac *hAdminClient) MaintenanceHStore(action MaintenanceAction, args []string) error {
+func (ac *hAdminClient) MaintenanceStore(action MaintenanceAction, args []string) error {
 	command := executor.Command{
 		Command: "hadmin",
 		Args:    append([]string{"store", "maintenance", string(action)}, args...),
@@ -80,6 +85,9 @@ func (ac *hAdminClient) MaintenanceHStore(action MaintenanceAction, args []strin
 
 	pods, err := ac.selector.GetPods(ac.hdb.Namespace,
 		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)}, nil)
+	if err != nil {
+		return err
+	}
 
 	_, err = ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
 

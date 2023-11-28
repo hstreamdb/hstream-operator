@@ -60,42 +60,47 @@ func (a addHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *h
 	newReplicas := sts.Spec.Replicas
 
 	if getRecommendedLogReplicaAcross(*newReplicas) > *newReplicas {
-		logger.Error(fmt.Errorf("--metadata-replicate-across should be less than or equal to %d", *newReplicas), "invalid replicas", "replicas", *newReplicas)
+		logger.Error(fmt.Errorf("--metadata-replicate-across should be less than or equal to %d", *newReplicas),
+			"invalid replicas", "replicas", *newReplicas)
 
 		return nil
 	}
 
-	sts.Annotations["oldReplicas"] = strconv.Itoa(int(*oldReplicas))
-
-	logger.Info("Updating HStore StatefulSet", "StatefulSet", sts.Name)
-	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHStore", fmt.Sprintf("Updating HStore StatefulSet %s", sts.Name))
+	sts.Annotations[hapi.OldReplicas] = strconv.Itoa(int(*oldReplicas))
+	sts.Annotations[hapi.NewReplicas] = strconv.Itoa(int(*newReplicas))
 
 	existingSts.Labels = sts.Labels
 	existingSts.Annotations = sts.Annotations
-	existingSts.Spec.Replicas = sts.Spec.Replicas
 	existingSts.Spec.Template = sts.Spec.Template
 	existingSts.Spec.UpdateStrategy = sts.Spec.UpdateStrategy
 	existingSts.Spec.MinReadySeconds = sts.Spec.MinReadySeconds
 
+	logger.Info("Updating HStore StatefulSet", "StatefulSet", sts.Name)
+	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHStore", fmt.Sprintf("Updating HStore StatefulSet %s", sts.Name))
+
 	if err = r.Update(ctx, existingSts); err != nil {
 		return &requeue{curError: err}
+	}
+
+	// If HStore is being scaled up/down, set the HStoreUpdating condition to true.
+	if *oldReplicas < *newReplicas {
+		hdb.SetCondition(metav1.Condition{
+			Type:    hapi.HStoreUpdating,
+			Status:  metav1.ConditionTrue,
+			Reason:  hapi.HStoreScalingUp,
+			Message: fmt.Sprintf("HStore is scaling up, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
+		})
 	} else {
-		// If HStore is being scaled up/down, set the HStoreUpdating condition to true.
-		if *oldReplicas < *newReplicas {
-			hdb.SetCondition(metav1.Condition{
-				Type:    hapi.HStoreUpdating,
-				Status:  metav1.ConditionTrue,
-				Reason:  hapi.HStoreScalingUp,
-				Message: fmt.Sprintf("HStore is scaling up, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
-			})
-		} else {
-			hdb.SetCondition(metav1.Condition{
-				Type:    hapi.HStoreUpdating,
-				Status:  metav1.ConditionTrue,
-				Reason:  hapi.HStoreScalingDown,
-				Message: fmt.Sprintf("HStore is scaling down, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
-			})
-		}
+		hdb.SetCondition(metav1.Condition{
+			Type:    hapi.HStoreUpdating,
+			Status:  metav1.ConditionTrue,
+			Reason:  hapi.HStoreScalingDown,
+			Message: fmt.Sprintf("HStore is scaling down, old replicas: %d, new replicas: %d", *oldReplicas, *newReplicas),
+		})
+	}
+
+	if err = r.Status().Update(ctx, hdb); err != nil {
+		return &requeue{curError: fmt.Errorf("failed to update HStore status: %w", err)}
 	}
 
 	return nil
@@ -159,7 +164,10 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 	}
 
 	args := hStoreArgs
-	args = append(args, "--num-shards", strconv.Itoa(int(nShard)))
+	args = append(args,
+		"--server-id", "$(hostname | grep -o '[0-9]*$')",
+		"--num-shards", strconv.Itoa(int(nShard)),
+	)
 
 	container.Args, _ = extendArgs(container.Args, args...)
 	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, constants.DefaultHStorePorts...))

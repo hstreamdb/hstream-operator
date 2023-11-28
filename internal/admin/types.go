@@ -14,9 +14,9 @@ const (
 )
 
 type HAdminClient interface {
-	BootstrapHServer() error
-	BootstrapHStore(metadataReplication int32) error
-	MaintenanceHStore(action MaintenanceAction, args []string) error
+	BootstrapHServer(hdb *hapi.HStreamDB) error
+	CallStore(args ...string) (string, error)
+	MaintenanceStore(action MaintenanceAction, args []string) error
 	GetHMetaStatus() (HMetaStatus, error)
 }
 

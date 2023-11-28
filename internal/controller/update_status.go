@@ -73,12 +73,12 @@ func (u updateStatus) checkAllReady(ctx context.Context, r *HStreamDBReconciler,
 		hapi.HServerReady,
 	}
 
-	if hdb.Spec.Console != nil {
-		conditionList = append(conditionList, hapi.ConsoleReady)
-	}
-
 	if hdb.Spec.Gateway != nil {
 		conditionList = append(conditionList, hapi.GatewayReady)
+	}
+
+	if hdb.Spec.Console != nil {
+		conditionList = append(conditionList, hapi.ConsoleReady)
 	}
 
 	for _, t := range conditionList {

@@ -12,6 +12,8 @@ const (
 	HStoreUpdating     string = "HStoreUpdating"
 	HStoreScalingUp    string = "HStoreScalingUp"
 	HStoreScalingDown  string = "HStoreScalingDown"
+	HStoreDraining     string = "HStoreDraining"
+	HStoreDrained      string = "HStoreDrained"
 	HServerReady       string = "HServerReady"
 	HServerScalingUp   string = "HServerScalingUp"
 	GatewayReady       string = "GatewayReady"
@@ -46,7 +48,7 @@ func (hdb *HStreamDB) SetCondition(condition metav1.Condition) {
 	condition.ObservedGeneration = hdb.Generation
 
 	index, current := hdb.GetCondition(condition.Type)
-	if index != -1 {
+	if index > -1 {
 		if current.Status == condition.Status && !current.LastTransitionTime.IsZero() {
 			condition.LastTransitionTime = current.LastTransitionTime
 		}
