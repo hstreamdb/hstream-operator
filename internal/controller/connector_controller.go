@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2023 HStream Operator Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,6 +34,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
+	"github.com/hstreamdb/hstream-operator/pkg/connectorgen"
 )
 
 // ConnectorReconciler reconciles a Connector object
@@ -126,7 +126,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				return ctrl.Result{}, err
 			}
 
-			err = r.createConnectorDeployment(ctx, connector, connector.Spec.Streams[index], name)
+			err = r.createConnectorDeployment(ctx, &connector, connector.Spec.Streams[index], name)
 			if err != nil {
 				log.Error(err, "fail to create Deployment for Connector",
 					"Connector", connector.Name,
@@ -207,7 +207,7 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logge
 	return configs, nil
 }
 
-func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector v1beta1.Connector, stream, configMapName string) error {
+func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector *v1beta1.Connector, stream, configMapName string) error {
 	name := v1beta1.GenConnectorDeploymentName(connector.Name, stream)
 	containerPorts := []corev1.ContainerPort{
 		{
@@ -224,24 +224,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	}
 
 	connector.Spec.Container.Ports = containerPorts
-	preconfiguredContainer := corev1.Container{
-		Name:  connector.Name,
-		Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
-		Args: []string{
-			"run",
-			"--config /data/config/config.json",
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      configMapName,
-				MountPath: "/data/config",
-			},
-			{
-				Name:      "data",
-				MountPath: "/data",
-			},
-		},
-	}
+	preconfiguredContainer := connectorgen.DefaultSinkElasticsearchContainer(connector, name, configMapName)
 	structAssign(&preconfiguredContainer, &connector.Spec.Container)
 
 	deployment := appsv1.Deployment{
@@ -273,29 +256,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						preconfiguredContainer,
-						{
-							Name:  "log",
-							Image: addImageRegistry("busybox:1.36", connector.Spec.ImageRegistry),
-							Args: []string{
-								"/bin/sh",
-								"-c",
-								"sleep 5 && tail -F /data/app.log", // OPTIMIZE: wait for connector to start.
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/data",
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU: resource.MustParse("300m"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU: resource.MustParse("100m"),
-								},
-							},
-						},
+						connectorgen.DefaultSinkElasticsearchLogContainer(connector),
 					},
 					Volumes: []corev1.Volume{
 						{
@@ -320,22 +281,14 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 		},
 	}
 
-	if err := controllerutil.SetControllerReference(&connector, &deployment, r.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(connector, &deployment, r.Scheme); err != nil {
 		return err
 	}
 
 	return r.Create(ctx, &deployment)
 }
 
-func addImageRegistry(image string, registry *string) string {
-	if registry == nil {
-		return image
-	}
-
-	return *registry + "/" + image
-}
-
-func getPromAnnotations(connector v1beta1.Connector) (annotaions map[string]string) {
+func getPromAnnotations(connector *v1beta1.Connector) (annotaions map[string]string) {
 	annotaions = make(map[string]string)
 
 	for k, v := range connector.Annotations {
