@@ -6,6 +6,7 @@ import (
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/internal/controller/status"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,10 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 
 	logger.Info("Bootstrap HServer")
 
-	if err := r.AdminClientProvider.GetHAdminClient(hdb).BootstrapHServer(hdb); err != nil {
+	if _, err := r.AdminClientProvider.GetHAdminClient(hdb).CallServer(
+		"server", "init",
+		"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
+	); err != nil {
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 

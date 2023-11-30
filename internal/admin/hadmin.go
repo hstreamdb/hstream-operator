@@ -41,35 +41,17 @@ func NewHAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logg
 	}
 }
 
-// BootstrapHServer init HServer nodes in HStreamDB cluster.
-func (ac *hAdminClient) BootstrapHServer(hdb *hapi.HStreamDB) error {
+func (ac *hAdminClient) call(args ...string) (string, error) {
 	command := executor.Command{
 		Command: "hadmin",
-		Args: []string{"server", "init",
-			"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
-		},
+		Args:    args,
 	}
 
-	pods, err := ac.selector.GetPods(ac.hdb.Namespace,
-		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)}, nil)
-	if err != nil {
-		return err
-	}
-
-	_, err = ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
-
-	return err
-}
-
-// CallStore call hadmin store command with args.
-func (ac *hAdminClient) CallStore(args ...string) (string, error) {
-	command := executor.Command{
-		Command: "hadmin",
-		Args:    append([]string{"store"}, args...),
-	}
-
-	pods, err := ac.selector.GetPods(ac.hdb.Namespace,
-		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)}, nil)
+	pods, err := ac.selector.GetPods(
+		ac.hdb.Namespace,
+		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)},
+		nil,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -77,21 +59,18 @@ func (ac *hAdminClient) CallStore(args ...string) (string, error) {
 	return ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
 }
 
-func (ac *hAdminClient) MaintenanceStore(action MaintenanceAction, args []string) error {
-	command := executor.Command{
-		Command: "hadmin",
-		Args:    append([]string{"store", "maintenance", string(action)}, args...),
-	}
+// CallServer call hadmin server command with args.
+func (ac *hAdminClient) CallServer(args ...string) (string, error) {
+	return ac.call(append([]string{"server"}, args...)...)
+}
 
-	pods, err := ac.selector.GetPods(ac.hdb.Namespace,
-		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)}, nil)
-	if err != nil {
-		return err
-	}
+// CallStore call hadmin store command with args.
+func (ac *hAdminClient) CallStore(args ...string) (string, error) {
+	return ac.call(append([]string{"store"}, args...)...)
+}
 
-	_, err = ac.executor.RunCommandInPod(pods[0].Name, ac.hdb.Namespace, command)
-
-	return err
+func (ac *hAdminClient) MaintenanceStore(action MaintenanceAction, args ...string) (string, error) {
+	return ac.call(append([]string{"store", "maintenance", string(action)}, args...)...)
 }
 
 func (ac *hAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
@@ -123,21 +102,3 @@ func (ac *hAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 	}
 	return
 }
-
-// func checkStoreInit(output string) (skipSubCmd bool, err error) {
-// 	if strings.Contains(output, "Successfully bootstrapped the cluster") {
-// 		return
-// 	}
-
-// 	err = fmt.Errorf("hstore init failed: %s", output)
-// 	return
-// }
-
-// func checkServerInit(output string) (skipSubCmd bool, err error) {
-// 	if strings.Contains(output, "Server successfully received init signal") {
-// 		return
-// 	}
-
-// 	err = fmt.Errorf("hserver init failed: %s", output)
-// 	return
-// }

@@ -63,9 +63,9 @@ func (r HStoreMaintenanceReconciler) reconcile(ctx context.Context, hr *HStreamD
 			"args", strings.Join(args, " "),
 		)
 
-		if err = hr.AdminClientProvider.GetHAdminClient(hdb).MaintenanceStore(
+		if _, err = hr.AdminClientProvider.GetHAdminClient(hdb).MaintenanceStore(
 			admin.MaintenanceActionApply,
-			args,
+			args...,
 		); err != nil {
 			return &requeue{curError: err}
 		}
