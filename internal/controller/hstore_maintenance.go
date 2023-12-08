@@ -17,6 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	drainingInterval = time.Minute * 5
+)
+
 type HStoreMaintenanceReconciler struct{}
 
 func (r HStoreMaintenanceReconciler) reconcile(ctx context.Context, hr *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
@@ -99,7 +103,7 @@ func (r HStoreMaintenanceReconciler) reconcile(ctx context.Context, hr *HStreamD
 			} else {
 				log.Info("a HStore node is still draining, wait for next reconcile", "node", n)
 
-				return &requeue{delay: time.Minute}
+				return &requeue{delay: drainingInterval}
 			}
 		}
 	}

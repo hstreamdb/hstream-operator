@@ -2,6 +2,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 
@@ -12,28 +13,31 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-type PodExecutor struct {
+type RemoteExecutor struct {
 	config    *rest.Config
 	Clientset *kubernetes.Clientset
 }
 
-func NewPodExecutor(config *rest.Config) (*PodExecutor, error) {
+func NewRemoteExecutor(config *rest.Config) (*RemoteExecutor, error) {
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PodExecutor{
+	return &RemoteExecutor{
 		config:    config,
 		Clientset: clientset,
 	}, nil
 }
 
-func (e *PodExecutor) RunCommandInPod(podName, namespace string, command Command) (string, error) {
-	req := e.Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
-		Namespace(namespace).SubResource("exec")
+func (e *RemoteExecutor) RunCommandInPod(podName, namespace string, command Command) (string, error) {
+	req := e.Clientset.CoreV1().RESTClient().Post().
+		Namespace(namespace).
+		Resource("pods").
+		Name(podName).
+		SubResource("exec")
 	option := &v1.PodExecOptions{
-		Command: command.getCommand(),
+		Command: command.GetCommand(),
 		Stdout:  true,
 		Stderr:  true,
 	}
@@ -52,8 +56,17 @@ func (e *PodExecutor) RunCommandInPod(podName, namespace string, command Command
 		Stderr: &stderr,
 	})
 	if err != nil || stderr.Len() != 0 {
-		return "", fmt.Errorf("an error occurred while executing the command: %w, stderr: %s", err, stderr.String())
+		return "", fmt.Errorf("an error occurred while executing the command: %w, command: %s, stderr: %s", err, command.ToString(), stderr.String())
 	}
 
 	return stdout.String(), nil
+}
+
+func (e *RemoteExecutor) AccessServiceProxy(namespace, serviceName, path string) (output []byte, err error) {
+	return e.Clientset.CoreV1().RESTClient().Get().
+		Namespace(namespace).
+		Resource("services").
+		Name(serviceName).
+		SubResource("proxy").
+		Suffix(path).DoRaw(context.TODO())
 }

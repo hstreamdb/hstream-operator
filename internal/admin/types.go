@@ -43,7 +43,7 @@ type adminClientProvider struct {
 }
 
 func (p *adminClientProvider) GetHAdminClient(hdb *hapi.HStreamDB) HAdminClient {
-	return NewHAdminClient(hdb, p.restConfig, p.log)
+	return NewAdminClient(hdb, p.restConfig, p.log)
 }
 
 func NewAdminClientProvider(restConfig *rest.Config, log logr.Logger) AdminClientProvider {

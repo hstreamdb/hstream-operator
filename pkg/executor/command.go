@@ -1,10 +1,8 @@
 package executor
 
 import (
-	"time"
+	"strings"
 )
-
-var defaultCommandTimeout = 15 * time.Second
 
 type Command struct {
 	Command string
@@ -12,17 +10,13 @@ type Command struct {
 	Args []string
 
 	// Timeout specifies the Timeout for running commands.
-	Timeout time.Duration
+	// Timeout time.Duration
 }
 
-func (c *Command) getCommand() []string {
+func (c *Command) GetCommand() []string {
 	return append([]string{c.Command}, c.Args...)
 }
 
-func (c *Command) getTimeout() time.Duration {
-	if c.Timeout != 0 {
-		return c.Timeout
-	}
-
-	return defaultCommandTimeout
+func (c *Command) ToString() string {
+	return c.Command + " " + strings.Join(c.Args, " ")
 }

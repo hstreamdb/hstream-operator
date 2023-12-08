@@ -2,7 +2,6 @@ package admin
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -17,31 +16,28 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-type hAdminClient struct {
-	hdb            *hapi.HStreamDB
-	selector       *selector.Selector
-	executor       *executor.PodExecutor
-	legacyExecutor *remoteExecutor
-	log            logr.Logger
+type AdminClient struct {
+	hdb      *hapi.HStreamDB
+	selector *selector.Selector
+	executor *executor.RemoteExecutor
+	log      logr.Logger
 }
 
 // NewAdminClient generates an Admin client for a hStream
-func NewHAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logger) HAdminClient {
-	legacyExecutor := NewExecutor(restConfig)
-	e, _ := executor.NewPodExecutor(restConfig)
+func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logger) HAdminClient {
+	e, _ := executor.NewRemoteExecutor(restConfig)
 	selector := selector.NewSelector(e.Clientset)
 
-	return &hAdminClient{
-		hdb:            hdb,
-		selector:       selector,
-		executor:       e,
-		legacyExecutor: legacyExecutor,
+	return &AdminClient{
+		hdb:      hdb,
+		selector: selector,
+		executor: e,
 		log: log.WithValues("namespace", hdb.Namespace).
 			WithValues("instance", hdb.Name),
 	}
 }
 
-func (ac *hAdminClient) call(args ...string) (string, error) {
+func (ac *AdminClient) call(args ...string) (string, error) {
 	command := executor.Command{
 		Command: "hadmin",
 		Args:    args,
@@ -60,20 +56,20 @@ func (ac *hAdminClient) call(args ...string) (string, error) {
 }
 
 // CallServer call hadmin server command with args.
-func (ac *hAdminClient) CallServer(args ...string) (string, error) {
+func (ac *AdminClient) CallServer(args ...string) (string, error) {
 	return ac.call(append([]string{"server"}, args...)...)
 }
 
 // CallStore call hadmin store command with args.
-func (ac *hAdminClient) CallStore(args ...string) (string, error) {
+func (ac *AdminClient) CallStore(args ...string) (string, error) {
 	return ac.call(append([]string{"store"}, args...)...)
 }
 
-func (ac *hAdminClient) MaintenanceStore(action MaintenanceAction, args ...string) (string, error) {
+func (ac *AdminClient) MaintenanceStore(action MaintenanceAction, args ...string) (string, error) {
 	return ac.call(append([]string{"store", "maintenance", string(action)}, args...)...)
 }
 
-func (ac *hAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
+func (ac *AdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 	hmetaAddr := ""
 	namespace := ""
 	if ac.hdb.Spec.ExternalHMeta != nil {
@@ -85,20 +81,19 @@ func (ac *hAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, constants.DefaultHMetaPort.ContainerPort)
 	}
 
-	resp, statusCode, err := ac.legacyExecutor.GetAPIByService(namespace, hmetaAddr, "nodes")
+	resp, err := ac.executor.AccessServiceProxy(namespace, hmetaAddr, "nodes")
 	if err != nil {
 		err = fmt.Errorf("get HMeta status failed. %w", err)
-		return
-	}
-	if statusCode != http.StatusOK {
-		err = fmt.Errorf("service unavailable: %s", jsoniter.Get(resp, "message").ToString())
+
 		return
 	}
 
 	err = json.Unmarshal(resp, &status.Nodes)
 	if err != nil {
 		err = fmt.Errorf("unmarshal HMeta staus failed. %w", err)
+
 		return
 	}
+
 	return
 }

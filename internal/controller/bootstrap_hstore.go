@@ -45,7 +45,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		"nodes-config", "bootstrap",
 		"--metadata-replicate-across", fmt.Sprintf("node:%d", metadataReplication),
 	); err != nil {
-		return &requeue{delay: time.Second}
+		return &requeue{message: err.Error(), delay: time.Second * 5}
 	}
 
 	hdb.SetCondition(metav1.Condition{

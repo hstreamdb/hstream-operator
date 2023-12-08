@@ -36,10 +36,10 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	logger.Info("Bootstrap HServer")
 
 	if _, err := r.AdminClientProvider.GetHAdminClient(hdb).CallServer(
-		"server", "init",
+		"init",
 		"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
 	); err != nil {
-		return &requeue{message: err.Error(), delay: time.Second}
+		return &requeue{message: err.Error(), delay: time.Second * 5}
 	}
 
 	hdb.SetCondition(metav1.Condition{
