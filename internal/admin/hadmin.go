@@ -24,7 +24,7 @@ type AdminClient struct {
 }
 
 // NewAdminClient generates an Admin client for a hStream
-func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logger) HAdminClient {
+func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logger) IAdminClient {
 	e, _ := executor.NewRemoteExecutor(restConfig)
 	selector := selector.NewSelector(e.Clientset)
 

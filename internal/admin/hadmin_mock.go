@@ -41,7 +41,7 @@ type mockAdminClientProvider struct {
 	client *mockAdminClient
 }
 
-func (m *mockAdminClientProvider) GetHAdminClient(hdb *hapi.HStreamDB) HAdminClient {
+func (m *mockAdminClientProvider) GetHAdminClient(hdb *hapi.HStreamDB) IAdminClient {
 	m.client.hdb = hdb
 	return m.client
 }
