@@ -67,7 +67,7 @@ func (r HStoreMaintenanceReconciler) reconcile(ctx context.Context, hr *HStreamD
 			"args", strings.Join(args, " "),
 		)
 
-		if _, err = hr.AdminClientProvider.GetHAdminClient(hdb).MaintenanceStore(
+		if _, err = hr.AdminClientProvider.GetAdminClient(hdb).MaintenanceStore(
 			admin.MaintenanceActionApply,
 			args...,
 		); err != nil {
@@ -92,7 +92,7 @@ func (r HStoreMaintenanceReconciler) reconcile(ctx context.Context, hr *HStreamD
 		newReplicas, _ := strconv.ParseInt(sts.Annotations[hapi.NewReplicas], 10, 32)
 
 		var statusOutput string
-		if statusOutput, err = hr.AdminClientProvider.GetHAdminClient(hdb).CallStore("status"); err != nil {
+		if statusOutput, err = hr.AdminClientProvider.GetAdminClient(hdb).CallStore("status"); err != nil {
 			return &requeue{delay: time.Second}
 		}
 

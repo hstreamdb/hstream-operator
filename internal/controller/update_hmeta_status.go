@@ -30,7 +30,7 @@ func (u updateHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler
 	}
 
 	var cluster admin.HMetaStatus
-	if cluster, err = r.AdminClientProvider.GetHAdminClient(hdb).GetHMetaStatus(); err != nil {
+	if cluster, err = r.AdminClientProvider.GetAdminClient(hdb).GetHMetaStatus(); err != nil {
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 	if !cluster.IsAllReady() {

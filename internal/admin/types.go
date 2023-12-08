@@ -22,7 +22,7 @@ type IAdminClient interface {
 // AdminClientProvider provides an abstraction for creating clients that
 // communicate with the HStreamDB cluster.
 type AdminClientProvider interface {
-	GetHAdminClient(hdb *hapi.HStreamDB) IAdminClient
+	GetAdminClient(hdb *hapi.HStreamDB) IAdminClient
 }
 
 type adminClientProvider struct {
@@ -33,7 +33,7 @@ type adminClientProvider struct {
 	log logr.Logger
 }
 
-func (p *adminClientProvider) GetHAdminClient(hdb *hapi.HStreamDB) IAdminClient {
+func (p *adminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) IAdminClient {
 	return NewAdminClient(hdb, p.restConfig, p.log)
 }
 

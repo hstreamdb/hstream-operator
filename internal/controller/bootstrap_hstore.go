@@ -41,7 +41,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 		metadataReplication = *hdb.Spec.Config.MetadataReplicateAcross
 	}
 
-	if _, err = r.AdminClientProvider.GetHAdminClient(hdb).CallStore(
+	if _, err = r.AdminClientProvider.GetAdminClient(hdb).CallStore(
 		"nodes-config", "bootstrap",
 		"--metadata-replicate-across", fmt.Sprintf("node:%d", metadataReplication),
 	); err != nil {

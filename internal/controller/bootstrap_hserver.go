@@ -35,7 +35,7 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 
 	logger.Info("Bootstrap HServer")
 
-	if _, err := r.AdminClientProvider.GetHAdminClient(hdb).CallServer(
+	if _, err := r.AdminClientProvider.GetAdminClient(hdb).CallServer(
 		"init",
 		"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
 	); err != nil {
