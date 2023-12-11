@@ -142,7 +142,7 @@ func createTestHStreamDBReconciler() *HStreamDBReconciler {
 		Client:              k8sClient,
 		Scheme:              k8sClient.Scheme(),
 		Recorder:            mock.GetEventRecorderFor("HStreamDB Controller"),
-		AdminClientProvider: admin.NewMockAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
+		AdminClientProvider: admin.NewAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
 	}
 }
 
