@@ -30,7 +30,7 @@ import (
 )
 
 type RemoteExecutor struct {
-	config    *rest.Config
+	Config    *rest.Config
 	Clientset *kubernetes.Clientset
 }
 
@@ -41,7 +41,7 @@ func NewRemoteExecutor(config *rest.Config) (*RemoteExecutor, error) {
 	}
 
 	return &RemoteExecutor{
-		config:    config,
+		Config:    config,
 		Clientset: clientset,
 	}, nil
 }
@@ -60,7 +60,7 @@ func (e *RemoteExecutor) RunCommandInPod(podName, namespace string, command Comm
 
 	req.VersionedParams(option, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(e.config, http.MethodPost, req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(e.Config, http.MethodPost, req.URL())
 	if err != nil {
 		return "", fmt.Errorf("an error occurred while creating the executor: %w", err)
 	}

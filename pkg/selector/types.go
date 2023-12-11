@@ -19,10 +19,10 @@ package selector
 import "k8s.io/client-go/kubernetes"
 
 type Selector struct {
-	clientset *kubernetes.Clientset
+	clientset kubernetes.Interface
 }
 
-func NewSelector(clientset *kubernetes.Clientset) *Selector {
+func NewSelector(clientset kubernetes.Interface) *Selector {
 	return &Selector{
 		clientset: clientset,
 	}

@@ -35,7 +35,7 @@ var _ = Describe("AddHMeta", func() {
 
 	Context("with a reconciled cluster", func() {
 		BeforeEach(func() {
-			requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+			requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 		})
 		It("should not requeue", func() {
 			Expect(requeue).To(BeNil())
@@ -74,7 +74,7 @@ var _ = Describe("AddHMeta", func() {
 		When("hmeta has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
-					requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+					requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -92,7 +92,7 @@ var _ = Describe("AddHMeta", func() {
 				name := "hdb-hmeta"
 				BeforeEach(func() {
 					hdb.Spec.HMeta.Container.Name = name
-					requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+					requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -110,7 +110,7 @@ var _ = Describe("AddHMeta", func() {
 				command := []string{"bash", "-c", "|", "echo 'hello world'"}
 				BeforeEach(func() {
 					hdb.Spec.HMeta.Container.Command = command
-					requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+					requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -136,7 +136,7 @@ var _ = Describe("AddHMeta", func() {
 				"--http-addr",
 				httpAddr,
 			}
-			requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+			requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 			Expect(requeue).To(BeNil())
 
 			sts, err = getHMetaStatefulSet(hdb)
@@ -186,7 +186,7 @@ var _ = Describe("AddHMeta", func() {
 				},
 			}
 
-			requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+			requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 		})
 
 		It("should not requeue", func() {
@@ -216,7 +216,7 @@ var _ = Describe("AddHMeta", func() {
 			} else {
 				_ = k8sClient.Delete(ctx, sts)
 			}
-			requeue = hmeta.reconcile(ctx, clusterReconciler, hdb)
+			requeue = hmeta.reconcile(ctx, hstreamdbReconciler, hdb)
 		})
 
 		It("should not requeue", func() {

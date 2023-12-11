@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2023 HStream Operator Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,12 +49,12 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg               *rest.Config
-	k8sClient         client.Client
-	testEnv           *envtest.Environment
-	ctx               context.Context
-	cancel            context.CancelFunc
-	clusterReconciler *HStreamDBReconciler
+	cfg                 *rest.Config
+	k8sClient           client.Client
+	testEnv             *envtest.Environment
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	hstreamdbReconciler *HStreamDBReconciler
 )
 
 func TestControllers(t *testing.T) {
@@ -100,15 +100,15 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	clusterReconciler = createTestClusterReconciler()
-
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	if isUsingExistingCluster() {
-		err = clusterReconciler.SetupWithManager(k8sManager)
+	hstreamdbReconciler = createTestHStreamDBReconciler()
+
+	if useExistingCluster() {
+		err = hstreamdbReconciler.SetupWithManager(k8sManager)
 		Expect(err).NotTo(HaveOccurred())
 	}
 
@@ -137,16 +137,16 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func createTestClusterReconciler() *HStreamDBReconciler {
+func createTestHStreamDBReconciler() *HStreamDBReconciler {
 	return &HStreamDBReconciler{
 		Client:              k8sClient,
 		Scheme:              k8sClient.Scheme(),
 		Recorder:            mock.GetEventRecorderFor("HStreamDB Controller"),
-		AdminClientProvider: admin.NewAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
+		AdminClientProvider: admin.NewMockAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
 	}
 }
 
-func isUsingExistingCluster() bool {
+func useExistingCluster() bool {
 	useExistingCluster, _ := strconv.ParseBool(os.Getenv("USE_EXISTING_CLUSTER"))
 	return useExistingCluster
 }

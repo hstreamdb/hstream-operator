@@ -20,7 +20,7 @@ var (
 )
 
 func reconcile() *requeue {
-	return hserver.reconcile(ctx, clusterReconciler, hdb)
+	return hserver.reconcile(ctx, hstreamdbReconciler, hdb)
 }
 
 var _ = Describe("controller/add_server", func() {

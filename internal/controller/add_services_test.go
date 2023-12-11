@@ -24,7 +24,7 @@ var _ = Describe("AddServices", func() {
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
 
-		requeue = addServices.reconcile(ctx, clusterReconciler, hdb)
+		requeue = addServices.reconcile(ctx, hstreamdbReconciler, hdb)
 	})
 
 	AfterEach(func() {
@@ -53,7 +53,7 @@ var _ = Describe("AddServices", func() {
 		When("services has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
-					requeue = addServices.reconcile(ctx, clusterReconciler, hdb)
+					requeue = addServices.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -75,7 +75,7 @@ var _ = Describe("AddServices", func() {
 							ContainerPort: 5440,
 						},
 					}
-					requeue = addServices.reconcile(ctx, clusterReconciler, hdb)
+					requeue = addServices.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {

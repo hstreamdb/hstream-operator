@@ -25,7 +25,7 @@ var _ = Describe("BootstrapHServer", Label("k8s"), func() {
 	ctx := context.TODO()
 
 	BeforeEach(func() {
-		if !isUsingExistingCluster() {
+		if !useExistingCluster() {
 			Skip("Skip testcase BootstrapHServer")
 		}
 
@@ -68,28 +68,28 @@ var _ = Describe("HstreamdbController", func() {
 
 	It("no requeue", func() {
 		mockRec.rq = nil
-		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
+		res, err := hstreamdbReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
 		Expect(res).To(Equal(ctrl.Result{}))
 	})
 
 	It("reconcile failed", func() {
 		mockRec.rq = &requeue{curError: errors.New("mock requeue")}
-		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
+		res, err := hstreamdbReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(HaveOccurred())
 		Expect(res).To(Equal(ctrl.Result{}))
 	})
 
 	It("should requeue next time immediately", func() {
 		mockRec.rq = &requeue{delayedRequeue: true}
-		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
+		res, err := hstreamdbReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
 		Expect(res).To(Equal(ctrl.Result{RequeueAfter: time.Second}))
 	})
 
 	It("should requeue delay", func() {
 		mockRec.rq = &requeue{message: "requeue delay", delay: time.Second}
-		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
+		res, err := hstreamdbReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
 		Expect(res).To(Equal(ctrl.Result{RequeueAfter: time.Second}))
 	})
@@ -99,7 +99,7 @@ var _ = Describe("HstreamdbController", func() {
 		conflictErr := k8sErrors.NewConflict(gr, "conflict", errors.New("something wrong"))
 		mockRec.rq = &requeue{curError: conflictErr, delay: 0}
 
-		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
+		res, err := hstreamdbReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
 		Expect(res).To(Equal(ctrl.Result{RequeueAfter: time.Second}))
 	})

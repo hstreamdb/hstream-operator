@@ -32,7 +32,7 @@ var _ = Describe("AddHstore", func() {
 
 	Context("with a reconciled cluster", func() {
 		BeforeEach(func() {
-			requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+			requeue = hStore.reconcile(ctx, hstreamdbReconciler, hdb)
 		})
 		It("should not requeue", func() {
 			Expect(requeue).To(BeNil())
@@ -48,7 +48,7 @@ var _ = Describe("AddHstore", func() {
 		When("hserver has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
-					requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+					requeue = hStore.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -66,7 +66,7 @@ var _ = Describe("AddHstore", func() {
 				name := "hdb-hserver"
 				BeforeEach(func() {
 					hdb.Spec.HStore.Container.Name = name
-					requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+					requeue = hStore.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -84,7 +84,7 @@ var _ = Describe("AddHstore", func() {
 				command := []string{"bash", "-c", "|", "echo 'hello world'"}
 				BeforeEach(func() {
 					hdb.Spec.HStore.Container.Command = command
-					requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+					requeue = hStore.reconcile(ctx, hstreamdbReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -122,7 +122,7 @@ var _ = Describe("AddHstore", func() {
 				},
 			}
 
-			requeue = hStore.reconcile(ctx, clusterReconciler, hdb)
+			requeue = hStore.reconcile(ctx, hstreamdbReconciler, hdb)
 		})
 
 		It("should not requeue", func() {
