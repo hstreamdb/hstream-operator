@@ -34,7 +34,7 @@ var _ = Describe("AddConsole", func() {
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
 
-		requeue = addConsole.reconcile(ctx, hstreamdbReconciler, hdb)
+		requeue = addConsole.reconcile(ctx, clusterReconciler, hdb)
 	})
 
 	AfterEach(func() {
@@ -56,7 +56,7 @@ var _ = Describe("AddConsole", func() {
 		When("console has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
-					requeue = addConsole.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addConsole.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -99,7 +99,7 @@ var _ = Describe("AddConsole", func() {
 				name := "hdb-console"
 				BeforeEach(func() {
 					hdb.Spec.Console.Container.Name = name
-					requeue = addConsole.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addConsole.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -117,7 +117,7 @@ var _ = Describe("AddConsole", func() {
 				command := []string{"bash", "-c", "|", "echo 'hello world'"}
 				BeforeEach(func() {
 					hdb.Spec.Console.Container.Command = command
-					requeue = addConsole.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addConsole.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -140,7 +140,7 @@ var _ = Describe("AddConsole", func() {
 							Value: "5178",
 						},
 					}
-					requeue = addConsole.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addConsole.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -165,7 +165,7 @@ var _ = Describe("AddConsole", func() {
 						"-Dserver.port=5179",
 						"-Dplain.hstream.privateAddress=hstreamdb-sample-internal-hserver:6570",
 					}
-					requeue = addConsole.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addConsole.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {

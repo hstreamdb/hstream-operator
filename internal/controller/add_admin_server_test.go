@@ -22,7 +22,7 @@ var _ = Describe("AddAdminServer", func() {
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
 
-		requeue = addAdminServer.reconcile(ctx, hstreamdbReconciler, hdb)
+		requeue = addAdminServer.reconcile(ctx, clusterReconciler, hdb)
 	})
 
 	AfterEach(func() {
@@ -44,7 +44,7 @@ var _ = Describe("AddAdminServer", func() {
 		When("admin server has been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
-					requeue = addAdminServer.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addAdminServer.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -62,7 +62,7 @@ var _ = Describe("AddAdminServer", func() {
 				name := "hdb-admin-server"
 				BeforeEach(func() {
 					hdb.Spec.AdminServer.Container.Name = name
-					requeue = addAdminServer.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addAdminServer.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -80,7 +80,7 @@ var _ = Describe("AddAdminServer", func() {
 				command := []string{"bash", "-c", "|", "echo 'hello world'"}
 				BeforeEach(func() {
 					hdb.Spec.AdminServer.Container.Command = command
-					requeue = addAdminServer.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = addAdminServer.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {

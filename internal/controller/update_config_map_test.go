@@ -33,7 +33,7 @@ var _ = Describe("UpdateConfigMap", func() {
 
 	Context("with a reconciled cluster", func() {
 		BeforeEach(func() {
-			requeue = updateConfigMap.reconcile(ctx, hstreamdbReconciler, hdb)
+			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 		})
 
 		It("should not requeue", func() {
@@ -50,7 +50,7 @@ var _ = Describe("UpdateConfigMap", func() {
 		When("config maps have been deployed", func() {
 			Context("reconcile though nothing change", func() {
 				BeforeEach(func() {
-					requeue = updateConfigMap.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 				})
 
 				It("should not requeue", func() {
@@ -81,7 +81,7 @@ var _ = Describe("UpdateConfigMap", func() {
 						}
 					}
 					`)}
-					requeue = updateConfigMap.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 					Expect(requeue).To(BeNil())
 				})
 
@@ -122,7 +122,7 @@ var _ = Describe("UpdateConfigMap", func() {
 						Namespace: "default",
 					}
 
-					requeue = updateConfigMap.reconcile(ctx, hstreamdbReconciler, hdb)
+					requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 					Expect(requeue).To(BeNil())
 				})
 
@@ -153,7 +153,7 @@ var _ = Describe("UpdateConfigMap", func() {
 			hdb.Spec.Config.LogDeviceConfig = runtime.RawExtension{
 				Raw: []byte("invalid config"),
 			}
-			requeue = updateConfigMap.reconcile(ctx, hstreamdbReconciler, hdb)
+			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 		})
 
 		It("should requeue", func() {
@@ -169,7 +169,7 @@ var _ = Describe("UpdateConfigMap", func() {
 	Context("with default nshard", func() {
 		BeforeEach(func() {
 			hdb.Spec.Config.NShards = 0
-			requeue = updateConfigMap.reconcile(ctx, hstreamdbReconciler, hdb)
+			requeue = updateConfigMap.reconcile(ctx, clusterReconciler, hdb)
 		})
 		It("should not requeue", func() {
 			Expect(requeue).To(BeNil())

@@ -36,7 +36,7 @@ var _ = Describe("UpdateStatus", func() {
 	})
 
 	It("check conditions", func() {
-		Expect(updateStatus.reconcile(ctx, hstreamdbReconciler, hdb)).To(Equal(&requeue{message: "HStreamDB is not ready", delayedRequeue: true}))
+		Expect(updateStatus.reconcile(ctx, clusterReconciler, hdb)).To(Equal(&requeue{message: "HStreamDB is not ready", delayedRequeue: true}))
 		storeHdb := &hapi.HStreamDB{}
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
 		Expect(storeHdb.Status.Conditions).To(ContainElement(
@@ -83,7 +83,7 @@ var _ = Describe("UpdateStatus", func() {
 		})
 
 		It("check conditions", func() {
-			Expect(updateStatus.reconcile(ctx, hstreamdbReconciler, hdb)).To(BeNil())
+			Expect(updateStatus.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 			storeHdb := &hapi.HStreamDB{}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(hdb), storeHdb)).To(BeNil())
 			Expect(storeHdb.Status.Conditions).To(ContainElement(
@@ -108,7 +108,7 @@ func prepareGatewayReady(ctx context.Context, hdb *hapi.HStreamDB) {
 		Reason:  "test",
 		Message: "test",
 	})
-	Expect(addGateway{}.reconcile(ctx, hstreamdbReconciler, hdb)).To(BeNil())
+	Expect(addGateway{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 
 	gateway := &appsv1.Deployment{
 		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeGateway),
@@ -125,7 +125,7 @@ func prepareConsoleReady(ctx context.Context, hdb *hapi.HStreamDB) {
 	hdb.Spec.Console.ImagePullPolicy = "IfNotPresent"
 	hdb.Spec.Console.Replicas = 1
 
-	Expect(addConsole{}.reconcile(ctx, hstreamdbReconciler, hdb)).To(BeNil())
+	Expect(addConsole{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
 
 	console := &appsv1.Deployment{
 		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeConsole),

@@ -49,12 +49,12 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg                 *rest.Config
-	k8sClient           client.Client
-	testEnv             *envtest.Environment
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	hstreamdbReconciler *HStreamDBReconciler
+	cfg               *rest.Config
+	k8sClient         client.Client
+	testEnv           *envtest.Environment
+	ctx               context.Context
+	cancel            context.CancelFunc
+	clusterReconciler *HStreamDBReconciler
 )
 
 func TestControllers(t *testing.T) {
@@ -105,10 +105,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	hstreamdbReconciler = createTestHStreamDBReconciler()
+	clusterReconciler = createTestHStreamDBReconciler()
 
 	if useExistingCluster() {
-		err = hstreamdbReconciler.SetupWithManager(k8sManager)
+		err = clusterReconciler.SetupWithManager(k8sManager)
 		Expect(err).NotTo(HaveOccurred())
 	}
 

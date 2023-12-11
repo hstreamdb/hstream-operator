@@ -38,7 +38,7 @@ var _ = Describe("AddGateway", func() {
 
 	It("should not create gateway if no gateway pointer", func() {
 		By("reconcile")
-		requeue = addGateway.reconcile(ctx, hstreamdbReconciler, hdb)
+		requeue = addGateway.reconcile(ctx, clusterReconciler, hdb)
 		Expect(requeue).To(BeNil())
 
 		Eventually(func() bool {
@@ -65,7 +65,7 @@ var _ = Describe("AddGateway", func() {
 
 		It("should not create gateway if HServer not ready", func() {
 			By("reconcile")
-			requeue = addGateway.reconcile(ctx, hstreamdbReconciler, hdb)
+			requeue = addGateway.reconcile(ctx, clusterReconciler, hdb)
 			Expect(requeue.curError).To(BeNil())
 			Expect(requeue.message).NotTo(BeEmpty())
 			Expect(requeue.delay).To(Equal(10 * time.Second))
@@ -101,7 +101,7 @@ var _ = Describe("AddGateway", func() {
 
 		It("should create gateway, but secret is not mount", func() {
 			By("reconcile")
-			requeue = addGateway.reconcile(ctx, hstreamdbReconciler, hdb)
+			requeue = addGateway.reconcile(ctx, clusterReconciler, hdb)
 			Expect(requeue).To(BeNil())
 
 			deployment := &appsv1.Deployment{}
@@ -154,7 +154,7 @@ var _ = Describe("AddGateway", func() {
 
 		It("should create gateway, and secret is mount", func() {
 			By("reconcile")
-			requeue = addGateway.reconcile(ctx, hstreamdbReconciler, hdb)
+			requeue = addGateway.reconcile(ctx, clusterReconciler, hdb)
 			Expect(requeue).To(BeNil())
 
 			deployment := &appsv1.Deployment{}
