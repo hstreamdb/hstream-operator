@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2023 HStream Operator Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -100,14 +100,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	clusterReconciler = createTestClusterReconciler()
-
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	if isUsingExistingCluster() {
+	clusterReconciler = createTestHStreamDBReconciler()
+
+	if useExistingCluster() {
 		err = clusterReconciler.SetupWithManager(k8sManager)
 		Expect(err).NotTo(HaveOccurred())
 	}
@@ -137,7 +137,7 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func createTestClusterReconciler() *HStreamDBReconciler {
+func createTestHStreamDBReconciler() *HStreamDBReconciler {
 	return &HStreamDBReconciler{
 		Client:              k8sClient,
 		Scheme:              k8sClient.Scheme(),
@@ -146,7 +146,7 @@ func createTestClusterReconciler() *HStreamDBReconciler {
 	}
 }
 
-func isUsingExistingCluster() bool {
+func useExistingCluster() bool {
 	useExistingCluster, _ := strconv.ParseBool(os.Getenv("USE_EXISTING_CLUSTER"))
 	return useExistingCluster
 }

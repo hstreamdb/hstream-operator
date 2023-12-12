@@ -6,6 +6,7 @@ import (
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/internal"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,8 +36,11 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	}
 
 	logger.Info("Bootstrap hServer")
-	if err := r.AdminClientProvider.GetAdminClient(hdb).BootstrapHServer(); err != nil {
-		return &requeue{message: err.Error(), delay: time.Second}
+	if _, err := r.AdminClientProvider.GetAdminClient(hdb).CallServer(
+		"init",
+		"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
+	); err != nil {
+		return &requeue{message: err.Error(), delay: time.Second * 5}
 	}
 
 	hdb.SetCondition(metav1.Condition{

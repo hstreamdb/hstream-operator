@@ -43,8 +43,12 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	} else {
 		metadataReplication = *hdb.Spec.Config.MetadataReplicateAcross
 	}
-	if err = r.AdminClientProvider.GetAdminClient(hdb).BootstrapHStore(metadataReplication); err != nil {
-		return &requeue{message: err.Error(), delay: time.Second}
+
+	if _, err = r.AdminClientProvider.GetAdminClient(hdb).CallStore(
+		"nodes-config", "bootstrap",
+		"--metadata-replicate-across", fmt.Sprintf("node:%d", metadataReplication),
+	); err != nil {
+		return &requeue{message: err.Error(), delay: time.Second * 5}
 	}
 
 	hdb.SetCondition(metav1.Condition{

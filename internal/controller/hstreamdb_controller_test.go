@@ -25,7 +25,7 @@ var _ = Describe("BootstrapHServer", Label("k8s"), func() {
 	ctx := context.TODO()
 
 	BeforeEach(func() {
-		if !isUsingExistingCluster() {
+		if !useExistingCluster() {
 			Skip("Skip testcase BootstrapHServer")
 		}
 
