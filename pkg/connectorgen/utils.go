@@ -14,25 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package executor
+package connectorgen
 
-import (
-	"strings"
-)
+func addImageRegistry(image string, registry *string) string {
+	if registry == nil {
+		return image
+	}
 
-type Command struct {
-	Command string
-
-	Args []string
-
-	// Timeout specifies the Timeout for running commands.
-	// Timeout time.Duration
-}
-
-func (c *Command) GetCommand() []string {
-	return append([]string{c.Command}, c.Args...)
-}
-
-func (c *Command) ToString() string {
-	return c.Command + " " + strings.Join(c.Args, " ")
+	return *registry + "/" + image
 }

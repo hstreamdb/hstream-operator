@@ -34,6 +34,7 @@ func (ac *mockAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 			Error:     "",
 		}
 	}
+
 	return
 }
 
@@ -43,6 +44,7 @@ type mockAdminClientProvider struct {
 
 func (m *mockAdminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) IAdminClient {
 	m.client.hdb = hdb
+
 	return m.client
 }
 

@@ -1,3 +1,19 @@
+/*
+Copyright 2023 HStream Operator Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package admin
 
 import (
@@ -70,8 +86,9 @@ func (ac *AdminClient) MaintenanceStore(action MaintenanceAction, args ...string
 }
 
 func (ac *AdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
-	hmetaAddr := ""
 	namespace := ""
+	hmetaAddr := ""
+
 	if ac.hdb.Spec.ExternalHMeta != nil {
 		namespace = ac.hdb.Spec.ExternalHMeta.Namespace
 		hmetaAddr = ac.hdb.Spec.ExternalHMeta.Host + ":" + strconv.Itoa(int(ac.hdb.Spec.ExternalHMeta.Port))
@@ -81,16 +98,16 @@ func (ac *AdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
 		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, constants.DefaultHMetaPort.ContainerPort)
 	}
 
-	resp, err := ac.executor.AccessServiceProxy(namespace, hmetaAddr, "nodes")
+	output, err := ac.executor.AccessServiceProxy(namespace, hmetaAddr, "nodes")
 	if err != nil {
-		err = fmt.Errorf("get HMeta status failed. %w", err)
+		err = fmt.Errorf("failed to get HMeta status: %w", err)
 
 		return
 	}
 
-	err = json.Unmarshal(resp, &status.Nodes)
+	err = json.Unmarshal(output, &status.Nodes)
 	if err != nil {
-		err = fmt.Errorf("unmarshal HMeta staus failed. %w", err)
+		err = fmt.Errorf("failed to unmarshal HMeta staus: %w", err)
 
 		return
 	}
