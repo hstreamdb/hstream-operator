@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,7 +58,6 @@ var hStoreArgs = []string{
 	"--address", "$(POD_IP)",
 	"--name", "$(POD_NAME)",
 	"--local-log-store-path", internal.HStoreDataPath,
-	//"--num-shards", "1",
 }
 
 type addHStore struct{}
@@ -168,13 +168,11 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 	container.Args, _ = extendArgs(container.Args, args...)
 	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, hStorePorts...))
 
-	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-			Name:      m.MountName,
-			MountPath: m.MountPath,
-			ReadOnly:  true,
-		})
-	})
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		utils.GetLogDeviceConfigVolumeMount(hdb),
+		utils.GetNShardsConfigVolumeMount(hdb),
+	)
 
 	for i := int32(0); i < nShard; i++ {
 		container.VolumeMounts = append(container.VolumeMounts,
@@ -188,23 +186,10 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 }
 
 func (a addHStore) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
-	volumes = make([]corev1.Volume, 0)
-	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
-		volumes = append(volumes, corev1.Volume{
-			Name: m.MountName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: internal.GetResNameOnPanic(hdb, m.MapNameSuffix)},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  m.MapKey,
-							Path: m.MapPath,
-						},
-					},
-				}},
-		})
-	})
+	volumes = []corev1.Volume{
+		utils.GetLogDeviceConfigVolume(hdb),
+		utils.GetNShardsConfigVolume(hdb),
+	}
 
 	// add an emptyDir volume if the pvc is null
 	if hdb.Spec.HStore.VolumeClaimTemplate == nil {
@@ -215,6 +200,7 @@ func (a addHStore) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
 			},
 		})
 	}
+
 	return
 }
 
@@ -232,8 +218,7 @@ func (a addHStore) getNShardFromExistingConfigMap(ctx context.Context, r *HStrea
 	nShard := hdb.Spec.Config.NShards
 
 	var existingConfigMap corev1.ConfigMap
-	nShardConfigMap, _ := getNShardsMap(hdb)
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(&nShardConfigMap), &existingConfigMap)
+	err := r.Client.Get(ctx, utils.GetNShardsConfigMapNamespacedName(hdb), &existingConfigMap)
 	if err == nil {
 		for _, v := range existingConfigMap.Data {
 			if num, err := strconv.Atoi(v); err == nil {

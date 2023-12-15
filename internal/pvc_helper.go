@@ -41,18 +41,3 @@ func GetPvcName(hdb *hapi.HStreamDB, pvc *corev1.PersistentVolumeClaimTemplate) 
 	}
 	return GetResNameWithDefault(hdb, shortName, "data")
 }
-
-func GetVolume(hdb *hapi.HStreamDB, m ConfigMap) corev1.Volume {
-	return corev1.Volume{
-		Name: m.MountName,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: GetResNameOnPanic(hdb, m.MapNameSuffix)},
-				Items: []corev1.KeyToPath{
-					{Key: m.MapKey, Path: m.MapPath},
-				},
-			},
-		},
-	}
-}

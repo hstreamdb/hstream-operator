@@ -5,6 +5,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,7 +81,7 @@ func (a addAdminServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSp
 	adminServer := &hdb.Spec.AdminServer
 
 	pod := corev1.PodTemplateSpec{
-		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeAdminServer),
+		ObjectMeta: hapi.ComponentTypeAdminServer.GetObjectMeta(hdb, nil),
 		Spec: corev1.PodSpec{
 			Affinity:        adminServer.Affinity,
 			Tolerations:     adminServer.Tolerations,
@@ -89,12 +90,10 @@ func (a addAdminServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSp
 			SecurityContext: adminServer.PodSecurityContext,
 			InitContainers:  adminServer.InitContainers,
 			Containers:      a.getContainer(hdb),
-			Volumes:         adminServer.Volumes,
+			Volumes:         append(adminServer.Volumes, utils.GetLogDeviceConfigVolume(hdb)),
 		},
 	}
 
-	pod.Name = hapi.ComponentTypeAdminServer.GetResName(hdb.Name)
-	pod.Spec.Volumes = append(pod.Spec.Volumes, a.getVolumes(hdb)...)
 	return pod
 }
 
@@ -118,15 +117,10 @@ func (a addAdminServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	container.Args, _ = extendArgs(container.Args, adminServerArgs...)
 	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, adminServerPort))
 
-	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
-	container.VolumeMounts = append(container.VolumeMounts,
-		corev1.VolumeMount{Name: m.MountName, MountPath: m.MountPath},
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		utils.GetLogDeviceConfigVolumeMount(hdb),
 	)
-	return append([]corev1.Container{container}, adminServer.SidecarContainers...)
-}
 
-func (a addAdminServer) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
-	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
-	volumes = []corev1.Volume{internal.GetVolume(hdb, m)}
-	return
+	return append([]corev1.Container{container}, adminServer.SidecarContainers...)
 }

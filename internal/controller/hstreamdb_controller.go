@@ -85,7 +85,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	subReconcilers := []hdbSubReconciler{
-		updateConfigMap{},
+		LogDeviceConfigReconciler{},
 		addServices{},
 		addHMeta{},
 		updateHMetaStatus{},

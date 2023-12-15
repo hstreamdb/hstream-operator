@@ -9,6 +9,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -89,7 +90,7 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 			SecurityContext: hServer.PodSecurityContext,
 			InitContainers:  append(initContainers, hServer.InitContainers...),
 			Containers:      append([]corev1.Container{container}, hServer.SidecarContainers...),
-			Volumes:         append(hServer.Volumes, a.getVolumes(hdb)...),
+			Volumes:         append(hServer.Volumes, utils.GetLogDeviceConfigVolume(hdb)),
 		},
 	}
 
@@ -178,18 +179,12 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 
 	container.Command, container.Args, container.Ports = a.defaultCommandArgsAndPorts(hdb)
 
-	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
-	container.VolumeMounts = append(container.VolumeMounts,
-		corev1.VolumeMount{Name: m.MountName, MountPath: m.MountPath},
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		utils.GetLogDeviceConfigVolumeMount(hdb),
 	)
 
 	return container
-}
-
-func (a addHServer) getVolumes(hdb *hapi.HStreamDB) (volumes []corev1.Volume) {
-	m, _ := internal.ConfigMaps.Get(internal.LogDeviceConfig)
-	volumes = []corev1.Volume{internal.GetVolume(hdb, m)}
-	return
 }
 
 func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, args []string, ports []corev1.ContainerPort) {

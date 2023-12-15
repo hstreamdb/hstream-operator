@@ -6,6 +6,7 @@ import (
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
 	jsoniter "github.com/json-iterator/go"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,11 +38,11 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 
 	logger.Info("Bootstrap HStore")
 
-	metadataReplication := int32(0)
+	var metadataReplication int
 	if hdb.Spec.Config.MetadataReplicateAcross == nil || *hdb.Spec.Config.MetadataReplicateAcross > hdb.Spec.HStore.Replicas {
-		metadataReplication = getRecommendedLogReplicaAcross(hdb.Spec.HStore.Replicas)
+		metadataReplication = utils.GetRecommendedLogReplicaAcross(hdb)
 	} else {
-		metadataReplication = *hdb.Spec.Config.MetadataReplicateAcross
+		metadataReplication = int(*hdb.Spec.Config.MetadataReplicateAcross)
 	}
 
 	if _, err = r.AdminClientProvider.GetAdminClient(hdb).CallStore(
