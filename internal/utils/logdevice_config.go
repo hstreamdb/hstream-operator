@@ -115,7 +115,9 @@ func GetLogDeviceConfig(nodeNum int32, hmetaAddr string, existingConfig []byte) 
 			return "", err
 		}
 
-		jsonParsed.Merge(existingParsed)
+		jsonParsed.MergeFn(existingParsed, func(destination, source interface{}) interface{} {
+			return source
+		})
 	}
 
 	return jsonParsed.String(), nil
