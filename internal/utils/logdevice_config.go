@@ -99,10 +99,13 @@ func GetLogDeviceConfig(nodeNum int32, hmetaAddr string, existingConfig []byte) 
 	}
 
 	var buf bytes.Buffer
-	tmpl.Execute(&buf, map[string]any{
+	err = tmpl.Execute(&buf, map[string]any{
 		"NodeNum":   nodeNum,
 		"HMetaAddr": hmetaAddr,
 	})
+	if err != nil {
+		return "", err
+	}
 
 	jsonParsed, err := gabs.ParseJSON(buf.Bytes())
 	if err != nil {
@@ -115,9 +118,12 @@ func GetLogDeviceConfig(nodeNum int32, hmetaAddr string, existingConfig []byte) 
 			return "", err
 		}
 
-		jsonParsed.MergeFn(existingParsed, func(destination, source interface{}) interface{} {
+		err = jsonParsed.MergeFn(existingParsed, func(destination, source interface{}) interface{} {
 			return source
 		})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return jsonParsed.String(), nil
