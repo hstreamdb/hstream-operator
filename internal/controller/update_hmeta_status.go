@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal/admin"
+	"github.com/hstreamdb/hstream-operator/internal/controller/status"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,14 +18,13 @@ func (u updateHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler
 	var err error
 
 	if hdb.Spec.ExternalHMeta == nil {
-		// determine if all HMeta pods are running
+		// Determine if all HMeta pods are running.
 		sts := &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: hapi.ComponentTypeHMeta.GetResName(hdb.Name),
 			},
 		}
-		if err = checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
-			// print message only to log, wait for reconciling after several second
+		if err = status.CheckReplicasReadyStatus(ctx, r.Client, hdb, sts); err != nil {
 			return &requeue{message: err.Error(), delay: time.Second}
 		}
 	}

@@ -97,7 +97,7 @@ var _ = Describe("HstreamdbController", func() {
 	It("should requeue delay with conflict error", func() {
 		gr := schema.ParseGroupResource("app.hstream.io")
 		conflictErr := k8sErrors.NewConflict(gr, "conflict", errors.New("something wrong"))
-		mockRec.rq = &requeue{curError: conflictErr, delay: 0}
+		mockRec.rq = &requeue{curError: conflictErr}
 
 		res, err := clusterReconciler.subReconcile(ctx, hdb, subReconcilers)
 		Expect(err).To(Succeed())
