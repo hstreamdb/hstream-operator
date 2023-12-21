@@ -19,17 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var hServerEnvVar = []corev1.EnvVar{
-	{
-		Name: "POD_NAME",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.name",
-			},
-		},
-	},
-}
-
 type addHServer struct{}
 
 func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
@@ -171,7 +160,7 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 	}
 
 	structAssign(&container, &hServer.Container)
-	container.Env = extendEnvs(container.Env, hServerEnvVar...)
+	container.Env = extendEnvs(container.Env, constants.DefaultHServerEnv...)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHServer)
