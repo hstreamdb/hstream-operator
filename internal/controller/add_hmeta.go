@@ -16,13 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Check https://github.com/rqlite/kubernetes-configuration/blob/master/statefulset-3-node.yaml as an example.
-var hmetaArgs = []string{
-	"--disco-mode", "dns",
-	"--join-interval", "1s",
-	"--join-attempts", "120",
-}
-
 type addHMeta struct{}
 
 func (a addHMeta) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
@@ -136,7 +129,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 		container.Name = string(hapi.ComponentTypeHMeta)
 	}
 
-	args := hmetaArgs
+	args := constants.DefaultHMetaArgs
 	args = append(args, "--bootstrap-expect", strconv.Itoa(int(hmeta.Replicas)))
 	args = append(args, "--disco-config", fmt.Sprintf(`{"name":"%s"}`, internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta).Name))
 	container.Args, _ = extendArgs(container.Args, args...)

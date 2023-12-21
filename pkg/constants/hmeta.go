@@ -20,6 +20,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Check https://github.com/rqlite/kubernetes-configuration/blob/master/statefulset-3-node.yaml as an example.
+var DefaultHMetaArgs = []string{
+	"--disco-mode", "dns",
+	"--join-interval", "1s",
+	"--join-attempts", "120",
+}
+
 var DefaultHMetaPort = corev1.ContainerPort{
 	Name:          "rqlite",
 	ContainerPort: 4001,
