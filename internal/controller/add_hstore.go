@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -14,51 +15,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var hStoreEnvVar = []corev1.EnvVar{
-	{
-		Name: "POD_NAME",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.name",
-			},
-		},
-	},
-	{
-		Name: "POD_IP",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "status.podIP",
-			},
-		},
-	},
-}
-
-var hStorePorts = []corev1.ContainerPort{
-	{
-		Name:          "port",
-		ContainerPort: 4440,
-		Protocol:      corev1.ProtocolTCP,
-	},
-	{
-		Name:          "gossip-port",
-		ContainerPort: 4441,
-		Protocol:      corev1.ProtocolTCP,
-	},
-	{
-		Name:          "admin-port",
-		ContainerPort: 6440,
-		Protocol:      corev1.ProtocolTCP,
-	},
-}
-
-var hStoreArgs = []string{
-	"--config-path", internal.HStoreConfigPath + "/config.json",
-	"--address", "$(POD_IP)",
-	"--name", "$(POD_NAME)",
-	"--local-log-store-path", internal.HStoreDataPath,
-	//"--num-shards", "1",
-}
 
 type addHStore struct{}
 
@@ -152,7 +108,7 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 
 	structAssign(&container, &hStore.Container)
 
-	container.Env = extendEnvs(container.Env, hStoreEnvVar...)
+	container.Env = extendEnvs(container.Env, constants.DefaultHStoreEnv...)
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHStore)
@@ -162,11 +118,11 @@ func (a addHStore) getContainer(hdb *hapi.HStreamDB, nShard int32) []corev1.Cont
 		container.Command = []string{"/usr/local/bin/logdeviced"}
 	}
 
-	args := hStoreArgs
+	args := constants.DefaultHStoreArgs
 	args = append(args, "--num-shards", strconv.Itoa(int(nShard)))
 
 	container.Args, _ = extendArgs(container.Args, args...)
-	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, hStorePorts...))
+	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, constants.DefaultHStorePorts...))
 
 	internal.ConfigMaps.Visit(func(m internal.ConfigMap) {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
