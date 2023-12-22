@@ -101,7 +101,7 @@ var _ = Describe("AddAdminServer", func() {
 func getAdminServerDeployment(hdb *hapi.HStreamDB) (deploy *appsv1.Deployment, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      hapi.ComponentTypeAdminServer.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeAdminServer.GetResName(hdb),
 	}
 	deploy = &appsv1.Deployment{}
 	err = k8sClient.Get(context.TODO(), keyObj, deploy)

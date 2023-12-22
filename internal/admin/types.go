@@ -30,6 +30,7 @@ const (
 
 type IAdminClient interface {
 	CallServer(args ...string) (string, error)
+	CallKafkaServer(args ...string) (string, error)
 	CallStore(args ...string) (string, error)
 	MaintenanceStore(action MaintenanceAction, args ...string) (string, error)
 	GetHMetaStatus() (HMetaStatus, error)

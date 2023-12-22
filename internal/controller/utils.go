@@ -125,7 +125,7 @@ func extendPorts(ports []corev1.ContainerPort, externalPorts ...corev1.Container
 			}
 		}
 		if !found {
-			if (&externalPorts[i]).Name == "" {
+			if externalPorts[i].Name == "" {
 				(&externalPorts[i]).Name = fmt.Sprintf("unset-%d", (&externalPorts[i]).ContainerPort)
 			}
 			ports = append(ports, externalPorts[i])
@@ -152,29 +152,6 @@ func coverPortsFromArgs(args []string, ports []corev1.ContainerPort) []corev1.Co
 	}
 
 	return newPorts
-}
-
-// mergePorts merge the same name of user defined port to required port
-func mergePorts(required, userDefined []corev1.ContainerPort) []corev1.ContainerPort {
-	ports := make([]corev1.ContainerPort, len(required))
-	copy(ports, required)
-
-	for i := range userDefined {
-		found := false
-		for j := range ports {
-			if (&ports[j]).Name == (&userDefined[i]).Name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			if (&userDefined[i]).Name == "" {
-				(&userDefined[i]).Name = fmt.Sprintf("unset-%d", (&userDefined[i]).ContainerPort)
-			}
-			ports = append(ports, userDefined[i])
-		}
-	}
-	return ports
 }
 
 func isHashChanged(obj1, obj2 *metav1.ObjectMeta) bool {

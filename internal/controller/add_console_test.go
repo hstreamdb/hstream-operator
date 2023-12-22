@@ -199,7 +199,7 @@ var _ = Describe("AddConsole", func() {
 func getConsoleDeployment(hdb *hapi.HStreamDB) (deploy *appsv1.Deployment, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      hapi.ComponentTypeConsole.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeConsole.GetResName(hdb),
 	}
 	deploy = &appsv1.Deployment{}
 	err = k8sClient.Get(context.TODO(), keyObj, deploy)

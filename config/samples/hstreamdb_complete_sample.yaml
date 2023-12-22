@@ -75,9 +75,8 @@ spec:
 
   # config:
   #   nshards: 1
-  #   metadata-replicate-across: 1
+  #   metadata-replicate-across: 3
   #   logDeviceConfig:
-  #     version: 2
   gateway:
     endpoint: "hstreamdb-sample.hstreamdb"
     image: hstreamdb/hstream-gateway

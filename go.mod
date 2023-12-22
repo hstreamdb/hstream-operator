@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/Jeffail/gabs/v2 v2.7.0
-	github.com/json-iterator/go v1.1.12
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.4
 	k8s.io/api v0.25.0
@@ -17,6 +16,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 )

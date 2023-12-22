@@ -17,6 +17,7 @@ limitations under the License.
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -26,11 +27,8 @@ import (
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	"github.com/hstreamdb/hstream-operator/pkg/executor"
 	"github.com/hstreamdb/hstream-operator/pkg/selector"
-	jsoniter "github.com/json-iterator/go"
 	"k8s.io/client-go/rest"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type AdminClient struct {
 	hdb      *hapi.HStreamDB
@@ -53,9 +51,9 @@ func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logge
 	}
 }
 
-func (ac *AdminClient) call(args ...string) (string, error) {
+func (ac *AdminClient) call(cmd string, args ...string) (string, error) {
 	command := executor.Command{
-		Command: "hadmin",
+		Command: cmd,
 		Args:    args,
 	}
 
@@ -73,16 +71,20 @@ func (ac *AdminClient) call(args ...string) (string, error) {
 
 // CallServer call hadmin server command with args.
 func (ac *AdminClient) CallServer(args ...string) (string, error) {
-	return ac.call(append([]string{"server"}, args...)...)
+	return ac.call("hadmin", append([]string{"server"}, args...)...)
+}
+
+func (ac *AdminClient) CallKafkaServer(args ...string) (string, error) {
+	return ac.call("hstream-kafka-cli", append([]string{"node"}, args...)...)
 }
 
 // CallStore call hadmin store command with args.
 func (ac *AdminClient) CallStore(args ...string) (string, error) {
-	return ac.call(append([]string{"store"}, args...)...)
+	return ac.call("hadmin", append([]string{"store"}, args...)...)
 }
 
 func (ac *AdminClient) MaintenanceStore(action MaintenanceAction, args ...string) (string, error) {
-	return ac.call(append([]string{"store", "maintenance", string(action)}, args...)...)
+	return ac.call("hadmin", append([]string{"store", "maintenance", string(action)}, args...)...)
 }
 
 func (ac *AdminClient) GetHMetaStatus() (status HMetaStatus, err error) {

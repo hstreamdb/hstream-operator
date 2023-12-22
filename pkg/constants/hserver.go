@@ -23,13 +23,16 @@ import (
 var DefaultHServerPort = corev1.ContainerPort{
 	Name:          "port",
 	ContainerPort: 6570,
-	Protocol:      corev1.ProtocolTCP,
 }
 
 var DefaultHServerInternalPort = corev1.ContainerPort{
 	Name:          "internal-port",
 	ContainerPort: 6571,
-	Protocol:      corev1.ProtocolTCP,
+}
+
+var DefaultHServerPorts = []corev1.ContainerPort{
+	DefaultHServerPort,
+	DefaultHServerInternalPort,
 }
 
 var DefaultHServerEnv = []corev1.EnvVar{

@@ -16,6 +16,10 @@ func (ac *mockAdminClient) CallServer(args ...string) (string, error) {
 	panic("unimplemented")
 }
 
+func (ac *mockAdminClient) CallKafkaServer(args ...string) (string, error) {
+	panic("unimplemented")
+}
+
 func (ac *mockAdminClient) CallStore(args ...string) (string, error) {
 	panic("unimplemented")
 }

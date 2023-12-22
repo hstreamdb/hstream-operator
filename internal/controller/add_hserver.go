@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"strconv"
 	"strings"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
@@ -83,7 +82,7 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 		},
 	}
 
-	podTemplate.Name = hapi.ComponentTypeHServer.GetResName(hdb.Name)
+	podTemplate.Name = hapi.ComponentTypeHServer.GetResName(hdb)
 	return podTemplate
 }
 
@@ -194,7 +193,13 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 
 	command = []string{"bash", "-c"}
 	args = []string{"/usr/local/bin/hstream-server"}
-	ports = hdb.Spec.HServer.Container.Ports
+	if hdb.Spec.Config.KafkaMode {
+		args = append(args, "kafka")
+	}
+	ports = utils.MergeContainerPorts(
+		constants.DefaultHServerPorts,
+		hdb.Spec.HServer.Container.Ports...,
+	)
 
 	flags := internal.FlagSet{}
 	if len(hdb.Spec.HServer.Container.Args) > 0 {
@@ -212,9 +217,6 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	if _, ok := flags.Flags()["--store-config"]; !ok {
 		args = append(args, "--store-config", "/etc/logdevice/config.json")
 	}
-	if _, ok := flags.Flags()["--store-admin-host"]; !ok {
-		args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
-	}
 	if _, ok := flags.Flags()["--metastore-uri"]; !ok {
 		hmeta, _ := getHMetaAddr(hdb)
 		args = append(args, "--metastore-uri", "rq://"+hmeta)
@@ -222,19 +224,32 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	if _, ok := flags.Flags()["--server-id"]; !ok {
 		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
 	}
-	if _, ok := flags.Flags()["--port"]; !ok {
-		args = append(args, "--port", strconv.Itoa(int(constants.DefaultHServerPort.ContainerPort)))
-		ports = coverPortsFromArgs(args, extendPorts(ports, constants.DefaultHServerPort))
+	if port, ok := flags.Flags()["--port"]; !ok {
+		args = append(args, "--port", fmt.Sprintf("%d", constants.DefaultHServerPort.ContainerPort))
 	} else {
-		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, constants.DefaultHServerPort))
+		ports = utils.OverrideContainerPorts(ports, constants.DefaultHServerPort.Name, port)
 	}
 
-	internalPortStr := strconv.Itoa(int(constants.DefaultHServerInternalPort.ContainerPort))
-	if _, ok := flags.Flags()["--internal-port"]; !ok {
-		args = append(args, "--internal-port", internalPortStr)
-		ports = coverPortsFromArgs(args, extendPorts(ports, constants.DefaultHServerInternalPort))
+	var (
+		internalPort string
+		ok           bool
+	)
+	if hdb.Spec.Config.KafkaMode {
+		internalPort, ok = flags.Flags()["--gossip-port"]
 	} else {
-		ports = coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(ports, constants.DefaultHServerInternalPort))
+		internalPort, ok = flags.Flags()["--internal-port"]
+	}
+
+	if !ok {
+		internalPort = fmt.Sprintf("%d", constants.DefaultHServerInternalPort.ContainerPort)
+
+		if hdb.Spec.Config.KafkaMode {
+			args = append(args, "--gossip-port", internalPort)
+		} else {
+			args = append(args, "--internal-port", internalPort)
+		}
+	} else {
+		ports = utils.OverrideContainerPorts(ports, constants.DefaultHServerInternalPort.Name, internalPort)
 	}
 
 	if _, ok := flags.Flags()["--seed-nodes"]; !ok {
@@ -244,15 +259,21 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
 			// E.g. hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571
 			seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%s",
-				hapi.ComponentTypeHServer.GetResName(hdb.Name),
+				hapi.ComponentTypeHServer.GetResName(hdb),
 				i,
 				hServerSvc.Name,
 				hServerSvc.Namespace,
-				internalPortStr,
+				internalPort,
 			)
 		}
 
 		args = append(args, "--seed-nodes", strings.Join(seedNodes, ","))
+	}
+
+	if !hdb.Spec.Config.KafkaMode {
+		if _, ok := flags.Flags()["--store-admin-host"]; !ok {
+			args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
+		}
 	}
 
 	args = append(args, hdb.Spec.HServer.Container.Args...)

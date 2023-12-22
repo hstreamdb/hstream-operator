@@ -77,6 +77,10 @@ type ExternalHMeta struct {
 }
 
 type Config struct {
+	// +kubebuilder:default:=false
+	// +optional
+	KafkaMode bool `json:"kafkaMode,omitempty"`
+
 	// MetadataReplicateAcross metadata replication must less than or equal to HStore replicas.
 	// If this is not specified, it will be set to HStore replicas or 3 if HStore replica more than 3
 	// Cannot be updated.

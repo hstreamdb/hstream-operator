@@ -32,7 +32,7 @@ var _ = Describe("PodSetHelper", func() {
 
 	It("get deployment", func() {
 		deploy := internal.GetDeployment(hdb, comp, podSpec, compType)
-		Expect(deploy.Name).To(Equal(compType.GetResName(hdb.Name)))
+		Expect(deploy.Name).To(Equal(compType.GetResName(hdb)))
 		Expect(deploy.Spec.Selector.MatchLabels).To(HaveKeyWithValue("label", "testLabel"))
 		Expect(*deploy.Spec.Replicas).To(Equal(comp.Replicas))
 		Expect(deploy.Annotations).To(HaveKey(hapi.LastSpecKey))
@@ -43,7 +43,7 @@ var _ = Describe("PodSetHelper", func() {
 		sts := internal.GetStatefulSet(hdb, comp, podSpec, compType)
 		service := internal.GetHeadlessService(hdb, compType)
 
-		Expect(sts.Name).To(Equal(compType.GetResName(hdb.Name)))
+		Expect(sts.Name).To(Equal(compType.GetResName(hdb)))
 		Expect(sts.Spec.Selector.MatchLabels).To(HaveKeyWithValue("label", "testLabel"))
 		Expect(*sts.Spec.Replicas).To(Equal(comp.Replicas))
 		Expect(sts.Annotations).To(HaveKey(hapi.LastSpecKey))

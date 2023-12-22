@@ -111,7 +111,7 @@ var _ = Describe("AddServices", func() {
 func getService(hdb *hapi.HStreamDB, compType hapi.ComponentType) (svc *corev1.Service, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      compType.GetResName(hdb.Name),
+		Name:      compType.GetResName(hdb),
 	}
 	svc = &corev1.Service{}
 	err = k8sClient.Get(context.TODO(), keyObj, svc)

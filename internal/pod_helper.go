@@ -14,7 +14,7 @@ func GetObjectMetadata(hdb *hapi.HStreamDB, base *metav1.ObjectMeta, compType ha
 	} else {
 		metadata = &metav1.ObjectMeta{}
 	}
-	metadata.Name = compType.GetResName(hdb.Name)
+	metadata.Name = compType.GetResName(hdb)
 	metadata.Namespace = hdb.Namespace
 
 	if metadata.Labels == nil {

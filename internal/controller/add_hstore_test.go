@@ -143,7 +143,7 @@ var _ = Describe("AddHstore", func() {
 func getHStoreStatefulSet(hdb *hapi.HStreamDB) (sts *appsv1.StatefulSet, err error) {
 	keyObj := types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      hapi.ComponentTypeHStore.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeHStore.GetResName(hdb),
 	}
 	sts = &appsv1.StatefulSet{}
 	err = k8sClient.Get(context.TODO(), keyObj, sts)

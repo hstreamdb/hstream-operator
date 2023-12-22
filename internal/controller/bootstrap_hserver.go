@@ -6,7 +6,9 @@ import (
 	"time"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/internal/status"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,23 +26,37 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	// determine if all hServer pods are running
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: hapi.ComponentTypeHServer.GetResName(hdb.Name),
+			Name: hapi.ComponentTypeHServer.GetResName(hdb),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &hdb.Spec.HServer.Replicas,
 		},
 	}
-	if err := checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {
+	if err := status.CheckReplicasReadyStatus(ctx, r.Client, hdb, sts); err != nil {
 		// we only set the message to log, and reconcile after several second
 		return &requeue{message: err.Error(), delay: time.Second}
 	}
 
 	logger.Info("Bootstrap hServer")
-	if _, err := r.AdminClientProvider.GetAdminClient(hdb).CallServer(
-		"init",
-		"--host", internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name,
-	); err != nil {
-		return &requeue{message: err.Error(), delay: time.Second * 5}
+
+	client := r.AdminClientProvider.GetAdminClient(hdb)
+	if hdb.Spec.Config.KafkaMode {
+		port := utils.FindContainerPortByName(sts.Spec.Template.Spec.Containers[0].Ports, constants.DefaultHServerPort.Name)
+
+		if _, err := client.CallKafkaServer(
+			"init",
+			"--host", hapi.ComponentTypeHServer.GetInternalResName(hdb),
+			"--port", fmt.Sprintf("%d", port.ContainerPort),
+		); err != nil {
+			return &requeue{message: err.Error(), delay: time.Second * 5}
+		}
+	} else {
+		if _, err := client.CallServer(
+			"init",
+			"--host", hapi.ComponentTypeHServer.GetInternalResName(hdb),
+		); err != nil {
+			return &requeue{message: err.Error(), delay: time.Second * 5}
+		}
 	}
 
 	hdb.SetCondition(metav1.Condition{

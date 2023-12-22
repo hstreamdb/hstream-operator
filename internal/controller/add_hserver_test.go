@@ -182,7 +182,7 @@ func getHServerStatefulSet(hdb *hapi.HStreamDB) (sts *appsv1.StatefulSet, err er
 	sts = &appsv1.StatefulSet{}
 	err = k8sClient.Get(context.TODO(), types.NamespacedName{
 		Namespace: hdb.Namespace,
-		Name:      hapi.ComponentTypeHServer.GetResName(hdb.Name),
+		Name:      hapi.ComponentTypeHServer.GetResName(hdb),
 	}, sts)
 
 	return
