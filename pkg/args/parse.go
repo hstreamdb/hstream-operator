@@ -14,21 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package constants
+package args
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	"strings"
 )
 
-// Check https://github.com/rqlite/kubernetes-configuration/blob/master/statefulset-3-node.yaml as an example.
-var DefaultHMetaArgs = []string{
-	"--disco-mode", "dns",
-	"--join-interval", "1s",
-	"--join-attempts", "120",
-}
+func ParseArgs(args []string) map[string]string {
+	argsMap := make(map[string]string)
 
-var DefaultHMetaPort = corev1.ContainerPort{
-	Name:          "rqlite",
-	ContainerPort: 4001,
-	Protocol:      corev1.ProtocolTCP,
+	var currentKey string
+
+	for _, arg := range args {
+		// Check if the argument has the format --key
+		if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
+			currentKey = arg
+			argsMap[currentKey] = ""
+		} else if currentKey != "" {
+			// If a key is set, treat the argument as its value
+			argsMap[currentKey] = arg
+			currentKey = ""
+		}
+	}
+
+	return argsMap
 }

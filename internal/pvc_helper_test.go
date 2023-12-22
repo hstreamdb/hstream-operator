@@ -59,36 +59,4 @@ var _ = Describe("PvcHelper", func() {
 				Equal(hdb.Name + "-" + "data"))
 		})
 	})
-
-	Context("with get volume", func() {
-		var volume corev1.Volume
-		var m internal.ConfigMap
-		BeforeEach(func() {
-			m = internal.ConfigMap{
-				MountName:     "shard-path",
-				MapNameSuffix: "shard",
-				MapKey:        "config.json",
-				MapPath:       "config.json",
-			}
-			volume = internal.GetVolume(hdb, m)
-		})
-
-		It("get volume from configMap", func() {
-			Expect(volume.Name).To(Equal(m.MountName))
-		})
-
-		It("volumeSource should be configMap", func() {
-			Expect(volume.VolumeSource.ConfigMap).NotTo(BeNil())
-		})
-
-		It("configMap name should be hdbName-MapNameSuffix", func() {
-			Expect(volume.VolumeSource.ConfigMap.Name).To(Equal(internal.GetResNameOnPanic(hdb, m.MapNameSuffix)))
-		})
-
-		It("should has element that name same as MapKey", func() {
-			Expect(volume.VolumeSource.ConfigMap.Items).To(ContainElement(
-				corev1.KeyToPath{Key: m.MapKey, Path: m.MapPath},
-			))
-		})
-	})
 })

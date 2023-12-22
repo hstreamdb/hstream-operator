@@ -81,20 +81,24 @@ type Config struct {
 	// If this is not specified, it will be set to HStore replicas or 3 if HStore replica more than 3
 	// Cannot be updated.
 	// More info: https://logdevice.io/docs/Config.html#metadata-logs-metadata-logs
+	//
 	// +kubebuilder:validation:Minimum:=1
 	// +optional
 	MetadataReplicateAcross *int32 `json:"metadata-replicate-across,omitempty"`
 
 	// NShards the number of HStore data shard
 	// Cannot be updated.
+	//
 	// +kubebuilder:default:=1
 	// +kubebuilder:validation:Minimum:=1
 	// +optional
 	NShards int32 `json:"nshards,omitempty"`
+
 	// log device bootstrap config, json style
 	// More info: https://logdevice.io/docs/Config.html
 	// Example: https://github.com/hstreamdb/hstream/blob/main/deploy/k8s/config.json
-	// +kubebuilder:pruning:PreserveUnknownFields
+	//
+	// +optional
 	LogDeviceConfig runtime.RawExtension `json:"logDeviceConfig,omitempty"`
 }
 

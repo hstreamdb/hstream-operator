@@ -28,13 +28,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/hstreamdb/hstream-operator/internal/admin"
-	"github.com/hstreamdb/hstream-operator/mock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -141,7 +141,7 @@ func createTestHStreamDBReconciler() *HStreamDBReconciler {
 	return &HStreamDBReconciler{
 		Client:              k8sClient,
 		Scheme:              k8sClient.Scheme(),
-		Recorder:            mock.GetEventRecorderFor("HStreamDB Controller"),
+		Recorder:            record.NewFakeRecorder(100),
 		AdminClientProvider: admin.NewAdminClientProvider(cfg, logf.Log.WithName("HStreamDB Controller")),
 	}
 }

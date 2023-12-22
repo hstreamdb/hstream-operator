@@ -20,6 +20,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	DefaultHStoreConfigPath = "/etc/logdevice"
+	DefaultHStoreDataPath   = "/data/logdevice"
+)
+
+var DefaultHStoreArgs = []string{
+	"--config-path", DefaultHStoreConfigPath + "/config.json",
+	"--address", "$(POD_IP)",
+	"--name", "$(POD_NAME)",
+	"--local-log-store-path", DefaultHStoreDataPath,
+}
+
 var DefaultHStoreEnv = []corev1.EnvVar{
 	{
 		Name: "POD_NAME",

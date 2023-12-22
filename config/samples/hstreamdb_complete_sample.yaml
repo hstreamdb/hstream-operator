@@ -73,57 +73,11 @@ spec:
   #    port: 4001
   #    namespace: default
 
-  #  config:
-  #    nshards: 1
-  #    metadata-replicate-across: 1
-  #    logDeviceConfig:
-  #      {
-  #        "server_settings": {
-  #          "enable-nodes-configuration-manager": "true",
-  #          "use-nodes-configuration-manager-nodes-configuration": "true",
-  #          "enable-node-self-registration": "true",
-  #          "enable-cluster-maintenance-state-machine": "true"
-  #        },
-  #        "client_settings": {
-  #          "enable-nodes-configuration-manager": "true",
-  #          "use-nodes-configuration-manager-nodes-configuration": "true",
-  #          "admin-client-capabilities": "true"
-  #        },
-  #        "cluster": "hstore",
-  #        "internal_logs": {
-  #          "config_log_deltas": {
-  #            "replicate_across": {
-  #              "node": 3
-  #            }
-  #          },
-  #          "config_log_snapshots": {
-  #            "replicate_across": {
-  #              "node": 3
-  #            }
-  #          },
-  #          "event_log_deltas": {
-  #            "replicate_across": {
-  #              "node": 3
-  #            }
-  #          },
-  #          "event_log_snapshots": {
-  #            "replicate_across": {
-  #              "node": 3
-  #            }
-  #          },
-  #          "maintenance_log_deltas": {
-  #            "replicate_across": {
-  #              "node": 3
-  #            }
-  #          },
-  #          "maintenance_log_snapshots": {
-  #            "replicate_across": {
-  #              "node": 3
-  #            }
-  #          }
-  #        },
-  #        "version": 1
-  #      }
+  # config:
+  #   nshards: 1
+  #   metadata-replicate-across: 1
+  #   logDeviceConfig:
+  #     version: 2
   gateway:
     endpoint: "hstreamdb-sample.hstreamdb"
     image: hstreamdb/hstream-gateway
