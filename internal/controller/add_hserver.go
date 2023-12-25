@@ -2,13 +2,13 @@ package controller
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"strings"
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/internal/utils"
+	pkgargs "github.com/hstreamdb/hstream-operator/pkg/args"
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,14 +87,9 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 }
 
 func (a addHServer) getDefaultInitContainers(hdb *hapi.HStreamDB) (containers []corev1.Container) {
-	var customConfigPath string
+	parsedArgs := pkgargs.ParseArgs(hdb.Spec.HServer.Container.Args)
 
-	flag := flag.NewFlagSet("args", flag.ContinueOnError)
-	flag.StringVar(&customConfigPath, "config-path", "", "")
-
-	_ = flag.Parse(hdb.Spec.HServer.Container.Args) // FIXME: encapsulate parse login.
-
-	if customConfigPath != "" {
+	if customConfigPath, ok := parsedArgs["--config-path"]; ok {
 		volumeName := "data-custom-hstream"
 		volumeMountPath := "/data/custom/hstream"
 		hdb.Spec.HServer.Volumes = append(hdb.Spec.HServer.Volumes, corev1.Volume{
@@ -201,30 +196,28 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		hdb.Spec.HServer.Container.Ports...,
 	)
 
-	flags := internal.FlagSet{}
-	if len(hdb.Spec.HServer.Container.Args) > 0 {
-		_ = flags.Parse(hdb.Spec.HServer.Container.Args)
-	}
-	if _, ok := flags.Flags()["--config-path"]; !ok {
+	parsedArgs := pkgargs.ParseArgs(hdb.Spec.HServer.Container.Args)
+
+	if _, ok := parsedArgs["--config-path"]; !ok {
 		args = append(args, "--config-path", "/etc/hstream/config.yaml")
 	}
-	if _, ok := flags.Flags()["--bind-address"]; !ok {
+	if _, ok := parsedArgs["--bind-address"]; !ok {
 		args = append(args, "--bind-address", "0.0.0.0")
 	}
-	if _, ok := flags.Flags()["--advertised-address"]; !ok {
+	if _, ok := parsedArgs["--advertised-address"]; !ok {
 		args = append(args, "--advertised-address", "$(POD_NAME)."+internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name+"."+hdb.GetNamespace())
 	}
-	if _, ok := flags.Flags()["--store-config"]; !ok {
+	if _, ok := parsedArgs["--store-config"]; !ok {
 		args = append(args, "--store-config", "/etc/logdevice/config.json")
 	}
-	if _, ok := flags.Flags()["--metastore-uri"]; !ok {
+	if _, ok := parsedArgs["--metastore-uri"]; !ok {
 		hmeta, _ := getHMetaAddr(hdb)
 		args = append(args, "--metastore-uri", "rq://"+hmeta)
 	}
-	if _, ok := flags.Flags()["--server-id"]; !ok {
+	if _, ok := parsedArgs["--server-id"]; !ok {
 		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
 	}
-	if port, ok := flags.Flags()["--port"]; !ok {
+	if port, ok := parsedArgs["--port"]; !ok {
 		args = append(args, "--port", fmt.Sprintf("%d", constants.DefaultHServerPort.ContainerPort))
 	} else {
 		ports = utils.OverrideContainerPorts(ports, constants.DefaultHServerPort.Name, port)
@@ -235,9 +228,9 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		ok           bool
 	)
 	if hdb.Spec.Config.KafkaMode {
-		internalPort, ok = flags.Flags()["--gossip-port"]
+		internalPort, ok = parsedArgs["--gossip-port"]
 	} else {
-		internalPort, ok = flags.Flags()["--internal-port"]
+		internalPort, ok = parsedArgs["--internal-port"]
 	}
 
 	if !ok {
@@ -252,7 +245,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		ports = utils.OverrideContainerPorts(ports, constants.DefaultHServerInternalPort.Name, internalPort)
 	}
 
-	if _, ok := flags.Flags()["--seed-nodes"]; !ok {
+	if _, ok := parsedArgs["--seed-nodes"]; !ok {
 		hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
 		seedNodes := make([]string, hdb.Spec.HServer.Replicas)
 
@@ -271,7 +264,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	}
 
 	if !hdb.Spec.Config.KafkaMode {
-		if _, ok := flags.Flags()["--store-admin-host"]; !ok {
+		if _, ok := parsedArgs["--store-admin-host"]; !ok {
 			args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
 		}
 	}
