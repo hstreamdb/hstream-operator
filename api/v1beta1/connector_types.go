@@ -40,8 +40,8 @@ type ConnectorSpec struct {
 	Type ConnectorType `json:"type"`
 
 	// TemplateName is the name of the connector template.
-	// +kubebuilder:validation:Required
-	TemplateName string `json:"templateName"`
+	// +optional
+	TemplateName *string `json:"templateName,omitempty"`
 
 	// Streams is used to specify the streams that the connector will be applied to.
 	// +kubebuilder:validation:Required
@@ -104,4 +104,27 @@ type ConnectorList struct {
 
 func init() {
 	SchemeBuilder.Register(&Connector{}, &ConnectorList{})
+}
+
+func (c *Connector) GetPatchByStream(stream string) (map[string]interface{}, error) {
+	if c.Spec.Patches == nil {
+		return nil, nil
+	}
+
+	var patches map[string]map[string]interface{}
+	err := json.Unmarshal(c.Spec.Patches, &patches)
+	if err != nil {
+		return nil, err
+	}
+
+	patch := make(map[string]interface{})
+	if val, ok := patches[stream]; ok {
+		for k, v := range val {
+			patch[k] = v
+		}
+	} else {
+		return nil, nil
+	}
+
+	return patch, nil
 }

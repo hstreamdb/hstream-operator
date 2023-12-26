@@ -22,10 +22,12 @@ type ConnectorType string
 
 const (
 	SinkElaticsearch ConnectorType = "sink-elasticsearch"
+	ExternalSource   ConnectorType = "external-source" // TODO: this type is for testing purposes only.
 )
 
 var ConnectorImageMap = map[ConnectorType]string{
 	SinkElaticsearch: "hstreamdb/sink-elasticsearch:standalone",
+	ExternalSource:   "hstreamdb/external-source",
 }
 
 var ConnectorContainerPortMap = map[ConnectorType]int32{

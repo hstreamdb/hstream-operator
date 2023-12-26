@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2023 HStream Operator Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,27 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mock
+package connectorgen
 
 import (
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func CreateDefaultConnector(ns string) v1beta1.Connector {
-	templateName := "test-connector-template"
+func DefaultExternalSourceContainer(connector *v1beta1.Connector, name, stream string) *corev1.Container {
+	patch, err := connector.GetPatchByStream(stream)
+	if err != nil {
+		return nil
+	}
 
-	return v1beta1.Connector{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-connector",
-			Namespace: ns,
-		},
-		Spec: v1beta1.ConnectorSpec{
-			Type:         "sink-elasticsearch", // We only support this type for now.
-			TemplateName: &templateName,
-			Streams: []string{
-				"stream01",
-			},
-		},
+	args := []string{"-u", connector.Spec.HServerEndpoint}
+	for k, v := range patch {
+		args = append(args, k, v.(string))
+	}
+
+	return &corev1.Container{
+		Name:  name,
+		Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
+		Args:  args,
 	}
 }

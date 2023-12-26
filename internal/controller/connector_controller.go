@@ -71,22 +71,38 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	configMapNames := []string{}
+	// If no template is specified, use patches as arguments.
+	if connector.Spec.TemplateName == nil {
+		for _, stream := range connector.Spec.Streams {
+			err := r.createConnectorDeployment(ctx, &connector, stream, "")
+			if err != nil {
+				log.Error(err, "fail to create Deployment for Connector",
+					"Connector", connector.Name,
+					"Deployment", v1beta1.GenConnectorDeploymentName(connector.Name, stream),
+				)
+
+				return ctrl.Result{}, err
+			}
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	configMapNames := make([]string, 0, len(connector.Spec.Streams))
 	for _, stream := range connector.Spec.Streams {
 		configMapNames = append(configMapNames, v1beta1.GenConnectorConfigMapNameForStream(connector.Name, stream))
 	}
-	var configs []map[string]interface{}
-	cfgs, err := r.mergePatchesIntoConfigs(ctx, log, connector)
+
+	configs, err := r.mergePatchesIntoConfigs(ctx, log, connector)
 	if err != nil {
 		log.Error(err, "fail to merge connector config patches into config template")
 
 		return ctrl.Result{}, err
 	}
-	configs = cfgs
 
 	for index, name := range configMapNames {
 		var connectorConfigMap corev1.ConfigMap
-		if err := r.Get(ctx, types.NamespacedName{
+		if err = r.Get(ctx, types.NamespacedName{
 			Namespace: connector.Namespace,
 			Name:      name,
 		}, &connectorConfigMap); err != nil {
@@ -113,7 +129,7 @@ func (r *ConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				},
 			}
 
-			if err := controllerutil.SetControllerReference(&connector, &connectorConfigMap, r.Scheme); err != nil {
+			if err = controllerutil.SetControllerReference(&connector, &connectorConfigMap, r.Scheme); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -153,7 +169,7 @@ func (r *ConnectorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logger logr.Logger, connector v1beta1.Connector) ([]map[string]interface{}, error) {
-	templateConfigMapName := v1beta1.GenConnectorConfigMapName(connector.Spec.TemplateName, true)
+	templateConfigMapName := v1beta1.GenConnectorConfigMapName(*connector.Spec.TemplateName, true)
 	templateConfigMapNamespacedName := types.NamespacedName{
 		Namespace: connector.Namespace,
 		Name:      templateConfigMapName,
@@ -184,21 +200,16 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logge
 
 		config["stream"] = stream
 
-		var patches map[string]map[string]interface{}
-		if connector.Spec.Patches != nil {
-			err = json.Unmarshal(connector.Spec.Patches, &patches)
-			if err != nil {
-				logger.Error(err, "fail to unmarshal Connector patches")
+		patch, err := connector.GetPatchByStream(stream)
+		if err != nil {
+			logger.Error(err, "fail to get Connector patch by stream")
 
-				return nil, err
-			}
+			return nil, err
 		}
 
-		if connector.Spec.Patches != nil {
-			if val, ok := patches[stream]; ok {
-				for k, v := range val {
-					config[k] = v
-				}
+		if patch != nil {
+			for k, v := range patch {
+				config[k] = v
 			}
 		}
 
@@ -208,12 +219,16 @@ func (r *ConnectorReconciler) mergePatchesIntoConfigs(ctx context.Context, logge
 	return configs, nil
 }
 
-func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector *v1beta1.Connector, stream, configMapName string) error {
+func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, connector *v1beta1.Connector, stream string, configMapName string) error {
 	name := v1beta1.GenConnectorDeploymentName(connector.Name, stream)
-	containerPorts := []corev1.ContainerPort{
-		{
-			ContainerPort: v1beta1.ConnectorContainerPortMap[connector.Spec.Type],
-		},
+	containerPorts := []corev1.ContainerPort{}
+
+	if port, ok := v1beta1.ConnectorContainerPortMap[connector.Spec.Type]; ok {
+		containerPorts = []corev1.ContainerPort{
+			{
+				ContainerPort: port,
+			},
+		}
 	}
 
 	if connector.Spec.Container.Ports != nil {
@@ -225,8 +240,38 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	}
 
 	connector.Spec.Container.Ports = containerPorts
-	preconfiguredContainer := connectorgen.DefaultSinkElasticsearchContainer(connector, name, configMapName)
+	preconfiguredContainer := connectorgen.GenConnectorContainer(connector, name, stream, configMapName)
 	structAssign(&preconfiguredContainer, &connector.Spec.Container)
+
+	containers := []corev1.Container{
+		*preconfiguredContainer,
+	}
+	volumes := []corev1.Volume{}
+
+	if connector.Spec.Type == v1beta1.SinkElaticsearch {
+		containers = append(containers, connectorgen.DefaultSinkElasticsearchLogContainer(connector))
+		volumes = append(
+			volumes,
+			[]corev1.Volume{
+				{
+					Name: configMapName,
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: configMapName,
+							},
+						},
+					},
+				},
+				{
+					Name: "data",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			}...,
+		)
+	}
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -255,28 +300,8 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 					Annotations: getPromAnnotations(connector),
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						preconfiguredContainer,
-						connectorgen.DefaultSinkElasticsearchLogContainer(connector),
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: configMapName,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapName,
-									},
-								},
-							},
-						},
-						{
-							Name: "data",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-					},
+					Containers: containers,
+					Volumes:    volumes,
 				},
 			},
 		},

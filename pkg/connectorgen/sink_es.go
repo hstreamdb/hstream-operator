@@ -23,25 +23,29 @@ import (
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 )
 
-func DefaultSinkElasticsearchContainer(connector *v1beta1.Connector, name, configMapName string) corev1.Container {
-	return corev1.Container{
-		Name:  name,
-		Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
-		Args: []string{
-			"run",
-			"--config /data/config/config.json",
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      configMapName,
-				MountPath: "/data/config",
+func DefaultSinkElasticsearchContainer(connector *v1beta1.Connector, name, configMapName string) *corev1.Container {
+	if configMapName != "" {
+		return &corev1.Container{
+			Name:  name,
+			Image: addImageRegistry(v1beta1.ConnectorImageMap[connector.Spec.Type], connector.Spec.ImageRegistry),
+			Args: []string{
+				"run",
+				"--config /data/config/config.json",
 			},
-			{
-				Name:      "data",
-				MountPath: "/data",
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      configMapName,
+					MountPath: "/data/config",
+				},
+				{
+					Name:      "data",
+					MountPath: "/data",
+				},
 			},
-		},
+		}
 	}
+
+	return nil
 }
 
 func DefaultSinkElasticsearchLogContainer(connector *v1beta1.Connector) corev1.Container {
