@@ -17,6 +17,8 @@ limitations under the License.
 package connectorgen
 
 import (
+	"fmt"
+
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -27,9 +29,9 @@ func DefaultExternalSourceContainer(connector *v1beta1.Connector, name, stream s
 		return nil
 	}
 
-	args := []string{"-u", connector.Spec.HServerEndpoint}
+	args := []string{"-u", "hstream://" + connector.Spec.HServerEndpoint, "--stream-name", stream}
 	for k, v := range patch {
-		args = append(args, k, v.(string))
+		args = append(args, k, fmt.Sprintf("%v", v))
 	}
 
 	return &corev1.Container{

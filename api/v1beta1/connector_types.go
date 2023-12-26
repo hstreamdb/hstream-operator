@@ -35,7 +35,7 @@ type ConnectorSpec struct {
 	//
 	// Each connector type is associated with a connector image, which is used to create the connector container.
 	// View `ConnectorImageMap` for more details.
-	// +kubebuilder:validation:Enum=sink-elasticsearch
+	// +kubebuilder:validation:Enum=sink-elasticsearch;external-source
 	// +kubebuilder:validation:Required
 	Type ConnectorType `json:"type"`
 

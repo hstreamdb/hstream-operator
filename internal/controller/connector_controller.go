@@ -241,7 +241,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 
 	connector.Spec.Container.Ports = containerPorts
 	preconfiguredContainer := connectorgen.GenConnectorContainer(connector, name, stream, configMapName)
-	structAssign(&preconfiguredContainer, &connector.Spec.Container)
+	structAssign(preconfiguredContainer, &connector.Spec.Container)
 
 	containers := []corev1.Container{
 		*preconfiguredContainer,
