@@ -96,7 +96,7 @@ func (a addGateway) getPodTemplate(ctx context.Context, r *HStreamDBReconciler, 
 		})
 	}
 
-	pod.Name = hapi.ComponentTypeGateway.GetResName(hdb.Name)
+	pod.Name = hapi.ComponentTypeGateway.GetResName(hdb)
 	return pod
 }
 

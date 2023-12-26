@@ -28,7 +28,7 @@ func (a bootstrapHStore) reconcile(ctx context.Context, r *HStreamDBReconciler, 
 	// determine if all HStore pods are running
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: hapi.ComponentTypeHStore.GetResName(hdb.Name),
+			Name: hapi.ComponentTypeHStore.GetResName(hdb),
 		},
 	}
 	if err = checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {

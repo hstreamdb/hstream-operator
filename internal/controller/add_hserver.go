@@ -83,7 +83,7 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 		},
 	}
 
-	podTemplate.Name = hapi.ComponentTypeHServer.GetResName(hdb.Name)
+	podTemplate.Name = hapi.ComponentTypeHServer.GetResName(hdb)
 	return podTemplate
 }
 
@@ -244,7 +244,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
 			// E.g. hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571
 			seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%s",
-				hapi.ComponentTypeHServer.GetResName(hdb.Name),
+				hapi.ComponentTypeHServer.GetResName(hdb),
 				i,
 				hServerSvc.Name,
 				hServerSvc.Namespace,

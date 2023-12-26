@@ -87,7 +87,7 @@ func (a addHStore) getPodTemplate(hdb *hapi.HStreamDB, nShard int32) corev1.PodT
 		},
 	}
 
-	podTemplate.Name = hapi.ComponentTypeHStore.GetResName(hdb.Name)
+	podTemplate.Name = hapi.ComponentTypeHStore.GetResName(hdb)
 	return podTemplate
 }
 

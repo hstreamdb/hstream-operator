@@ -20,7 +20,7 @@ func (u updateHMetaStatus) reconcile(ctx context.Context, r *HStreamDBReconciler
 		// determine if all HMeta pods are running
 		sts := &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: hapi.ComponentTypeHMeta.GetResName(hdb.Name),
+				Name: hapi.ComponentTypeHMeta.GetResName(hdb),
 			},
 		}
 		if err = checkPodRunningStatus(ctx, r.Client, hdb, sts); err != nil {

@@ -118,7 +118,7 @@ func (a addConsole) getPodTemplate(hdb *hapi.HStreamDB) (spec corev1.PodTemplate
 		},
 	}
 
-	spec.Name = hapi.ComponentTypeConsole.GetResName(hdb.Name)
+	spec.Name = hapi.ComponentTypeConsole.GetResName(hdb)
 	return
 }
 

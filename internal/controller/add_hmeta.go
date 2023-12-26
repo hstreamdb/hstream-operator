@@ -89,7 +89,7 @@ func (a addHMeta) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 		},
 	}
 
-	podTemplate.Name = hapi.ComponentTypeHMeta.GetResName(hdb.Name)
+	podTemplate.Name = hapi.ComponentTypeHMeta.GetResName(hdb)
 	return podTemplate
 }
 

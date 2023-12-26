@@ -29,7 +29,7 @@ var _ = Describe("ServiceHelper", func() {
 		compType := hapi.ComponentTypeHServer
 		svc := internal.GetService(hdb, compType, ports...)
 
-		Expect(svc.Name).To(Equal(compType.GetResName(hdb.Name)))
+		Expect(svc.Name).To(Equal(compType.GetResName(hdb)))
 		Expect(svc.Spec.Ports).To(ContainElements(ports[0]))
 		Expect(svc.Spec.Selector).To(HaveKeyWithValue(hapi.ComponentKey, string(compType)))
 	})

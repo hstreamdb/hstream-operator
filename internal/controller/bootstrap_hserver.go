@@ -24,7 +24,7 @@ func (a bootstrapHServer) reconcile(ctx context.Context, r *HStreamDBReconciler,
 	// determine if all hServer pods are running
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: hapi.ComponentTypeHServer.GetResName(hdb.Name),
+			Name: hapi.ComponentTypeHServer.GetResName(hdb),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &hdb.Spec.HServer.Replicas,

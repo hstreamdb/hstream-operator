@@ -18,13 +18,23 @@ const (
 	ComponentTypeHMeta       ComponentType = "hmeta"
 )
 
-func (ct ComponentType) GetResName(instance string) string {
-	return fmt.Sprintf("%s-%s", instance, ct)
+func (ct ComponentType) GetResName(hdb *HStreamDB) string {
+	return fmt.Sprintf("%s-%s", hdb.Name, ct)
+}
+
+func (ct ComponentType) GetInternalResName(hdb *HStreamDB) string {
+	return fmt.Sprintf("%s-internal-%s", hdb.Name, ct)
 }
 
 func (ct ComponentType) GetObjectMeta(hdb *HStreamDB, meta *metav1.ObjectMeta) metav1.ObjectMeta {
+	name := ct.GetResName(hdb)
+
+	if meta != nil && meta.Name != "" {
+		name = meta.Name
+	}
+
 	fixedMeta := metav1.ObjectMeta{
-		Name:      ct.GetResName(hdb.Name),
+		Name:      name,
 		Namespace: hdb.Namespace,
 		Labels: map[string]string{
 			InstanceKey:  hdb.Name,
@@ -40,12 +50,8 @@ func (ct ComponentType) GetObjectMeta(hdb *HStreamDB, meta *metav1.ObjectMeta) m
 	return fixedMeta
 }
 
-func (ct ComponentType) GetService(hdb *HStreamDB, ports []corev1.ServicePort, isInternal bool) corev1.Service {
+func (ct ComponentType) GetService(hdb *HStreamDB, ports []corev1.ServicePort) corev1.Service {
 	meta := ct.GetObjectMeta(hdb, nil)
-
-	if isInternal {
-		meta.Name = ct.GetResName(hdb.Name + "-internal")
-	}
 
 	return corev1.Service{
 		ObjectMeta: meta,
@@ -59,11 +65,21 @@ func (ct ComponentType) GetService(hdb *HStreamDB, ports []corev1.ServicePort, i
 }
 
 func (ct ComponentType) GetHeadlessService(hdb *HStreamDB, ports []corev1.ServicePort) corev1.Service {
-	svc := ct.GetService(hdb, ports, true)
-	svc.Spec.ClusterIP = corev1.ClusterIPNone
-	svc.Spec.PublishNotReadyAddresses = true
+	meta := ct.GetObjectMeta(hdb, &metav1.ObjectMeta{
+		Name: ct.GetInternalResName(hdb),
+	})
 
-	return svc
+	return corev1.Service{
+		ObjectMeta: meta,
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				ComponentKey: string(ct),
+			},
+			Ports:                    ports,
+			ClusterIP:                corev1.ClusterIPNone,
+			PublishNotReadyAddresses: true,
+		},
+	}
 }
 
 func mergeMap(existing, newMap map[string]string) map[string]string {
