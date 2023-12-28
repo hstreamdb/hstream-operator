@@ -502,6 +502,8 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         type: array
+                      image:
+                        type: string
                       imagePullPolicy:
                         type: string
                       lifecycle:
@@ -3582,6 +3584,8 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         type: array
+                      image:
+                        type: string
                       imagePullPolicy:
                         type: string
                       lifecycle:
@@ -6658,6 +6662,8 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         type: array
+                      image:
+                        type: string
                       imagePullPolicy:
                         type: string
                       lifecycle:
@@ -9733,6 +9739,8 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         type: array
+                      image:
+                        type: string
                       imagePullPolicy:
                         type: string
                       lifecycle:
@@ -12795,6 +12803,8 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         type: array
+                      image:
+                        type: string
                       imagePullPolicy:
                         type: string
                       lifecycle:
@@ -15857,6 +15867,8 @@ spec:
                               x-kubernetes-map-type: atomic
                           type: object
                         type: array
+                      image:
+                        type: string
                       imagePullPolicy:
                         type: string
                       lifecycle:

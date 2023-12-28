@@ -252,7 +252,7 @@ var _ = Describe("Utils", func() {
 			Spec: hapi.HStreamDBSpec{
 				HMeta: hapi.Component{
 					Replicas: 1,
-					Container: hapi.Container{
+					Container: corev1.Container{
 						Args: []string{"invalid arg"},
 					},
 				},

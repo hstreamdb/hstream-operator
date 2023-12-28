@@ -119,7 +119,7 @@ func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler,
 	return r.Update(ctx, existingService)
 }
 
-func getPorts(container *hapi.Container, defaultPorts ...corev1.ContainerPort) ([]corev1.ServicePort, error) {
+func getPorts(container *corev1.Container, defaultPorts ...corev1.ContainerPort) ([]corev1.ServicePort, error) {
 	ports := coverPortsFromArgs(container.Args, extendPorts(container.Ports, defaultPorts...))
 	return convertToServicePort(ports), nil
 }
