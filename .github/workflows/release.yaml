@@ -69,15 +69,13 @@ jobs:
             echo "draft=true" >> $GITHUB_OUTPUT
           fi
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
+        uses: ncipollo/release-action@v1
         with:
-          token: ${{ github.token }}
           name: HStream Operator ${{ github.ref_name }}
-          generate_release_notes: ${{ steps.draft.outputs.draft == 'false' }}
+          generateReleaseNotes: ${{ steps.draft.outputs.draft == 'false' }}
           draft: ${{ steps.draft.outputs.draft }}
           body: |
             HStream Operator ${{ github.ref_name }} has been released.
 
             See [CHANGELOG](https://github.com/hstreamdb/hstream-operator/blob/main/CHANGELOG.md) for more details.
-          files: |
-            ${{ steps.yaml.outputs.yaml }}
+          artifacts: ${{ steps.yaml.outputs.yaml }}
