@@ -71,6 +71,7 @@ jobs:
       - name: Create GitHub release
         uses: ncipollo/release-action@v1
         with:
+          tag: ${{ github.ref_name }}
           name: HStream Operator ${{ github.ref_name }}
           generateReleaseNotes: ${{ steps.draft.outputs.draft == 'false' }}
           draft: ${{ steps.draft.outputs.draft }}
