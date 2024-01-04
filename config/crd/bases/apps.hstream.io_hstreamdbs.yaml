@@ -3114,6 +3114,9 @@ spec:
                     format: int32
                     minimum: 1
                     type: integer
+                  metrics:
+                    default: false
+                    type: boolean
                   nshards:
                     default: 1
                     format: int32

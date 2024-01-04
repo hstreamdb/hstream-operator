@@ -34,7 +34,7 @@ func GetHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 		hmetaAddr = hdb.Spec.ExternalHMeta.GetAddr()
 	} else {
 		svc := hapi.ComponentTypeHMeta.GetHeadlessService(hdb, nil)
-		port, err := getHMetaContainerPort(hdb.Spec.HMeta.Container.Args)
+		port, err := GetHMetaContainerPort(hdb.Spec.HMeta.Container.Args)
 		if err != nil {
 			return "", err
 		}
@@ -45,7 +45,7 @@ func GetHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
 	return hmetaAddr, nil
 }
 
-func getHMetaContainerPort(hmetaArgs []string) (corev1.ContainerPort, error) {
+func GetHMetaContainerPort(hmetaArgs []string) (corev1.ContainerPort, error) {
 	parsedArgs := args.ParseArgs(hmetaArgs)
 
 	if addr, ok := parsedArgs["--http-addr"]; ok {

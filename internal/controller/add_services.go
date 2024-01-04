@@ -6,6 +6,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,31 +35,38 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 
 func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
 	hserver := &hdb.Spec.HServer
-	ports, err := getPorts(&hserver.Container, constants.DefaultHServerPort, constants.DefaultHServerInternalPort)
-	if err != nil {
-		return fmt.Errorf("parse hServer args failed. %w", err)
+	var defaultPorts []corev1.ContainerPort
+
+	if hdb.Spec.Config.KafkaMode {
+		defaultPorts = constants.DefaultKafkaHServerPorts
+	} else {
+		defaultPorts = constants.DefaultHServerPorts
 	}
 
-	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer, ports...)
-	service.Spec.PublishNotReadyAddresses = true
+	ports, err := getPorts(&hserver.Container, defaultPorts...)
+	if err != nil {
+		return fmt.Errorf("parse HServer args failed. %w", err)
+	}
+
+	service := hapi.ComponentTypeHServer.GetHeadlessService(hdb, ports)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
 func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
 	ports, err := getPorts(&hdb.Spec.HStore.Container, constants.DefaultHStorePorts...)
 	if err != nil {
-		return fmt.Errorf("parse hStore args failed. %w", err)
+		return fmt.Errorf("parse HStore args failed. %w", err)
 	}
-	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHStore, ports...)
+	service := hapi.ComponentTypeHStore.GetHeadlessService(hdb, ports)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
 func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	ports, err := getPorts(&hdb.Spec.AdminServer.Container, adminServerPort)
+	ports, err := getPorts(&hdb.Spec.AdminServer.Container, constants.DefaultAdminServerPort)
 	if err != nil {
-		return fmt.Errorf("parse adminServer args failed. %w", err)
+		return fmt.Errorf("parse AdminServer args failed. %w", err)
 	}
-	service := internal.GetService(hdb, hapi.ComponentTypeAdminServer, ports...)
+	service := hapi.ComponentTypeAdminServer.GetService(hdb, ports)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
@@ -74,12 +82,11 @@ func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler
 		return fmt.Errorf("parse HMeta args failed. %w", err)
 	}
 
-	port, _ := parseHMetaPort(hdb.Spec.HMeta.Container.Args)
+	port, _ := utils.GetHMetaContainerPort(hdb.Spec.HMeta.Container.Args)
 	ports := extendPorts(hdb.Spec.HMeta.Container.Ports, port)
 	servicePorts := convertToServicePort(ports)
 
-	service := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta, servicePorts...)
-	service.Spec.PublishNotReadyAddresses = true
+	service := hapi.ComponentTypeHMeta.GetHeadlessService(hdb, servicePorts)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 

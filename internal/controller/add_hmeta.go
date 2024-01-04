@@ -7,6 +7,7 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
+	"github.com/hstreamdb/hstream-operator/internal/utils"
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -133,7 +134,7 @@ func (a addHMeta) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	args = append(args, "--bootstrap-expect", strconv.Itoa(int(hmeta.Replicas)))
 	args = append(args, "--disco-config", fmt.Sprintf(`{"name":"%s"}`, internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta).Name))
 	container.Args, _ = extendArgs(container.Args, args...)
-	port, _ := parseHMetaPort(container.Args)
+	port, _ := utils.GetHMetaContainerPort(container.Args)
 	container.Ports = extendPorts(container.Ports, port)
 	container.VolumeMounts = append(container.VolumeMounts,
 		corev1.VolumeMount{

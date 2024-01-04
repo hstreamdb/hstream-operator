@@ -77,33 +77,43 @@ type ExternalHMeta struct {
 }
 
 type Config struct {
+	// KafkaMode decides whether to use Kafka protocol or not.
+	//
 	// +kubebuilder:default:=false
 	// +optional
 	KafkaMode bool `json:"kafkaMode,omitempty"`
 
-	// MetadataReplicateAcross metadata replication must less than or equal to HStore replicas.
-	// If this is not specified, it will be set to HStore replicas or 3 if HStore replica more than 3
+	// Metrics decides whether to enable metrics or not.
+	// Only available in KafkaMode.
+	//
+	// +kubebuilder:default:=false
+	// +optional
+	Metrics bool `json:"metrics,omitempty"`
+
+	// LogDevice config. Refer to https://logdevice.io/docs/Config.html for more details.
+	//
+	// +optional
+	LogDeviceConfig runtime.RawExtension `json:"logDeviceConfig,omitempty"`
+
+	// MetadataReplicateAcross decides the required metadata replication in LogDevice.
+	// Default same as HStore replicas. If replicas is more than 3, it will be set to 3.
+	//
 	// Cannot be updated.
+	//
 	// More info: https://logdevice.io/docs/Config.html#metadata-logs-metadata-logs
 	//
 	// +kubebuilder:validation:Minimum:=1
 	// +optional
 	MetadataReplicateAcross *int32 `json:"metadata-replicate-across,omitempty"`
 
-	// NShards the number of HStore data shard
+	// NShards decides the number of shards per LogDevice daemon.
+	//
 	// Cannot be updated.
 	//
 	// +kubebuilder:default:=1
 	// +kubebuilder:validation:Minimum:=1
 	// +optional
 	NShards int32 `json:"nshards,omitempty"`
-
-	// log device bootstrap config, json style
-	// More info: https://logdevice.io/docs/Config.html
-	// Example: https://github.com/hstreamdb/hstream/blob/main/deploy/k8s/config.json
-	//
-	// +optional
-	LogDeviceConfig runtime.RawExtension `json:"logDeviceConfig,omitempty"`
 }
 
 // HStreamDBStatus defines the observed state of HStreamDB

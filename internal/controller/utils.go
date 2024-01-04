@@ -7,7 +7,6 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
-	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -156,37 +155,4 @@ func coverPortsFromArgs(args []string, ports []corev1.ContainerPort) []corev1.Co
 
 func isHashChanged(obj1, obj2 *metav1.ObjectMeta) bool {
 	return obj1.Annotations[hapi.LastSpecKey] != obj2.Annotations[hapi.LastSpecKey]
-}
-
-func getHMetaAddr(hdb *hapi.HStreamDB) (string, error) {
-	hmetaAddr := ""
-	if hdb.Spec.ExternalHMeta != nil {
-		hmetaAddr = hdb.Spec.ExternalHMeta.GetAddr()
-	} else {
-		svc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHMeta)
-		port, err := parseHMetaPort(hdb.Spec.HMeta.Container.Args)
-		if err != nil {
-			return "", err
-		}
-		hmetaAddr = fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, port.ContainerPort)
-	}
-	return hmetaAddr, nil
-}
-
-func parseHMetaPort(args []string) (corev1.ContainerPort, error) {
-	flags := internal.FlagSet{}
-	if err := flags.Parse(args); err != nil {
-		return constants.DefaultHMetaPort, err
-	}
-	if addr, ok := flags.Flags()["--http-addr"]; ok {
-		if slice := strings.Split(addr, ":"); len(slice) == 2 {
-			return corev1.ContainerPort{
-				Name:          "port",
-				ContainerPort: intstr.Parse(slice[1]).IntVal,
-				Protocol:      corev1.ProtocolTCP,
-			}, nil
-		}
-	}
-
-	return constants.DefaultHMetaPort, nil
 }

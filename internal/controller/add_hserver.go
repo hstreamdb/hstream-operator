@@ -171,23 +171,8 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 }
 
 func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, args []string, ports []corev1.ContainerPort) {
-	if len(hdb.Spec.HServer.Container.Command) > 0 {
-		return hdb.Spec.HServer.Container.Command,
-			hdb.Spec.HServer.Container.Args,
-			coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(hdb.Spec.HServer.Container.Ports, constants.DefaultHServerPort, constants.DefaultHServerInternalPort))
-	}
-	if len(hdb.Spec.HServer.Container.Args) > 0 {
-		if strings.HasPrefix(hdb.Spec.HServer.Container.Args[0], "bash") ||
-			strings.HasPrefix(hdb.Spec.HServer.Container.Args[0], "sh") ||
-			strings.HasPrefix(hdb.Spec.HServer.Container.Args[0], "-c") {
-			return hdb.Spec.HServer.Container.Command,
-				hdb.Spec.HServer.Container.Args,
-				coverPortsFromArgs(hdb.Spec.HServer.Container.Args, extendPorts(hdb.Spec.HServer.Container.Ports, constants.DefaultHServerPort, constants.DefaultHServerInternalPort))
-		}
-	}
-
 	command = []string{"bash", "-c"}
-	args = []string{"/usr/local/bin/hstream-server"}
+	args = []string{"hstream-server"}
 	var defaultPorts []corev1.ContainerPort
 
 	if hdb.Spec.Config.KafkaMode {
@@ -211,10 +196,10 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
 	}
 	if _, ok := parsedArgs["--advertised-address"]; !ok {
-		args = append(args, "--advertised-address", "$(POD_NAME)."+internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name+"."+hdb.GetNamespace())
+		args = append(args, "--advertised-address", "$(POD_NAME)."+hapi.ComponentTypeHServer.GetHeadlessService(hdb, nil).Name+"."+hdb.GetNamespace())
 	}
 	if _, ok := parsedArgs["--metastore-uri"]; !ok {
-		hmeta, _ := getHMetaAddr(hdb)
+		hmeta, _ := utils.GetHMetaAddr(hdb)
 		args = append(args, "--metastore-uri", "rq://"+hmeta)
 	}
 	if _, ok := parsedArgs["--store-config"]; !ok {
@@ -244,7 +229,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	}
 
 	if _, ok := parsedArgs["--seed-nodes"]; !ok {
-		hServerSvc := internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer)
+		hServerSvc := hapi.ComponentTypeHServer.GetHeadlessService(hdb, nil)
 		seedNodes := make([]string, hdb.Spec.HServer.Replicas)
 
 		for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
