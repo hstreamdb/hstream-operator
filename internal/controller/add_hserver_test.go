@@ -79,15 +79,12 @@ var _ = Describe("controller/add_server", func() {
 					defaultContainerArgs := []string{
 						strings.Join([]string{"/usr/local/bin/hstream-server",
 							"--config-path", "/etc/hstream/config.yaml",
-							"--bind-address", "0.0.0.0",
-							"--advertised-address $(POD_NAME).hstreamdb-sample-internal-hserver.default",
-							"--store-config", "/etc/logdevice/config.json",
-							"--store-admin-host", "hstreamdb-sample-admin-server.default",
-							"--metastore-uri", "rq://hstreamdb-sample-internal-hmeta.default:4001",
 							"--server-id", "$(hostname | grep -o '[0-9]*$')",
-							"--port", "6570",
-							"--internal-port", "6571",
+							"--advertised-address $(POD_NAME).hstreamdb-sample-internal-hserver.default",
+							"--metastore-uri", "rq://hstreamdb-sample-internal-hmeta.default:4001",
+							"--store-config", "/etc/logdevice/config.json",
 							"--seed-nodes", "hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571,hstreamdb-sample-hserver-1.hstreamdb-sample-internal-hserver.default:6571,hstreamdb-sample-hserver-2.hstreamdb-sample-internal-hserver.default:6571",
+							"--store-admin-host", "hstreamdb-sample-admin-server.default",
 						}, " "),
 					}
 

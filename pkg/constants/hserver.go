@@ -20,19 +20,47 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	HServerPortName         = "port"
+	HServerInternalPortName = "internal-port"
+	HServerGossipPortName   = "gossip-port"
+	HServerMetricsPortName  = "metrics-port"
+)
+
 var DefaultHServerPort = corev1.ContainerPort{
-	Name:          "port",
+	Name:          HServerPortName,
 	ContainerPort: 6570,
 }
 
 var DefaultHServerInternalPort = corev1.ContainerPort{
-	Name:          "internal-port",
+	Name:          HServerInternalPortName,
 	ContainerPort: 6571,
 }
 
 var DefaultHServerPorts = []corev1.ContainerPort{
 	DefaultHServerPort,
 	DefaultHServerInternalPort,
+}
+
+var DefaultKafkaHServerPort = corev1.ContainerPort{
+	Name:          HServerPortName,
+	ContainerPort: 9092,
+}
+
+var DefaultKafkaHServerGossipPort = corev1.ContainerPort{
+	Name:          HServerGossipPortName,
+	ContainerPort: 6571,
+}
+
+var DefaultKafkaHServerMetricsPort = corev1.ContainerPort{
+	Name:          HServerMetricsPortName,
+	ContainerPort: 9700,
+}
+
+var DefaultKafkaHServerPorts = []corev1.ContainerPort{
+	DefaultKafkaHServerPort,
+	DefaultKafkaHServerGossipPort,
+	DefaultKafkaHServerMetricsPort,
 }
 
 var DefaultHServerEnv = []corev1.EnvVar{

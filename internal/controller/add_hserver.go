@@ -188,11 +188,17 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 
 	command = []string{"bash", "-c"}
 	args = []string{"/usr/local/bin/hstream-server"}
+	var defaultPorts []corev1.ContainerPort
+
 	if hdb.Spec.Config.KafkaMode {
 		args = append(args, "kafka")
+		defaultPorts = constants.DefaultKafkaHServerPorts
+	} else {
+		defaultPorts = constants.DefaultHServerPorts
 	}
+
 	ports = utils.MergeContainerPorts(
-		constants.DefaultHServerPorts,
+		defaultPorts,
 		hdb.Spec.HServer.Container.Ports...,
 	)
 
@@ -201,48 +207,40 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	if _, ok := parsedArgs["--config-path"]; !ok {
 		args = append(args, "--config-path", "/etc/hstream/config.yaml")
 	}
-	if _, ok := parsedArgs["--bind-address"]; !ok {
-		args = append(args, "--bind-address", "0.0.0.0")
+	if _, ok := parsedArgs["--server-id"]; !ok {
+		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
 	}
 	if _, ok := parsedArgs["--advertised-address"]; !ok {
 		args = append(args, "--advertised-address", "$(POD_NAME)."+internal.GetHeadlessService(hdb, hapi.ComponentTypeHServer).Name+"."+hdb.GetNamespace())
-	}
-	if _, ok := parsedArgs["--store-config"]; !ok {
-		args = append(args, "--store-config", "/etc/logdevice/config.json")
 	}
 	if _, ok := parsedArgs["--metastore-uri"]; !ok {
 		hmeta, _ := getHMetaAddr(hdb)
 		args = append(args, "--metastore-uri", "rq://"+hmeta)
 	}
-	if _, ok := parsedArgs["--server-id"]; !ok {
-		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
-	}
-	if port, ok := parsedArgs["--port"]; !ok {
-		args = append(args, "--port", fmt.Sprintf("%d", constants.DefaultHServerPort.ContainerPort))
-	} else {
-		ports = utils.OverrideContainerPorts(ports, constants.DefaultHServerPort.Name, port)
+	if _, ok := parsedArgs["--store-config"]; !ok {
+		args = append(args, "--store-config", "/etc/logdevice/config.json")
 	}
 
-	var (
-		internalPort string
-		ok           bool
-	)
+	// --port
+	if port, ok := parsedArgs["--"+constants.HServerPortName]; ok {
+		ports = utils.OverrideContainerPorts(ports, constants.HServerPortName, port)
+	}
+
+	// --internal-port or --gossip-port
+	internalPortName := constants.HServerInternalPortName
 	if hdb.Spec.Config.KafkaMode {
-		internalPort, ok = parsedArgs["--gossip-port"]
+		internalPortName = constants.HServerGossipPortName
+	}
+	internalPortArg := "--" + internalPortName
+	var internalPort string
+	if hdb.Spec.Config.KafkaMode {
+		internalPort = fmt.Sprintf("%d", constants.DefaultKafkaHServerGossipPort.ContainerPort)
 	} else {
-		internalPort, ok = parsedArgs["--internal-port"]
+		internalPort = fmt.Sprintf("%d", constants.DefaultHServerInternalPort.ContainerPort)
 	}
 
-	if !ok {
-		internalPort = fmt.Sprintf("%d", constants.DefaultHServerInternalPort.ContainerPort)
-
-		if hdb.Spec.Config.KafkaMode {
-			args = append(args, "--gossip-port", internalPort)
-		} else {
-			args = append(args, "--internal-port", internalPort)
-		}
-	} else {
-		ports = utils.OverrideContainerPorts(ports, constants.DefaultHServerInternalPort.Name, internalPort)
+	if internalPort, ok := parsedArgs[internalPortArg]; ok {
+		ports = utils.OverrideContainerPorts(ports, internalPortName, internalPort)
 	}
 
 	if _, ok := parsedArgs["--seed-nodes"]; !ok {
@@ -263,7 +261,11 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		args = append(args, "--seed-nodes", strings.Join(seedNodes, ","))
 	}
 
-	if !hdb.Spec.Config.KafkaMode {
+	if hdb.Spec.Config.KafkaMode {
+		if metricsPort, ok := parsedArgs["--"+constants.HServerMetricsPortName]; ok {
+			ports = utils.OverrideContainerPorts(ports, constants.HServerMetricsPortName, metricsPort)
+		}
+	} else {
 		if _, ok := parsedArgs["--store-admin-host"]; !ok {
 			args = append(args, "--store-admin-host", internal.GetService(hdb, hapi.ComponentTypeAdminServer).Name+"."+hdb.GetNamespace())
 		}
