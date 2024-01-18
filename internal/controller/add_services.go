@@ -54,7 +54,7 @@ func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconcile
 }
 
 func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	ports, err := getPorts(&hdb.Spec.AdminServer.Container, adminServerPort)
+	ports, err := getPorts(&hdb.Spec.AdminServer.Container, constants.DefaultAdminServerPort)
 	if err != nil {
 		return fmt.Errorf("parse adminServer args failed. %w", err)
 	}
