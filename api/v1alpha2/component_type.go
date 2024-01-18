@@ -40,6 +40,7 @@ func (ct ComponentType) GetObjectMeta(hdb *HStreamDB, meta *metav1.ObjectMeta) m
 			InstanceKey:  hdb.Name,
 			ComponentKey: string(ct),
 		},
+		Annotations: map[string]string{},
 	}
 
 	if meta != nil {
