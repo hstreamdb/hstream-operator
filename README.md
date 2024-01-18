@@ -4,10 +4,10 @@
 
 HStream Operator is a Kubernetes operator designed to manage and maintain the HStreamDB cluster within a Kubernetes environment. The HStreamDB cluster comprises of several components including:
 
-- [HServer](https://docs.hstream.io/reference/architecture/hserver.html)
-- [HStore](https://docs.hstream.io/reference/architecture/hstore.html)
 - HMeta
 - AdminServer
+- [HServer](https://docs.hstream.io/reference/architecture/hserver.html)
+- [HStore](https://docs.hstream.io/reference/architecture/hstore.html)
 
 It simplifies the deployment, scaling, and operations of HStreamDB clusters on Kubernetes, making it easier for users to manage their HStream components effectively. We use and get benefits from [kubebuilder](https://book.kubebuilder.io/) to simplify the development of the operator.
 
@@ -27,13 +27,13 @@ Every releases will be published to [GitHub Releases](https://github.com/hstream
 can also install the operator with the following command:
 
 ```sh
-kubectl create -f https://github.com/hstreamdb/hstream-operator/releases/download/0.0.8/hstream-operator.yaml
+kubectl create -f https://github.com/hstreamdb/hstream-operator/releases/download/0.0.9/hstream-operator.yaml
 ```
 
 > You can also use server-side apply to install the operator by running `kubectl apply --server-side`, please refer to
 > [comparison-with-client-side-apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/#comparison-with-client-side-apply) for more details.
 
-Replace `0.0.8` with the version you want to install.
+Replace `0.0.9` with the version you want to install.
 
 ### Check the status
 
