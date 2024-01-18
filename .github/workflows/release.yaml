@@ -11,7 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v3
+      - name: Check if it's a semver release
+        id: semver
+        run: |
+          if grep -q "^\d+\.\d+\.\d+$" "${{ github.ref_name }}"; then
+            echo "semver=true" >> $GITHUB_OUTPUT
+          else
+            echo "semver=false" >> $GITHUB_OUTPUT
+          fi
       - name: Check chart version
+        if: steps.semver.outputs.semver == 'true'
         run: |
           version=$(helm show chart deploy/charts/hstream-operator | grep version | awk '{print $2}')
 
@@ -20,6 +29,7 @@ jobs:
             exit 1
           fi
       - name: Check chart appVersion
+        if: steps.semver.outputs.semver == 'true'
         run: |
           appVersion=$(helm show chart deploy/charts/hstream-operator | grep appVersion | awk '{print $2}')
 
