@@ -33,29 +33,6 @@ spec:
       targetPort: server-port
       nodePort: 31777
 ---
-# # Ref: https://github.com/hstreamdb/hstream/blob/main/conf/hstream.yaml
-# #
-# # This configmap is used to overwrite the default config of hstreamdb.
-# # Please note that not all the config items can be overwritten by this configmap.
-# # For example, the config item `hserver.id` is configured internally by hstream-operator
-# # because it is related to the number of hserver replicas.
-#
-# apiVersion: v1
-# kind: ConfigMap
-# metadata:
-#   name: hstreamdb-sample-config
-# data:
-#   config: |
-#     hserver:
-#       # Server port value, the value must be given and can be overwritten by cli
-#       # option `--port`
-#       port: 6580
-
-#       # Server port value for internal communications between server nodes,
-#       # the value must be given
-#       # and can be overwritten by cli option `--internal-port`
-#       internal-port: 6581
-# ---
 apiVersion: apps.hstream.io/v1alpha2
 kind: HStreamDB
 metadata:
@@ -75,9 +52,8 @@ spec:
 
   # config:
   #   nshards: 1
-  #   metadata-replicate-across: 1
+  #   metadata-replicate-across: 3
   #   logDeviceConfig:
-  #     version: 2
   gateway:
     endpoint: "hstreamdb-sample.hstreamdb"
     image: hstreamdb/hstream-gateway
@@ -116,19 +92,6 @@ spec:
     replicas: 3
     container:
       name: hserver
-      args:
-        - --log-level
-        - debug
-    #     # Overriding the default config of hserver.
-    #     - --config-path
-    #     - /etc/custom/hstream/config
-    #   volumeMounts:
-    #     - name: hstreamdb-config-vol
-    #       mountPath: /etc/custom/hstream
-    # volumes:
-    #   - name: hstreamdb-config-vol
-    #     configMap:
-    #       name: hstreamdb-sample-config
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent

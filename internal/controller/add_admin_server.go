@@ -6,6 +6,7 @@ import (
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/internal/utils"
+	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,12 +23,6 @@ var adminServerArgs = []string{
 	"--enable-maintenance-manager", "",
 	"--maintenance-log-snapshotting", "",
 	"--enable-safety-check-periodic-metadata-update", "",
-}
-
-var adminServerPort = corev1.ContainerPort{
-	Name:          "admin-port",
-	ContainerPort: 6440,
-	Protocol:      corev1.ProtocolTCP,
 }
 
 type addAdminServer struct{}
@@ -115,7 +110,7 @@ func (a addAdminServer) getContainer(hdb *hapi.HStreamDB) []corev1.Container {
 	}
 
 	container.Args, _ = extendArgs(container.Args, adminServerArgs...)
-	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, adminServerPort))
+	container.Ports = coverPortsFromArgs(container.Args, extendPorts(container.Ports, constants.DefaultAdminServerPort))
 
 	container.VolumeMounts = append(
 		container.VolumeMounts,
