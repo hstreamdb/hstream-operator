@@ -249,7 +249,7 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 	volumes := []corev1.Volume{}
 
 	if connector.Spec.Type == v1beta1.SinkElaticsearch {
-		containers = append(containers, connectorgen.DefaultSinkElasticsearchLogContainer(connector))
+		containers = append(containers, connector.Spec.Containers...)
 		volumes = append(
 			volumes,
 			[]corev1.Volume{
