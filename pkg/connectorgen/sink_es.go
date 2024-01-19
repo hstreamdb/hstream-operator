@@ -18,7 +18,6 @@ package connectorgen
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/hstreamdb/hstream-operator/api/v1beta1"
 )
@@ -39,32 +38,6 @@ func DefaultSinkElasticsearchContainer(connector *v1beta1.Connector, name, confi
 			{
 				Name:      "data",
 				MountPath: "/data",
-			},
-		},
-	}
-}
-
-func DefaultSinkElasticsearchLogContainer(connector *v1beta1.Connector) corev1.Container {
-	return corev1.Container{
-		Name:  "log",
-		Image: addImageRegistry("busybox:1.36", connector.Spec.ImageRegistry),
-		Args: []string{
-			"/bin/sh",
-			"-c",
-			"sleep 5 && tail -F /data/app.log", // OPTIMIZE: wait for connector to start.
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "data",
-				MountPath: "/data",
-			},
-		},
-		Resources: corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU: resource.MustParse("300m"),
-			},
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU: resource.MustParse("100m"),
 			},
 		},
 	}

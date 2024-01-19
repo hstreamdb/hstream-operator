@@ -255,10 +255,12 @@ func (r *ConnectorReconciler) createConnectorDeployment(ctx context.Context, con
 					Annotations: getPromAnnotations(connector),
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						preconfiguredContainer,
-						connectorgen.DefaultSinkElasticsearchLogContainer(connector),
-					},
+					Containers: append(
+						[]corev1.Container{
+							preconfiguredContainer,
+						},
+						connector.Spec.Containers...,
+					),
 					Volumes: []corev1.Volume{
 						{
 							Name: configMapName,

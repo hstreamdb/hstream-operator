@@ -73,6 +73,10 @@ type ConnectorSpec struct {
 	// Note that not all fields are supported.
 	// +optional
 	Container corev1.Container `json:"container,omitempty"`
+
+	// Containers is used to add additional containers to the connector pod.
+	// +optional
+	Containers []corev1.Container `json:"containers,omitempty"`
 }
 
 // ConnectorStatus defines the observed state of Connector
