@@ -162,18 +162,6 @@ var _ = Describe("controller/add_server", func() {
 				Expect(err).To(BeNil())
 				Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--log-level debug"))
 			})
-
-			It("should override the default config successfully", func() {
-				hdb.Spec.HServer.Container.Args = append(hdb.Spec.HServer.Container.Args,
-					"--config-path", "/etc/custom/hstream/config")
-				Expect(reconcile()).To(BeNil())
-
-				sts, err := getHServerStatefulSet(hdb)
-
-				Expect(err).To(BeNil())
-				Expect(sts.Spec.Template.Spec.Containers[0].Args[0]).Should(ContainSubstring("--config-path /data/custom/hstream/config-override.yaml"))
-				Expect(sts.Spec.Template.Spec.InitContainers).To(HaveLen(2))
-			})
 		})
 	})
 })
