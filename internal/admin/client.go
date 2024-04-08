@@ -19,26 +19,23 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/go-logr/logr"
-	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
-	"github.com/hstreamdb/hstream-operator/internal"
-	"github.com/hstreamdb/hstream-operator/pkg/constants"
+	"github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/pkg/executor"
 	"github.com/hstreamdb/hstream-operator/pkg/selector"
 	"k8s.io/client-go/rest"
 )
 
 type AdminClient struct {
-	hdb      *hapi.HStreamDB
+	hdb      *v1alpha2.HStreamDB
 	selector *selector.Selector
 	executor *executor.RemoteExecutor
 	log      logr.Logger
 }
 
-// NewAdminClient generates an Admin client for a hStream
-func NewAdminClient(hdb *hapi.HStreamDB, restConfig *rest.Config, log logr.Logger) IAdminClient {
+// NewAdminClient generates an admin client for communicating with the HStreamDB cluster.
+func NewAdminClient(hdb *v1alpha2.HStreamDB, restConfig *rest.Config, log logr.Logger) IAdminClient {
 	e, _ := executor.NewRemoteExecutor(restConfig)
 	selector := selector.NewSelector(e.Clientset)
 
@@ -59,7 +56,7 @@ func (ac *AdminClient) call(cmd string, args ...string) (string, error) {
 
 	pods, err := ac.selector.GetPods(
 		ac.hdb.Namespace,
-		&map[string]string{hapi.ComponentKey: string(hapi.ComponentTypeAdminServer)},
+		&map[string]string{v1alpha2.ComponentKey: string(v1alpha2.ComponentTypeAdminServer)},
 		nil,
 	)
 	if err != nil {
@@ -87,29 +84,17 @@ func (ac *AdminClient) MaintenanceStore(action MaintenanceAction, args ...string
 	return ac.call("hadmin", append([]string{"store", "maintenance", string(action)}, args...)...)
 }
 
-func (ac *AdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
-	namespace := ""
-	hmetaAddr := ""
-
-	if ac.hdb.Spec.ExternalHMeta != nil {
-		namespace = ac.hdb.Spec.ExternalHMeta.Namespace
-		hmetaAddr = ac.hdb.Spec.ExternalHMeta.Host + ":" + strconv.Itoa(int(ac.hdb.Spec.ExternalHMeta.Port))
-	} else {
-		namespace = ac.hdb.Namespace
-		svc := internal.GetHeadlessService(ac.hdb, hapi.ComponentTypeHMeta)
-		hmetaAddr = fmt.Sprintf("%s:%d", svc.Name, constants.DefaultHMetaPort.ContainerPort)
-	}
-
-	output, err := ac.executor.AccessServiceProxy(namespace, hmetaAddr, "nodes")
+func (ac *AdminClient) GetInternalRqliteStatus() (status v1alpha2.InternalRqliteStatus, err error) {
+	output, err := ac.executor.AccessServiceProxy(ac.hdb.Spec.Rqlite.Namespace, ac.hdb.Spec.Rqlite.Host+":"+fmt.Sprint(ac.hdb.Spec.Rqlite.Port), "nodes")
 	if err != nil {
-		err = fmt.Errorf("failed to get HMeta status: %w", err)
+		err = fmt.Errorf("failed to get rqlite status: %w", err)
 
 		return
 	}
 
 	err = json.Unmarshal(output, &status.Nodes)
 	if err != nil {
-		err = fmt.Errorf("failed to unmarshal HMeta staus: %w", err)
+		err = fmt.Errorf("failed to unmarshal rqlite staus: %w", err)
 
 		return
 	}

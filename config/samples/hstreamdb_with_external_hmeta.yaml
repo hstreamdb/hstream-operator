@@ -79,10 +79,10 @@ spec:
     replicas: 1
     container:
       name: hserver
-  externalHmeta:
-    host: rqlite-svc
-    port: 4001
-    namespace: default
+  rqlite:
+    host: hstreamdb-internal-rqlite
+    port: 80
+    namespace: hstreamdb
   hstore:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent

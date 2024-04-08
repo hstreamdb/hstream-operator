@@ -40,8 +40,7 @@ func (lc LogDeviceConfigReconciler) reconcile(ctx context.Context, r *HStreamDBR
 			return &requeue{curError: err}
 		}
 
-		hmetaAddr, _ := utils.GetHMetaAddr(hdb)
-		logDeviceConfig, _ := utils.GetLogDeviceConfig(hdb.Spec.HStore.Replicas, hmetaAddr, hdb.Spec.Config.LogDeviceConfig.Raw)
+		logDeviceConfig, _ := utils.GetLogDeviceConfig(hdb.Spec.HStore.Replicas, hdb.Spec.Rqlite.GetAddr(), hdb.Spec.Config.LogDeviceConfig.Raw)
 
 		logDeviceConfigMap = corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{

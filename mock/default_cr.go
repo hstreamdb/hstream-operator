@@ -40,12 +40,6 @@ func CreateDefaultCR() *hapi.HStreamDB {
 				Replicas:            3,
 				VolumeClaimTemplate: nil,
 			},
-			HMeta: hapi.Component{
-				Image:               "rqlite/rqlite:latest",
-				ImagePullPolicy:     "IfNotPresent",
-				Replicas:            1,
-				VolumeClaimTemplate: nil,
-			},
 		},
 		Status: hapi.HStreamDBStatus{},
 	}

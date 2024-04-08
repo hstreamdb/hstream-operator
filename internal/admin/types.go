@@ -18,7 +18,7 @@ package admin
 
 import (
 	"github.com/go-logr/logr"
-	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"k8s.io/client-go/rest"
 )
 
@@ -33,13 +33,13 @@ type IAdminClient interface {
 	CallKafkaServer(args ...string) (string, error)
 	CallStore(args ...string) (string, error)
 	MaintenanceStore(action MaintenanceAction, args ...string) (string, error)
-	GetHMetaStatus() (HMetaStatus, error)
+	GetInternalRqliteStatus() (v1alpha2.InternalRqliteStatus, error)
 }
 
 // AdminClientProvider provides an abstraction for creating clients that
 // communicate with the HStreamDB cluster.
 type AdminClientProvider interface {
-	GetAdminClient(hdb *hapi.HStreamDB) IAdminClient
+	GetAdminClient(hdb *v1alpha2.HStreamDB) IAdminClient
 }
 
 type adminClientProvider struct {
@@ -50,7 +50,7 @@ type adminClientProvider struct {
 	log logr.Logger
 }
 
-func (p *adminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) IAdminClient {
+func (p *adminClientProvider) GetAdminClient(hdb *v1alpha2.HStreamDB) IAdminClient {
 	return NewAdminClient(hdb, p.restConfig, p.log)
 }
 
@@ -59,28 +59,4 @@ func NewAdminClientProvider(restConfig *rest.Config, log logr.Logger) AdminClien
 		restConfig: restConfig,
 		log:        log.WithName("Admin Client"),
 	}
-}
-
-type HMetaStatus struct {
-	Nodes map[string]HMetaNode
-}
-
-type HMetaNode struct {
-	Reachable bool
-	Leader    bool
-	Error     string
-}
-
-func (rs *HMetaStatus) IsAllReady() bool {
-	if len(rs.Nodes) == 0 {
-		return false
-	}
-
-	for _, node := range rs.Nodes {
-		if !node.Reachable {
-			return false
-		}
-	}
-
-	return true
 }

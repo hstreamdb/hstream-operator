@@ -77,7 +77,7 @@ const defaultLogDeviceConfigTemplate = `{
 		}
 	},
 	"rqlite": {
-		"rqlite_uri": "ip://{{ .HMetaAddr }}"
+		"rqlite_uri": "ip://{{ .RqliteAddr }}"
 	},
 	"version": 1
 }`
@@ -92,7 +92,7 @@ func GetRecommendedLogReplicaAcross(hdb *hapi.HStreamDB) int {
 	return defaultRecommendedLogReplication
 }
 
-func GetLogDeviceConfig(nodeNum int32, hmetaAddr string, existingConfig []byte) (string, error) {
+func GetLogDeviceConfig(nodeNum int32, rqliteAddr string, existingConfig []byte) (string, error) {
 	tmpl, err := template.New("defaultLogDeviceConfig").Parse(defaultLogDeviceConfigTemplate)
 	if err != nil {
 		return "", err
@@ -100,8 +100,8 @@ func GetLogDeviceConfig(nodeNum int32, hmetaAddr string, existingConfig []byte) 
 
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, map[string]any{
-		"NodeNum":   nodeNum,
-		"HMetaAddr": hmetaAddr,
+		"NodeNum":    nodeNum,
+		"RqliteAddr": rqliteAddr,
 	})
 	if err != nil {
 		return "", err

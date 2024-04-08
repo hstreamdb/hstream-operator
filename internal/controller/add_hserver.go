@@ -148,8 +148,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		args = append(args, "--advertised-address", "$(POD_NAME)."+hapi.ComponentTypeHServer.GetHeadlessService(hdb, nil).Name+"."+hdb.GetNamespace())
 	}
 	if _, ok := parsedArgs["--metastore-uri"]; !ok {
-		hmeta, _ := utils.GetHMetaAddr(hdb)
-		args = append(args, "--metastore-uri", "rq://"+hmeta)
+		args = append(args, "--metastore-uri", "rq://"+hdb.Spec.Rqlite.GetAddr())
 	}
 	if _, ok := parsedArgs["--store-config"]; !ok {
 		args = append(args, "--store-config", "/etc/logdevice/config.json")

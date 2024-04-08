@@ -15,7 +15,6 @@ const (
 	ComponentTypeConsole     ComponentType = "console"
 	ComponentTypeHServer     ComponentType = "hserver"
 	ComponentTypeHStore      ComponentType = "hstore"
-	ComponentTypeHMeta       ComponentType = "hmeta"
 )
 
 func (ct ComponentType) GetResName(hdb *HStreamDB) string {

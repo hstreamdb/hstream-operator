@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"strconv"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,30 +50,34 @@ type HStreamDBList struct {
 
 // HStreamDBSpec defines the desired state of HStreamDB
 type HStreamDBSpec struct {
-	// ExternalHMeta set external HMeta cluster addr
-	// +optional
-	ExternalHMeta *ExternalHMeta `json:"externalHmeta,omitempty"`
-
 	Config Config `json:"config,omitempty"`
 
-	Gateway     *Gateway   `json:"gateway,omitempty"`
-	Console     *Component `json:"console,omitempty"`
-	AdminServer Component  `json:"adminServer,omitempty"`
-	HServer     Component  `json:"hserver,omitempty"`
-	HStore      Component  `json:"hstore,omitempty"`
-	HMeta       Component  `json:"hmeta,omitempty"`
+	Gateway *Gateway `json:"gateway,omitempty"`
+
+	Console *Component `json:"console,omitempty"`
+
+	AdminServer Component `json:"adminServer,omitempty"`
+
+	HServer Component `json:"hserver,omitempty"`
+
+	HStore Component `json:"hstore,omitempty"`
+
+	// +kubebuilder:validation:Required
+	Rqlite Rqlite `json:"rqlite"`
 }
 
-type ExternalHMeta struct {
-	// Host set external HMeta cluster host, it can be ip addr or service name
+type Rqlite struct {
 	// +kubebuilder:validation:Required
 	Host string `json:"host"`
+
 	// +kubebuilder:validation:Required
 	Port int32 `json:"port"`
-	// Namespace the namespace of external HMeta cluster
-	// +kubebuilder:default:=default
-	// +optional
+
 	Namespace string `json:"namespace"`
+}
+
+func (r *Rqlite) GetAddr() string {
+	return fmt.Sprintf("%s.%s:%d", r.Host, r.Namespace, r.Port)
 }
 
 type Config struct {
@@ -119,31 +123,35 @@ type Config struct {
 // HStreamDBStatus defines the observed state of HStreamDB
 type HStreamDBStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// HMeta store the status of HMeta cluster
-	HMeta HMetaStatus `json:"hmeta"`
+
+	InternalRqlite InternalRqliteStatus `json:"internalRqlite,omitempty"`
 }
 
-type HMetaStatus struct {
-	// Nodes the status of node that return by api http://localhost:4001/status?pretty in HMeta pod
-	Nodes   []HMetaNode `json:"nodes"`
-	Version string      `json:"version"`
+type InternalRqliteStatus struct {
+	Nodes map[string]RqliteNode `json:"nodes"`
 }
 
-type HMetaNode struct {
-	NodeId    string `json:"nodeId"`
+type RqliteNode struct {
+	Id        string `json:"id"`
+	Addr      string `json:"addr"`
 	Reachable bool   `json:"reachable"`
 	Leader    bool   `json:"leader"`
-	Error     string `json:"error,omitempty"`
+}
+
+func (rs *InternalRqliteStatus) IsAllNodesReady() bool {
+	if len(rs.Nodes) == 0 {
+		return false
+	}
+
+	for _, node := range rs.Nodes {
+		if !node.Reachable {
+			return false
+		}
+	}
+
+	return true
 }
 
 func init() {
 	SchemeBuilder.Register(&HStreamDB{}, &HStreamDBList{})
-}
-
-func (er *ExternalHMeta) GetAddr() string {
-	addr := er.Host
-	if er.Namespace != "" {
-		addr += "." + er.Namespace
-	}
-	return addr + ":" + strconv.Itoa(int(er.Port))
 }

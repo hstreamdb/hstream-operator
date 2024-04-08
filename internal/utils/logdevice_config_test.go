@@ -7,7 +7,7 @@ import (
 
 var _ = Describe("internal/utils/logdevice_config", func() {
 	It("should generate correct default logdevice config", func() {
-		config, err := GetLogDeviceConfig(3, "hmeta.default:4001", []byte("{}"))
+		config, err := GetLogDeviceConfig(3, "internal-rqlite.hstreamdb:80", []byte("{}"))
 
 		Expect(err).To(BeNil())
 		Expect(config).ToNot(Equal(""))

@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	HMetaReady   string = "HMetaReady"
-	HStoreReady  string = "HStoreReady"
-	HServerReady string = "HServerReady"
-	GatewayReady string = "GatewayReady"
-	ConsoleReady string = "ConsoleReady"
-	Ready        string = "Ready"
+	InternalRqliteReady string = "InternalRqliteReady"
+	HStoreReady         string = "HStoreReady"
+	HServerReady        string = "HServerReady"
+	GatewayReady        string = "GatewayReady"
+	ConsoleReady        string = "ConsoleReady"
+	Ready               string = "Ready"
 )
 
 func (hdb *HStreamDB) IsConditionTrue(conditionType string) bool {

@@ -56,7 +56,7 @@ type hdbSubReconciler interface {
 	If reconciliation cannot proceed, this should return a requeue object with
 	a `Message` field.
 	*/
-	reconcile(ctx context.Context, r *HStreamDBReconciler, cluster *hapi.HStreamDB) *requeue
+	reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue
 }
 
 //+kubebuilder:rbac:groups=apps.hstream.io,resources=hstreamdbs,verbs=get;list;watch;create;update;patch;delete
@@ -87,8 +87,7 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	subReconcilers := []hdbSubReconciler{
 		LogDeviceConfigReconciler{},
 		addServices{},
-		addHMeta{},
-		updateHMetaStatus{},
+		RqliteStatusReconciler{},
 		addAdminServer{},
 		addHStore{},
 		bootstrapHStore{},

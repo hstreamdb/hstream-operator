@@ -68,7 +68,7 @@ func (u updateStatus) checkAllReady(ctx context.Context, r *HStreamDBReconciler,
 	}
 
 	conditionList := []string{
-		hapi.HMetaReady,
+		hapi.InternalRqliteReady,
 		hapi.HStoreReady,
 		hapi.HServerReady,
 	}

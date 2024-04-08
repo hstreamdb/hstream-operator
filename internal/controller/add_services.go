@@ -6,7 +6,6 @@ import (
 
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
-	"github.com/hstreamdb/hstream-operator/internal/utils"
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,9 +17,6 @@ type addServices struct{}
 
 func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	var err error
-	if err = a.addHMetaService(ctx, r, hdb); err != nil {
-		return &requeue{curError: err}
-	}
 	if err = a.addAdminServerService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
 	}
@@ -67,26 +63,6 @@ func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReco
 		return fmt.Errorf("parse AdminServer args failed. %w", err)
 	}
 	service := hapi.ComponentTypeAdminServer.GetService(hdb, ports)
-	return a.createOrUpdate(ctx, r, hdb, &service)
-}
-
-func (a addServices) addHMetaService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
-	if hdb.Spec.ExternalHMeta != nil {
-		return nil
-	}
-
-	hmeta := &hdb.Spec.HMeta
-
-	flags := internal.FlagSet{}
-	if err = flags.Parse(hmeta.Container.Args); err != nil {
-		return fmt.Errorf("parse HMeta args failed. %w", err)
-	}
-
-	port, _ := utils.GetHMetaContainerPort(hdb.Spec.HMeta.Container.Args)
-	ports := extendPorts(hdb.Spec.HMeta.Container.Ports, port)
-	servicePorts := convertToServicePort(ports)
-
-	service := hapi.ComponentTypeHMeta.GetHeadlessService(hdb, servicePorts)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 

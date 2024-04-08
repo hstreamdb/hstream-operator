@@ -25,7 +25,7 @@ var _ = Describe("UpdateStatus", func() {
 
 		prepareGatewayReady(ctx, hdb)
 		prepareConsoleReady(ctx, hdb)
-		hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
+		hdb.Status.InternalRqlite.Nodes = map[string]hapi.RqliteNode{}
 	})
 
 	AfterEach(func() {
@@ -49,9 +49,9 @@ var _ = Describe("UpdateStatus", func() {
 
 	When("all components have been ready", func() {
 		JustBeforeEach(func() {
-			hdb.Status.HMeta.Nodes = []hapi.HMetaNode{}
+			hdb.Status.InternalRqlite.Nodes = map[string]hapi.RqliteNode{}
 			hdb.SetCondition(metav1.Condition{
-				Type:    hapi.HMetaReady,
+				Type:    hapi.InternalRqliteReady,
 				Status:  metav1.ConditionTrue,
 				Reason:  "test",
 				Message: "test",

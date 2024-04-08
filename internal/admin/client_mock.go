@@ -1,15 +1,13 @@
 package admin
 
 import (
-	"fmt"
-
 	"github.com/go-logr/logr"
-	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"k8s.io/client-go/rest"
 )
 
 type mockAdminClient struct {
-	hdb *hapi.HStreamDB
+	hdb *v1alpha2.HStreamDB
 }
 
 func (ac *mockAdminClient) CallServer(args ...string) (string, error) {
@@ -30,13 +28,14 @@ func (*mockAdminClient) MaintenanceStore(action MaintenanceAction, args ...strin
 	panic("unimplemented")
 }
 
-func (ac *mockAdminClient) GetHMetaStatus() (status HMetaStatus, err error) {
-	for i := 0; i < int(ac.hdb.Spec.HMeta.Replicas); i++ {
-		status.Nodes[fmt.Sprint("nodeId-", i)] = HMetaNode{
+func (ac *mockAdminClient) GetInternalRqliteStatus() (status v1alpha2.InternalRqliteStatus, err error) {
+	status.Nodes = map[string]v1alpha2.RqliteNode{
+		"hstreamdb-internal-rqlite-0": {
+			Id:        "hstreamdb-internal-rqlite-0",
+			Addr:      "hstreamdb-internal-rqlite-0.hstreamdb-internal-rqlite-headless.hstreamdb.svc.cluster.local:4002",
 			Reachable: true,
 			Leader:    false,
-			Error:     "",
-		}
+		},
 	}
 
 	return
@@ -46,7 +45,7 @@ type mockAdminClientProvider struct {
 	client *mockAdminClient
 }
 
-func (m *mockAdminClientProvider) GetAdminClient(hdb *hapi.HStreamDB) IAdminClient {
+func (m *mockAdminClientProvider) GetAdminClient(hdb *v1alpha2.HStreamDB) IAdminClient {
 	m.client.hdb = hdb
 
 	return m.client

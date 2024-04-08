@@ -46,8 +46,6 @@ var _ = Describe("AddServices", func() {
 			Expect(err).To(BeNil())
 			_, err = getService(hdb, hapi.ComponentTypeAdminServer)
 			Expect(err).To(BeNil())
-			_, err = getHeadlessService(hdb, hapi.ComponentTypeHMeta)
-			Expect(err).To(BeNil())
 		})
 
 		When("services has been deployed", func() {
@@ -94,14 +92,6 @@ var _ = Describe("AddServices", func() {
 							IntVal: 5440,
 						},
 					}))
-				})
-			})
-
-			Context("check hmete headless service", func() {
-				It("PublishNotReadyAddresses should be true", func() {
-					svc, err := getHeadlessService(hdb, hapi.ComponentTypeHMeta)
-					Expect(err).To(BeNil())
-					Expect(svc.Spec.PublishNotReadyAddresses).To(BeTrue())
 				})
 			})
 		})
