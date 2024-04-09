@@ -72,7 +72,7 @@ func (ac *AdminClient) CallServer(args ...string) (string, error) {
 }
 
 func (ac *AdminClient) CallKafkaServer(args ...string) (string, error) {
-	return ac.call("hstream-kafka-cli", append([]string{"node"}, args...)...)
+	return ac.call("hstream-kafka", append([]string{"node"}, args...)...)
 }
 
 // CallStore call hadmin store command with args.
