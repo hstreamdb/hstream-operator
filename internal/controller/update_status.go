@@ -39,9 +39,6 @@ func (u updateStatus) checkComponentsReady(ctx context.Context, r *HStreamDBReco
 	if hdb.Spec.Console != nil {
 		componentsMap[hapi.ComponentTypeConsole] = hapi.ConsoleReady
 	}
-	if hdb.Spec.Gateway != nil {
-		componentsMap[hapi.ComponentTypeGateway] = hapi.GatewayReady
-	}
 
 	for component, condition := range componentsMap {
 		deploy := &appsv1.Deployment{}
@@ -75,10 +72,6 @@ func (u updateStatus) checkAllReady(ctx context.Context, r *HStreamDBReconciler,
 
 	if hdb.Spec.Console != nil {
 		conditionList = append(conditionList, hapi.ConsoleReady)
-	}
-
-	if hdb.Spec.Gateway != nil {
-		conditionList = append(conditionList, hapi.GatewayReady)
 	}
 
 	for _, t := range conditionList {

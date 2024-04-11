@@ -10,7 +10,6 @@ const (
 	InternalRqliteReady string = "InternalRqliteReady"
 	HStoreReady         string = "HStoreReady"
 	HServerReady        string = "HServerReady"
-	GatewayReady        string = "GatewayReady"
 	ConsoleReady        string = "ConsoleReady"
 	Ready               string = "Ready"
 )

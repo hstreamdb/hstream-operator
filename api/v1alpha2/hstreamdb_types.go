@@ -26,7 +26,6 @@ import (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=hdb
-//+kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".spec.gateway.endpoint"
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
@@ -52,9 +51,8 @@ type HStreamDBList struct {
 type HStreamDBSpec struct {
 	Config Config `json:"config,omitempty"`
 
-	Gateway *Gateway `json:"gateway,omitempty"`
-
-	Console *Component `json:"console,omitempty"`
+	// +kubebuilder:validation:Required
+	Rqlite Rqlite `json:"rqlite"`
 
 	AdminServer Component `json:"adminServer,omitempty"`
 
@@ -62,8 +60,7 @@ type HStreamDBSpec struct {
 
 	HStore Component `json:"hstore,omitempty"`
 
-	// +kubebuilder:validation:Required
-	Rqlite Rqlite `json:"rqlite"`
+	Console *Component `json:"console,omitempty"`
 }
 
 type Rqlite struct {

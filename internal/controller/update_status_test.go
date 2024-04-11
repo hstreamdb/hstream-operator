@@ -23,7 +23,6 @@ var _ = Describe("UpdateStatus", func() {
 		err := k8sClient.Create(ctx, hdb)
 		Expect(err).NotTo(HaveOccurred())
 
-		prepareGatewayReady(ctx, hdb)
 		prepareConsoleReady(ctx, hdb)
 		hdb.Status.InternalRqlite.Nodes = map[string]hapi.RqliteNode{}
 	})
@@ -69,12 +68,6 @@ var _ = Describe("UpdateStatus", func() {
 				Message: "test",
 			})
 			hdb.SetCondition(metav1.Condition{
-				Type:    hapi.GatewayReady,
-				Status:  metav1.ConditionTrue,
-				Reason:  "test",
-				Message: "test",
-			})
-			hdb.SetCondition(metav1.Condition{
 				Type:    hapi.ConsoleReady,
 				Status:  metav1.ConditionTrue,
 				Reason:  "test",
@@ -95,29 +88,6 @@ var _ = Describe("UpdateStatus", func() {
 		})
 	})
 })
-
-func prepareGatewayReady(ctx context.Context, hdb *hapi.HStreamDB) {
-	hdb.Spec.Gateway = &hapi.Gateway{}
-	hdb.Spec.Gateway.Endpoint = "fake"
-	hdb.Spec.Gateway.Port = 14789
-	hdb.Spec.Gateway.Image = "hstreamdb/hstream-gateway:latest"
-	hdb.Spec.Gateway.Replicas = 1
-	hdb.SetCondition(metav1.Condition{
-		Type:    hapi.HServerReady,
-		Status:  metav1.ConditionTrue,
-		Reason:  "test",
-		Message: "test",
-	})
-	Expect(addGateway{}.reconcile(ctx, clusterReconciler, hdb)).To(BeNil())
-
-	gateway := &appsv1.Deployment{
-		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeGateway),
-	}
-	Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)).To(BeNil())
-	gateway.Status.Replicas = 1
-	gateway.Status.ReadyReplicas = 1
-	Expect(k8sClient.Status().Update(ctx, gateway)).To(BeNil())
-}
 
 func prepareConsoleReady(ctx context.Context, hdb *hapi.HStreamDB) {
 	hdb.Spec.Console = &hapi.Component{}

@@ -11,7 +11,6 @@ metadata:
 spec:
   selector:
     hstream.io/instance: hstreamdb-sample
-    hstream.io/component: gateway
   type: ClusterIP
   ports:
     - name: port
@@ -49,12 +48,10 @@ spec:
   #   nshards: 1
   #   metadata-replicate-across: 3
   #   logDeviceConfig:
-  gateway:
-    endpoint: "hstreamdb-sample.hstreamdb"
-    image: hstreamdb/hstream-gateway
-    replicas: 1
-    container:
-      name: gateway
+  rqlite:
+    host: hstreamdb-internal-rqlite
+    port: 80
+    namespace: hstreamdb
   adminServer:
     image: hstreamdb/hstream:rqlite
     imagePullPolicy: IfNotPresent
@@ -73,10 +70,6 @@ spec:
       name: console
       env:
         - name: HSTREAM_PUBLIC_ADDRESS
-          # The HSTREAM_PUBLIC_ADDRESS will be shown on the overview of console dashboard
-          # to tell users how to connect HStream cluster through hserver or gateway component.
-          # If you deploy gateway, you should deploy a svc or LB for the gateway as the same time, and
-          # then set the svc name or LB addr of gateway to the HSTREAM_PUBLIC_ADDRESS
           value: hstreamdb-sample.hstreamdb:6570
           # The PROMETHEUS_URL will be used to show the metrics of HStream cluster on the console dashboard.
         - name: PROMETHEUS_URL

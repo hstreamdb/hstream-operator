@@ -10,7 +10,6 @@ import (
 type ComponentType string
 
 const (
-	ComponentTypeGateway     ComponentType = "gateway"
 	ComponentTypeAdminServer ComponentType = "admin-server"
 	ComponentTypeConsole     ComponentType = "console"
 	ComponentTypeHServer     ComponentType = "hserver"
@@ -72,11 +71,11 @@ func (ct ComponentType) GetHeadlessService(hdb *HStreamDB, ports []corev1.Servic
 	return corev1.Service{
 		ObjectMeta: meta,
 		Spec: corev1.ServiceSpec{
+			ClusterIP: corev1.ClusterIPNone,
 			Selector: map[string]string{
 				ComponentKey: string(ct),
 			},
 			Ports:                    ports,
-			ClusterIP:                corev1.ClusterIPNone,
 			PublishNotReadyAddresses: true,
 		},
 	}

@@ -93,7 +93,6 @@ func (r *HStreamDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		bootstrapHStore{},
 		addHServer{},
 		bootstrapHServer{},
-		addGateway{},
 		addConsole{},
 		updateStatus{},
 	}
