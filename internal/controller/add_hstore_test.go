@@ -114,7 +114,7 @@ var _ = Describe("AddHstore", func() {
 			hdb.Spec.HStore.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
 				Spec: corev1.PersistentVolumeClaimSpec{
 					StorageClassName: &storageClassName,
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceStorage: resource.MustParse("1Gi"),
 						},
