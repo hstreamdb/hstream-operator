@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/internal/utils"
@@ -120,8 +121,15 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 }
 
 func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, args []string, ports []corev1.ContainerPort) {
+	arg := "hstream-server"
+	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
+		for i, addr := range hdb.Spec.Config.ExternalAccess.AdvertisedAddresses {
+			arg = "export EXTERNAL_ADVERTISED_ADDR_" + fmt.Sprintf("%d", i) + "=" + addr.Host + ":" + fmt.Sprintf("%d", addr.Port) + " && " + arg
+		}
+	}
+
 	command = []string{"bash", "-c"}
-	args = []string{"hstream-server"}
+	args = []string{arg}
 	var defaultPorts []corev1.ContainerPort
 
 	if hdb.Spec.Config.KafkaMode {
@@ -136,13 +144,14 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		hdb.Spec.HServer.Container.Ports...,
 	)
 
+	serverId := "$(hostname | grep -o '[0-9]*$')"
 	parsedArgs := pkgargs.ParseArgs(hdb.Spec.HServer.Container.Args)
 
 	if _, ok := parsedArgs["--config-path"]; !ok {
 		args = append(args, "--config-path", "/etc/hstream/config.yaml")
 	}
 	if _, ok := parsedArgs["--server-id"]; !ok {
-		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
+		args = append(args, "--server-id", serverId)
 	}
 	if _, ok := parsedArgs["--advertised-address"]; !ok {
 		args = append(args, "--advertised-address", "$(POD_NAME)."+hapi.ComponentTypeHServer.GetHeadlessService(hdb, nil).Name+"."+hdb.GetNamespace())
@@ -152,6 +161,10 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	}
 	if _, ok := parsedArgs["--store-config"]; !ok {
 		args = append(args, "--store-config", "/etc/logdevice/config.json")
+	}
+
+	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
+		args = append(args, "--advertised-listeners", "external:"+"$$EXTERNAL_ADVERTISED_ADDR"+"_"+serverId)
 	}
 
 	// --port

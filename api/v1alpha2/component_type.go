@@ -81,6 +81,42 @@ func (ct ComponentType) GetHeadlessService(hdb *HStreamDB, ports []corev1.Servic
 	}
 }
 
+func (ct ComponentType) GetNodePortServices(hdb *HStreamDB, ports []corev1.ServicePort) []corev1.Service {
+	localPorts := make([]corev1.ServicePort, len(ports))
+	copy(localPorts, ports)
+	names := []string{}
+	services := []corev1.Service{}
+
+	for i := 0; i < int(hdb.Spec.HServer.Replicas); i++ {
+		names = append(names, fmt.Sprintf("%s-%d", ct.GetResName(hdb), i))
+	}
+
+	for i, name := range names {
+		for _, port := range localPorts {
+			if port.Port == hdb.Spec.Config.ExternalAccess.AdvertisedAddresses[i].Port {
+				port.NodePort = hdb.Spec.Config.ExternalAccess.AdvertisedAddresses[i].NodePort
+
+				break
+			}
+		}
+
+		services = append(services, corev1.Service{
+			ObjectMeta: ct.GetObjectMeta(hdb, &metav1.ObjectMeta{
+				Name: name,
+			}),
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeNodePort,
+				Selector: map[string]string{
+					"statefulset.kubernetes.io/pod-name": name,
+				},
+				Ports: localPorts,
+			},
+		})
+	}
+
+	return services
+}
+
 func mergeMap(existing, newMap map[string]string) map[string]string {
 	result := make(map[string]string)
 
