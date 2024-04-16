@@ -81,9 +81,9 @@ func (ct ComponentType) GetHeadlessService(hdb *HStreamDB, ports []corev1.Servic
 	}
 }
 
-func (ct ComponentType) GetNodePortServices(hdb *HStreamDB, ports []corev1.ServicePort) []corev1.Service {
-	localPorts := make([]corev1.ServicePort, len(ports))
-	copy(localPorts, ports)
+func (ct ComponentType) GetNodePortServices(hdb *HStreamDB) []corev1.Service {
+	addresses := hdb.Spec.Config.ExternalAccess.AdvertisedAddresses
+
 	names := []string{}
 	services := []corev1.Service{}
 
@@ -92,14 +92,6 @@ func (ct ComponentType) GetNodePortServices(hdb *HStreamDB, ports []corev1.Servi
 	}
 
 	for i, name := range names {
-		for _, port := range localPorts {
-			if port.Port == hdb.Spec.Config.ExternalAccess.AdvertisedAddresses[i].Port {
-				port.NodePort = hdb.Spec.Config.ExternalAccess.AdvertisedAddresses[i].NodePort
-
-				break
-			}
-		}
-
 		services = append(services, corev1.Service{
 			ObjectMeta: ct.GetObjectMeta(hdb, &metav1.ObjectMeta{
 				Name: name,
@@ -109,7 +101,12 @@ func (ct ComponentType) GetNodePortServices(hdb *HStreamDB, ports []corev1.Servi
 				Selector: map[string]string{
 					"statefulset.kubernetes.io/pod-name": name,
 				},
-				Ports: localPorts,
+				Ports: []corev1.ServicePort{
+					{
+						Port:     addresses[i].Port,
+						NodePort: addresses[i].NodePort,
+					},
+				},
 			},
 		})
 	}

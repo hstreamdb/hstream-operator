@@ -141,6 +141,10 @@ type AdvertisedAddress struct {
 	NodePort int32 `json:"nodePort"`
 }
 
+func (a *AdvertisedAddress) ToNodePortAddr() string {
+	return fmt.Sprintf("%s:%d", a.Host, a.NodePort)
+}
+
 // HStreamDBStatus defines the observed state of HStreamDB
 type HStreamDBStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`

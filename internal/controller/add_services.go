@@ -50,7 +50,9 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 	}
 
 	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
-		nodeportServices := v1alpha2.ComponentTypeHServer.GetNodePortServices(hdb, ports)
+		nodeportServices := v1alpha2.ComponentTypeHServer.GetNodePortServices(hdb)
+
+		log.Info("Creating nodeport services", "services", nodeportServices)
 
 		for _, s := range nodeportServices {
 			err = a.createOrUpdate(ctx, r, hdb, &s)
