@@ -42,7 +42,9 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 				data := map[string]string{}
 
 				for i, addr := range advertisedAddresses {
-					data[fmt.Sprintf("EXTERNAL_ADVERTISED_ADDR_%d", i)] = addr.ToNodePortAddr()
+					key := fmt.Sprintf("EXTERNAL_ADVERTISED_ADDR_%d", i)
+
+					data[key] = addr.ToNodePortAddr()
 				}
 
 				addressConfigMap.Data = data
@@ -139,21 +141,19 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB, externalConfigMap *c
 	container.Env = extendEnvs(container.Env, constants.DefaultHServerEnv...)
 
 	if externalConfigMap.Data != nil {
-		container.Env = append(hServer.Container.Env, corev1.EnvVar{
+		container.EnvFrom = append(container.EnvFrom, corev1.EnvFromSource{
+			ConfigMapRef: &corev1.ConfigMapEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: externalConfigMap.Name,
+				},
+			},
+		})
+
+		container.Env = append(container.Env, corev1.EnvVar{
 			Name: "POD_INDEX",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					FieldPath: "metadata.labels['apps.kubernetes.io/pod-index']",
-				},
-			},
-		}, corev1.EnvVar{
-			Name: "EXTERNAL_ADVERTISED_ADDR",
-			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: externalConfigMap.Name,
-					},
-					Key: "EXTERNAL_ADVERTISED_ADDR_$(POD_INDEX)",
 				},
 			},
 		})
@@ -210,7 +210,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	}
 
 	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
-		args = append(args, "--advertised-listeners", "external:$(EXTERNAL_ADVERTISED_ADDR)")
+		args = append(args, "--advertised-listeners", "external:$EXTERNAL_ADVERTISED_ADDR_"+"$(POD_INDEX)")
 	}
 
 	// --port
