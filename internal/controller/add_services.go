@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
+	"github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +15,7 @@ import (
 
 type addServices struct{}
 
-func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
+func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *v1alpha2.HStreamDB) *requeue {
 	var err error
 	if err = a.addAdminServerService(ctx, r, hdb); err != nil {
 		return &requeue{curError: err}
@@ -29,7 +29,7 @@ func (a addServices) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb 
 	return nil
 }
 
-func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconciler, hdb *v1alpha2.HStreamDB) (err error) {
 	hserver := &hdb.Spec.HServer
 	var defaultPorts []corev1.ContainerPort
 
@@ -44,36 +44,52 @@ func (a addServices) addHServerService(ctx context.Context, r *HStreamDBReconcil
 		return fmt.Errorf("parse HServer args failed. %w", err)
 	}
 
-	service := hapi.ComponentTypeHServer.GetHeadlessService(hdb, ports)
-	return a.createOrUpdate(ctx, r, hdb, &service)
+	service := v1alpha2.ComponentTypeHServer.GetHeadlessService(hdb, ports)
+	if err = a.createOrUpdate(ctx, r, hdb, &service); err != nil {
+		return
+	}
+
+	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
+		nodeportServices := v1alpha2.ComponentTypeHServer.GetNodePortServices(hdb)
+
+		log.Info("Creating nodeport services", "services", nodeportServices)
+
+		for _, s := range nodeportServices {
+			err = a.createOrUpdate(ctx, r, hdb, &s)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return
 }
 
-func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+func (a addServices) addHStoreService(ctx context.Context, r *HStreamDBReconciler, hdb *v1alpha2.HStreamDB) (err error) {
 	ports, err := getPorts(&hdb.Spec.HStore.Container, constants.DefaultHStorePorts...)
 	if err != nil {
 		return fmt.Errorf("parse HStore args failed. %w", err)
 	}
-	service := hapi.ComponentTypeHStore.GetHeadlessService(hdb, ports)
+	service := v1alpha2.ComponentTypeHStore.GetHeadlessService(hdb, ports)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
-func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) (err error) {
+func (a addServices) addAdminServerService(ctx context.Context, r *HStreamDBReconciler, hdb *v1alpha2.HStreamDB) (err error) {
 	ports, err := getPorts(&hdb.Spec.AdminServer.Container, constants.DefaultAdminServerPort)
 	if err != nil {
 		return fmt.Errorf("parse AdminServer args failed. %w", err)
 	}
-	service := hapi.ComponentTypeAdminServer.GetService(hdb, ports)
+	service := v1alpha2.ComponentTypeAdminServer.GetService(hdb, ports)
 	return a.createOrUpdate(ctx, r, hdb, &service)
 }
 
 // createOrUpdate create or updates selected safe fields on a service based on a new
 // service definition.
-func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB,
+func (a addServices) createOrUpdate(ctx context.Context, r *HStreamDBReconciler, hdb *v1alpha2.HStreamDB,
 	newService *corev1.Service) (err error) {
-
-	newService.Annotations[hapi.LastSpecKey] = internal.GetObjectHash(newService)
-
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "service", newService.Name)
+
+	newService.Annotations[v1alpha2.LastSpecKey] = internal.GetObjectHash(newService)
 
 	existingService := &corev1.Service{}
 	err = r.Get(ctx, client.ObjectKeyFromObject(newService), existingService)

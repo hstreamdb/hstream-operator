@@ -55,10 +55,8 @@ type HStreamDBSpec struct {
 	Rqlite Rqlite `json:"rqlite"`
 
 	AdminServer Component `json:"adminServer,omitempty"`
-
-	HServer Component `json:"hserver,omitempty"`
-
-	HStore Component `json:"hstore,omitempty"`
+	HServer     Component `json:"hserver,omitempty"`
+	HStore      Component `json:"hstore,omitempty"`
 
 	Console *Component `json:"console,omitempty"`
 }
@@ -91,6 +89,9 @@ type Config struct {
 	// +optional
 	Metrics bool `json:"metrics,omitempty"`
 
+	// +optional
+	ExternalAccess *ExternalAccess `json:"externalAccess,omitempty"`
+
 	// LogDevice config. Refer to https://logdevice.io/docs/Config.html for more details.
 	//
 	// +optional
@@ -115,6 +116,33 @@ type Config struct {
 	// +kubebuilder:validation:Minimum:=1
 	// +optional
 	NShards int32 `json:"nshards,omitempty"`
+}
+
+type AccessType string
+
+const (
+	AccessTypeNodePort AccessType = "nodeport"
+)
+
+type ExternalAccess struct {
+	// +kube:validation:Required
+	AccessType AccessType `json:"accessType"`
+
+	AdvertisedAddresses []AdvertisedAddress `json:"advertisedAddresses"`
+}
+
+type AdvertisedAddress struct {
+	Instance uint `json:"instance"`
+
+	Host string `json:"host"`
+
+	Port int32 `json:"port"`
+
+	NodePort int32 `json:"nodePort"`
+}
+
+func (a *AdvertisedAddress) ToNodePortAddr() string {
+	return fmt.Sprintf("%s:%d", a.Host, a.NodePort)
 }
 
 // HStreamDBStatus defines the observed state of HStreamDB

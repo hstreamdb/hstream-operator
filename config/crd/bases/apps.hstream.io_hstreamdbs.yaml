@@ -944,10 +944,8 @@ spec:
                         type: object
                     type: object
                   container:
-                    description: |-
-                      container belonging to the pod.
-                      Container cannot currently be added or removed.
-                      Cannot be updated.
+                    description: A single application container that you want to run
+                      within a pod.
                     properties:
                       args:
                         description: |-
@@ -3665,7 +3663,10 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                     type: object
                     x-kubernetes-map-type: atomic
-                  podSecurityContext:
+                  replicas:
+                    format: int32
+                    type: integer
+                  securityContext:
                     description: |-
                       SecurityContext holds pod-level security attributes and common container settings.
                       Optional: Defaults to empty.  See type description for default values of each field.
@@ -3841,13 +3842,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  replicas:
-                    description: |-
-                      Replicas is the desired number of replicas of the given Template.
-                      These are replicas in the sense that they are instantiations of the
-                      same Template, but individual replicas also have a consistent identity.
-                    format: int32
-                    type: integer
                   sidecarContainers:
                     description: SidecarContainers represents extra containers to
                       be added to the pod.
@@ -5232,8 +5226,9 @@ spec:
                       type: object
                     type: array
                   volumeClaimTemplate:
-                    description: VolumeClaimTemplate allows customizing the persistent
-                      volume claim for the pod.
+                    description: |-
+                      PersistentVolumeClaimTemplate is used to produce
+                      PersistentVolumeClaim objects as part of an EphemeralVolumeSource.
                     properties:
                       metadata:
                         description: |-
@@ -7142,6 +7137,34 @@ spec:
                 type: object
               config:
                 properties:
+                  externalAccess:
+                    properties:
+                      accessType:
+                        type: string
+                      advertisedAddresses:
+                        items:
+                          properties:
+                            host:
+                              type: string
+                            instance:
+                              type: integer
+                            nodePort:
+                              format: int32
+                              type: integer
+                            port:
+                              format: int32
+                              type: integer
+                          required:
+                          - host
+                          - instance
+                          - nodePort
+                          - port
+                          type: object
+                        type: array
+                    required:
+                    - accessType
+                    - advertisedAddresses
+                    type: object
                   kafkaMode:
                     default: false
                     description: KafkaMode decides whether to use Kafka protocol or
@@ -8078,10 +8101,8 @@ spec:
                         type: object
                     type: object
                   container:
-                    description: |-
-                      container belonging to the pod.
-                      Container cannot currently be added or removed.
-                      Cannot be updated.
+                    description: A single application container that you want to run
+                      within a pod.
                     properties:
                       args:
                         description: |-
@@ -10799,7 +10820,10 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                     type: object
                     x-kubernetes-map-type: atomic
-                  podSecurityContext:
+                  replicas:
+                    format: int32
+                    type: integer
+                  securityContext:
                     description: |-
                       SecurityContext holds pod-level security attributes and common container settings.
                       Optional: Defaults to empty.  See type description for default values of each field.
@@ -10975,13 +10999,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  replicas:
-                    description: |-
-                      Replicas is the desired number of replicas of the given Template.
-                      These are replicas in the sense that they are instantiations of the
-                      same Template, but individual replicas also have a consistent identity.
-                    format: int32
-                    type: integer
                   sidecarContainers:
                     description: SidecarContainers represents extra containers to
                       be added to the pod.
@@ -12366,8 +12383,9 @@ spec:
                       type: object
                     type: array
                   volumeClaimTemplate:
-                    description: VolumeClaimTemplate allows customizing the persistent
-                      volume claim for the pod.
+                    description: |-
+                      PersistentVolumeClaimTemplate is used to produce
+                      PersistentVolumeClaim objects as part of an EphemeralVolumeSource.
                     properties:
                       metadata:
                         description: |-
@@ -15170,10 +15188,8 @@ spec:
                         type: object
                     type: object
                   container:
-                    description: |-
-                      container belonging to the pod.
-                      Container cannot currently be added or removed.
-                      Cannot be updated.
+                    description: A single application container that you want to run
+                      within a pod.
                     properties:
                       args:
                         description: |-
@@ -17891,7 +17907,10 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                     type: object
                     x-kubernetes-map-type: atomic
-                  podSecurityContext:
+                  replicas:
+                    format: int32
+                    type: integer
+                  securityContext:
                     description: |-
                       SecurityContext holds pod-level security attributes and common container settings.
                       Optional: Defaults to empty.  See type description for default values of each field.
@@ -18067,13 +18086,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  replicas:
-                    description: |-
-                      Replicas is the desired number of replicas of the given Template.
-                      These are replicas in the sense that they are instantiations of the
-                      same Template, but individual replicas also have a consistent identity.
-                    format: int32
-                    type: integer
                   sidecarContainers:
                     description: SidecarContainers represents extra containers to
                       be added to the pod.
@@ -19458,8 +19470,9 @@ spec:
                       type: object
                     type: array
                   volumeClaimTemplate:
-                    description: VolumeClaimTemplate allows customizing the persistent
-                      volume claim for the pod.
+                    description: |-
+                      PersistentVolumeClaimTemplate is used to produce
+                      PersistentVolumeClaim objects as part of an EphemeralVolumeSource.
                     properties:
                       metadata:
                         description: |-
@@ -22262,10 +22275,8 @@ spec:
                         type: object
                     type: object
                   container:
-                    description: |-
-                      container belonging to the pod.
-                      Container cannot currently be added or removed.
-                      Cannot be updated.
+                    description: A single application container that you want to run
+                      within a pod.
                     properties:
                       args:
                         description: |-
@@ -24983,7 +24994,10 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                     type: object
                     x-kubernetes-map-type: atomic
-                  podSecurityContext:
+                  replicas:
+                    format: int32
+                    type: integer
+                  securityContext:
                     description: |-
                       SecurityContext holds pod-level security attributes and common container settings.
                       Optional: Defaults to empty.  See type description for default values of each field.
@@ -25159,13 +25173,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  replicas:
-                    description: |-
-                      Replicas is the desired number of replicas of the given Template.
-                      These are replicas in the sense that they are instantiations of the
-                      same Template, but individual replicas also have a consistent identity.
-                    format: int32
-                    type: integer
                   sidecarContainers:
                     description: SidecarContainers represents extra containers to
                       be added to the pod.
@@ -26550,8 +26557,9 @@ spec:
                       type: object
                     type: array
                   volumeClaimTemplate:
-                    description: VolumeClaimTemplate allows customizing the persistent
-                      volume claim for the pod.
+                    description: |-
+                      PersistentVolumeClaimTemplate is used to produce
+                      PersistentVolumeClaim objects as part of an EphemeralVolumeSource.
                     properties:
                       metadata:
                         description: |-

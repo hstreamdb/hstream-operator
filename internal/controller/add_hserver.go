@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	hapi "github.com/hstreamdb/hstream-operator/api/v1alpha2"
 	"github.com/hstreamdb/hstream-operator/internal"
 	"github.com/hstreamdb/hstream-operator/internal/utils"
@@ -13,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +25,40 @@ type addHServer struct{}
 func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *hapi.HStreamDB) *requeue {
 	logger := log.WithValues("namespace", hdb.Namespace, "instance", hdb.Name, "reconciler", "add HServer")
 
-	sts := a.getSts(hdb)
+	addressConfigMap := corev1.ConfigMap{
+		ObjectMeta: hapi.ComponentTypeHServer.GetObjectMeta(hdb, &metav1.ObjectMeta{
+			Name:      hapi.ComponentTypeHServer.GetResName(hdb) + "-external-advertised-addresses",
+			Namespace: hdb.Namespace,
+		}),
+		Data: nil,
+	}
+
+	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
+		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(&addressConfigMap), &addressConfigMap); err != nil {
+			if k8sErrors.IsNotFound(err) {
+				logger.Info("creating external advertised addresses config map")
+
+				advertisedAddresses := hdb.Spec.Config.ExternalAccess.AdvertisedAddresses
+				data := map[string]string{}
+
+				for i, addr := range advertisedAddresses {
+					key := fmt.Sprintf("EXTERNAL_ADVERTISED_ADDR_%d", i)
+
+					data[key] = addr.ToNodePortAddr()
+				}
+
+				addressConfigMap.Data = data
+
+				if err = r.Client.Create(ctx, &addressConfigMap); err != nil {
+					return &requeue{curError: err}
+				}
+			} else {
+				return &requeue{curError: err}
+			}
+		}
+	}
+
+	sts := a.getSts(hdb, &addressConfigMap)
 
 	existingSts := &appsv1.StatefulSet{}
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(&sts), existingSts)
@@ -45,7 +80,6 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 		return nil
 	}
 
-	logger.Info("Update hServer")
 	r.Recorder.Event(hdb, corev1.EventTypeNormal, "UpdatingHServer", "")
 
 	existingSts.Annotations = sts.Annotations
@@ -57,15 +91,15 @@ func (a addHServer) reconcile(ctx context.Context, r *HStreamDBReconciler, hdb *
 	return nil
 }
 
-func (a addHServer) getSts(hdb *hapi.HStreamDB) appsv1.StatefulSet {
-	podTemplate := a.getPodTemplate(hdb)
+func (a addHServer) getSts(hdb *hapi.HStreamDB, externalConfigMap *corev1.ConfigMap) appsv1.StatefulSet {
+	podTemplate := a.getPodTemplate(hdb, externalConfigMap)
 	sts := internal.GetStatefulSet(hdb, &hdb.Spec.HServer, &podTemplate, hapi.ComponentTypeHServer)
 	return sts
 }
 
-func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
+func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB, externalConfigMap *corev1.ConfigMap) corev1.PodTemplateSpec {
 	hserver := &hdb.Spec.HServer
-	container := a.getServerContainer(hdb)
+	container := a.getServerContainer(hdb, externalConfigMap)
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: internal.GetObjectMetadata(hdb, nil, hapi.ComponentTypeHServer),
@@ -85,8 +119,9 @@ func (a addHServer) getPodTemplate(hdb *hapi.HStreamDB) corev1.PodTemplateSpec {
 	return podTemplate
 }
 
-func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
+func (a addHServer) getServerContainer(hdb *hapi.HStreamDB, externalConfigMap *corev1.ConfigMap) corev1.Container {
 	hServer := &hdb.Spec.HServer
+
 	container := corev1.Container{
 		Image:           hdb.Spec.HServer.Image,
 		ImagePullPolicy: hdb.Spec.HServer.ImagePullPolicy,
@@ -104,6 +139,25 @@ func (a addHServer) getServerContainer(hdb *hapi.HStreamDB) corev1.Container {
 
 	structAssign(&container, &hServer.Container)
 	container.Env = extendEnvs(container.Env, constants.DefaultHServerEnv...)
+
+	if externalConfigMap.Data != nil {
+		container.EnvFrom = append(container.EnvFrom, corev1.EnvFromSource{
+			ConfigMapRef: &corev1.ConfigMapEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: externalConfigMap.Name,
+				},
+			},
+		})
+
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name: "POD_INDEX",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.labels['apps.kubernetes.io/pod-index']",
+				},
+			},
+		})
+	}
 
 	if container.Name == "" {
 		container.Name = string(hapi.ComponentTypeHServer)
@@ -136,13 +190,14 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 		hdb.Spec.HServer.Container.Ports...,
 	)
 
+	serverId := "$(hostname | grep -o '[0-9]*$')"
 	parsedArgs := pkgargs.ParseArgs(hdb.Spec.HServer.Container.Args)
 
 	if _, ok := parsedArgs["--config-path"]; !ok {
 		args = append(args, "--config-path", "/etc/hstream/config.yaml")
 	}
 	if _, ok := parsedArgs["--server-id"]; !ok {
-		args = append(args, "--server-id", "$(hostname | grep -o '[0-9]*$')")
+		args = append(args, "--server-id", serverId)
 	}
 	if _, ok := parsedArgs["--advertised-address"]; !ok {
 		args = append(args, "--advertised-address", "$(POD_NAME)."+hapi.ComponentTypeHServer.GetHeadlessService(hdb, nil).Name+"."+hdb.GetNamespace())
@@ -152,6 +207,10 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	}
 	if _, ok := parsedArgs["--store-config"]; !ok {
 		args = append(args, "--store-config", "/etc/logdevice/config.json")
+	}
+
+	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
+		args = append(args, "--advertised-listeners", "external:$EXTERNAL_ADVERTISED_ADDR_"+"$(POD_INDEX)")
 	}
 
 	// --port
