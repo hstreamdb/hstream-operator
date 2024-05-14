@@ -210,7 +210,7 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 	}
 
 	if hdb.Spec.Config.ExternalAccess != nil && hdb.Spec.Config.ExternalAccess.AccessType == v1alpha2.AccessTypeNodePort {
-		args = append(args, "--advertised-listeners", "external:$EXTERNAL_ADVERTISED_ADDR_"+"$(POD_INDEX)")
+		args = append(args, "--advertised-listeners", "external:$EXTERNAL_ADVERTISED_ADDR_"+"$(POD_INDEX)", "--listeners-security-protocol-map", "external:plaintext")
 	}
 
 	// --port
