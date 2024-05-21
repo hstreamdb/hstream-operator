@@ -237,9 +237,9 @@ func (a addHServer) defaultCommandArgsAndPorts(hdb *hapi.HStreamDB) (command, ar
 
 	if _, ok := parsedArgs["--seed-nodes"]; !ok {
 		hServerSvc := hapi.ComponentTypeHServer.GetHeadlessService(hdb, nil)
-		seedNodes := make([]string, hdb.Spec.HServer.Replicas)
+		seedNodes := make([]string, 3) // Minimum nodes is 3.
 
-		for i := int32(0); i < hdb.Spec.HServer.Replicas; i++ {
+		for i := 0; i < 3; i++ {
 			// E.g. hstreamdb-sample-hserver-0.hstreamdb-sample-internal-hserver.default:6571
 			seedNodes[i] = fmt.Sprintf("%s-%d.%s.%s:%s",
 				hapi.ComponentTypeHServer.GetResName(hdb),
